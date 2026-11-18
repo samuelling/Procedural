@@ -1,0 +1,8 @@
+{
+  "name": "lamina",
+  "private": true,
+  "description": "A tissue genome: a few kilobytes of rules that grow a block of brain tissue, in one HTML file",
+  "type": "module",
+  "scripts": { "build": "node build.mjs", "test": "node test/sim.mjs" },
+  "devDependencies": { "esbuild": "^0.28.2" }
+}
