@@ -25,7 +25,7 @@ function grow(keepView) {
   G = mut ? mutate(GENOMES[key], rng(mut)) : GENOMES[key];
   B = build(G, seed, Q, 50000);
   net = makeNet(G, B.units, seed);
-  R.load(B.inst, B.count, net.tex, net.N);
+  R.load(B.inst, B.opaque, B.count, net.tex, net.N);
   time = 0; nextStim = 4;
   if (!keepView) { tgt = [0, -B.T / 2, 0]; rad = max(B.T * 1.9, B.W * 2.5); pitch = 0.1; }
   $('l1').textContent = G.nm + (mut ? ' · mutant ' + mut : '') + ' · seed ' + seed;
@@ -93,7 +93,7 @@ function frame(now) {
   const sp = max(60, rad * 0.7) * dt, kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), kf = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0), ky = (keys.KeyE ? 1 : 0) - (keys.KeyQ ? 1 : 0);
   if (kx || kf || ky) { move(kx * sp, ky * sp, kf * sp); idle = 0; }
   view();
-  R.draw(V, K, time, net.tex, [mode, section, rad, 7 + rad * 0.012]);
+  R.draw(V, K, time, net.tex, [mode, section, rad, 7 + rad * 0.012], rad);
   overlay();
   requestAnimationFrame(frame);
 }

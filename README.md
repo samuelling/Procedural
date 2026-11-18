@@ -9,7 +9,7 @@ opens.
 
 > **Also in this repo: [Lamina](lamina/)**, a second take that drops the ocean engine. A 2 to 4 kB genome of layers,
 > cell types and growth rules grows neocortex, cerebellar cortex or hippocampus CA1, wires a circuit through it and
-> runs it. One 31 kB file, WebGL 2, works on a phone. Play [`lamina/index.html`](lamina/index.html).
+> runs it. One 39 kB file, WebGL 2, works on a phone. Play [`lamina/index.html`](lamina/index.html).
 
 This is a re-skin of [Abyssal Garden](https://github.com/Noniv/abyssal-garden) by Noniv (MIT). The renderer, the
 terrain generator and the scattering rules are that project's; the content, palette and sound are new.

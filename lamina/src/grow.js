@@ -1,6 +1,7 @@
 // Phenotype from genotype: reads a genome and grows the block. Everything drawn is a tapered capsule,
 // 12 floats: x0 y0 z0 r0, x1 y1 z1 r1, path0 path1 id kind.
-// kinds: 0 smooth dendrite · 1 spiny dendrite · 2 axon · 3 soma · 4 nucleus · 5 vessel · 6 glia · 7 frame
+// kinds: 0 smooth dendrite · 1 spiny dendrite · 2 axon · 3 soma · 4 nucleus · 5 vessel · 6 glia · 7 frame · 8 felt
+// Solid kinds come first in the buffer; nuclei, frame and felt follow, because they are drawn as added light.
 const { PI, sin, cos, hypot, abs, max, min, round, pow, exp, log, sqrt } = Math, TAU = PI * 2;
 
 export const rng = (s) => () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -10,11 +11,11 @@ export function build(G, seed, q = 1, nucCap = 50000) {
   const gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const [W, D] = G.size, hw = W / 2, hd = D / 2;
   const ly = []; let yy = 0;
-  for (const [nm, t, den, nr] of G.layers) { ly.push({ nm, top: yy, bot: yy - t, den, nr }); yy -= t; }
-  const T = -yy, out = [];
-  const seg = (a, ra, b, rb, d0, d1, id, k) => out.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, d0, d1, id, k);
+  for (const [nm, t, den, nr, fo] of G.layers) { ly.push({ nm, top: yy, bot: yy - t, den, nr, fo }); yy -= t; }
+  const T = -yy, solid = [], light = [];
+  const seg = (a, ra, b, rb, d0, d1, id, k) => (k === 4 || k > 6 ? light : solid).push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, d0, d1, id, k);
   const yIn = (L, f0, f1) => ly[L].bot + (ly[L].top - ly[L].bot) * rr(f0, f1);
-  const st = { cells: 0, neurite: 0, nuclei: 0, vessel: 0 };
+  const st = { cells: 0, neurite: 0, nuclei: 0, vessel: 0, felt: 0 };
 
   // frame: the block's edges and its layer boundaries
   for (let i = 0; i <= ly.length; i++) {
@@ -39,7 +40,7 @@ export function build(G, seed, q = 1, nucCap = 50000) {
   for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) for (let k = 0; k < nz; k++) {
     const a = node[i + nx * (j + ny * k)]; nodes.push(a);
     for (const [di, dj, dk] of [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
-      if (i + di < nx && j + dj < ny && k + dk < nz && rnd() < cp) path(a, node[i + di + nx * (j + dj + ny * (k + dk))], 2.4, 2.4, 5, cs * 0.3);
+      if (i + di < nx && j + dj < ny && k + dk < nz && rnd() < cp) path(a, node[i + di + nx * (j + dj + ny * (k + dk))], 2.2, 2.2, 5, cs * 0.14);
     }
   }
   for (let n = round(W * D / G.vessels.pen ** 2); n > 0; n--) {
@@ -63,6 +64,20 @@ export function build(G, seed, q = 1, nucCap = 50000) {
     }
   }
   st.nucKeep = keep;
+
+  // felt: the unlabelled fibres that fill the neuropil, running the way each layer's fibres run
+  // (0 any way · 1 radial · 2 tangential · 3 along z · 4 along x)
+  for (const l of ly) {
+    for (let n = round((G.felt || 0) * 1e3 * W * D * (l.top - l.bot) * 1e-9 * q); n > 0; n--) {
+      let p = [rr(-hw, hw), rr(l.bot, l.top), rr(-hd, hd)], a = rnd() * TAU, sg = rnd() < 0.5 ? -1 : 1, s = 0; const id = rnd();
+      let d = l.fo === 1 ? [gs() * 0.25, sg, gs() * 0.25] : l.fo === 2 ? [cos(a), gs() * 0.15, sin(a)] : l.fo === 3 ? [gs() * 0.08, gs() * 0.08, sg] : l.fo === 4 ? [sg, gs() * 0.08, gs() * 0.08] : [gs(), gs(), gs()];
+      for (let i = 0; i < 4; i++) {
+        d = d.map((v) => v + gs() * 0.12); const dl = hypot(d[0], d[1], d[2]) || 1, c = p.map((v, j) => v + d[j] / dl * 28);
+        if (c[1] > -1 || c[1] < 1 - T || abs(c[0]) > hw || abs(c[2]) > hd) break;
+        seg(p, 0.26, c, 0.26, s, s + 28, id, 8); p = c; s += 28; st.felt++;
+      }
+    }
+  }
 
   // cells: grow each arbor tip by tip, all tips advancing together so a budget cuts evenly
   const units = [], pl = G.plane;
@@ -136,5 +151,6 @@ export function build(G, seed, q = 1, nucCap = 50000) {
     }
   });
 
-  return { inst: new Float32Array(out), count: out.length / 12, units, ly, T, W, D, st };
+  const inst = new Float32Array(solid.length + light.length); inst.set(solid); inst.set(light, solid.length);
+  return { inst, count: inst.length / 12, opaque: solid.length / 12, units, ly, T, W, D, st };
 }

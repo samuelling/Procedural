@@ -1,7 +1,9 @@
 // The DNA. Three genomes, one grammar. All lengths in µm.
 //
 // size      [width, depth] of the block.
-// layers    [name, thickness, cells per mm³ in thousands, nucleus radius], listed from the pia down.
+// layers    [name, thickness, cells per mm³ in thousands, nucleus radius, grain], listed from the pia down.
+//           grain is how the layer's unlabelled fibres run: 0 any way · 1 radial · 2 tangential · 3 along z · 4 along x
+// felt      unlabelled fibres per mm³, in thousands
 // cells     one entry per cell type:
 //   id, nm  short id and display name
 //   ly      [layer (or a list to pick from), from, to]: where the soma sits, as a fraction of that layer (0 bottom, 1 top)
@@ -36,7 +38,8 @@ const basket = (ly, n) => ({ id: 'bc', nm: 'Basket cell', ly, n, so: [7, 1], h: 
 export const GENOMES = {
   cortex: {
     nm: 'Neocortex', size: [700, 700],
-    layers: [['L1', 100, 15, 4], ['L2/3', 260, 130, 4], ['L4', 140, 180, 3.6], ['L5', 220, 110, 4.4], ['L6', 230, 140, 4], ['WM', 50, 12, 3.4]],
+    felt: 13,
+    layers: [['L1', 100, 15, 4, 2], ['L2/3', 260, 130, 4, 0], ['L4', 140, 180, 3.6, 0], ['L5', 220, 110, 4.4, 1], ['L6', 230, 140, 4, 1], ['WM', 50, 12, 3.4, 4]],
     cells: [
       { id: 'p23', nm: 'L2/3 pyramidal', ly: [1, 0.08, 0.95], n: 105, so: [8, 1.5], h: 0.36, b: 0.2, ar: [
         { k: 1, n: 1, el: [1, 1], L: [900, 900], st: 14, r: 1.5, tp: 0.985, br: 0.012, sf: 0.86, tr: 0.5, to: 0.12, c: obl,
@@ -66,7 +69,7 @@ export const GENOMES = {
         { k: 2, n: 1, el: [1, 1], L: [2000, 2000], st: 22, r: 0.4, tp: 1, tr: 0.5, to: 0.1,
           tuft: { at: [2, 0.1, 0.8], L: [80, 150], br: 0.02, sf: 0.5, bo: 4, ba: 0.9, tr: 0, to: 0.45 } }] },
       astro],
-    vessels: { pen: 170, cap: [58, 0.42] },
+    vessels: { pen: 170, cap: [58, 0.3] },
     net: { sig: [110, 110], v: 1500, rm: 7, sg: 1, ks: 1.5, ka: 0.3, stim: [220, 220],
       conn: [['tc', 'ss4', 1.1, 12], ['tc', 'bc', 0.6, 3], ['ss4', 'ss4', 0.3, 5], ['ss4', 'p23', 0.6, 10], ['p23', 'p23', 0.26, 8], ['p23', 'p5', 0.55, 8],
         ['p5', 'p5', 0.26, 6], ['p5', 'p6', 0.5, 6], ['p6', 'ss4', 0.16, 4], ['E', 'bc', 0.5, 3], ['bc', 'E', 1, 22], ['p23', 'mc', 0.5, 2], ['mc', 'p23', 0.8, 12], ['mc', 'p5', 0.8, 10]] },
@@ -74,7 +77,8 @@ export const GENOMES = {
 
   cerebellum: {
     nm: 'Cerebellar cortex', size: [700, 700], plane: 0,
-    layers: [['ML', 230, 30, 3.4], ['PCL', 30, 60, 4], ['GL', 260, 2500, 2.7], ['WM', 70, 15, 3.4]],
+    felt: 16,
+    layers: [['ML', 230, 30, 3.4, 3], ['PCL', 30, 60, 4, 0], ['GL', 260, 2500, 2.7, 0], ['WM', 70, 15, 3.4, 1]],
     cells: [
       { id: 'pc', nm: 'Purkinje cell', ly: [1, 0.3, 0.7], n: 46, so: [11, 1.25], h: 0.36, I: 1, b: 0.62, cap: 900, ar: [
         { k: 1, n: 1, el: [1, 1], L: [215, 240], st: 9, r: 2.6, tp: 0.985, br: 0.05, bo: 7, ba: 0.5, bs: 0.93, tr: 0.1, to: 0.2, fl: 0.97 },
@@ -94,14 +98,15 @@ export const GENOMES = {
         { k: 2, n: 1, el: [1, 1], L: [1000, 1000], st: 20, r: 0.5, tp: 1, tr: 0.4, to: 0.15,
           tuft: { at: [2, 0.1, 0.9], L: [60, 120], br: 0.02, sf: 0.5, bo: 3, ba: 0.9, tr: 0, to: 0.5 } }] },
       { id: 'bg', nm: 'Bergmann glia', ly: [1, 0, 1], n: 44, so: [5, 1], x: 1, ar: [{ k: 6, n: [2, 3], el: [0.9, 1], L: [400, 400], st: 12, r: 0.5, tp: 1, tr: 0.8, to: 0.08 }] }],
-    vessels: { pen: 190, cap: [62, 0.4] },
+    vessels: { pen: 190, cap: [62, 0.3] },
     net: { sig: [80, 80], v: 1500, rm: 7, sg: 1, ks: 1.5, ka: 0.25, stim: [170, 170],
       conn: [['mf', 'gc', 1.1, 14], ['mf', 'go', 0.4, 2], ['gc', 'pc', 0.3, 9, 50, 330], ['gc', 'mli', 0.45, 3, 50, 260], ['mli', 'pc', 1, 8, 120, 40], ['gc', 'go', 0.4, 2], ['go', 'gc', 0.9, 30]] },
   },
 
   hippocampus: {
     nm: 'Hippocampus CA1', size: [700, 700],
-    layers: [['SLM', 140, 25, 3.6], ['SR', 300, 18, 3.6], ['SP', 60, 520, 4.2], ['SO', 150, 28, 3.8], ['Alv', 50, 10, 3.4]],
+    felt: 14,
+    layers: [['SLM', 140, 25, 3.6, 4], ['SR', 300, 18, 3.6, 4], ['SP', 60, 520, 4.2, 1], ['SO', 150, 28, 3.8, 0], ['Alv', 50, 10, 3.4, 4]],
     cells: [
       { id: 'pyr', nm: 'CA1 pyramidal', ly: [2, 0.05, 0.95], n: 180, so: [8, 1.5], h: 0.36, b: 0.2, ar: [
         { k: 1, n: 1, el: [1, 1], L: [900, 900], st: 14, r: 1.6, tp: 0.988, br: 0.016, sf: 0.86, tr: 0.5, to: 0.1, c: { ...obl, L: [50, 120] },
@@ -117,7 +122,7 @@ export const GENOMES = {
       { id: 'sc', nm: 'Schaffer collateral', ly: [1, 0.1, 0.92], n: 60, so: 0, h: 0.58, in: 1, b: 0.4, edge: 1, ar: [
         { k: 2, n: 1, tv: [1, 0, 0], L: [1000, 1000], st: 25, r: 0.3, tp: 1, tr: 1.2, to: 0.06 }] },
       { ...astro, ly: [[0, 1, 3], 0, 1] }],
-    vessels: { pen: 180, cap: [58, 0.42] },
+    vessels: { pen: 180, cap: [58, 0.3] },
     net: { sig: [100, 100], v: 1500, rm: 7, sg: 1, ks: 1.5, ka: 0.3, stim: [900, 110],
       conn: [['sc', 'pyr', 0.75, 16, 700, 80], ['sc', 'bc', 0.5, 2, 700, 80], ['pyr', 'pyr', 0.1, 3], ['pyr', 'bc', 0.6, 2], ['bc', 'pyr', 1, 20], ['pyr', 'olm', 0.6, 2], ['olm', 'pyr', 0.7, 12]] },
   },
@@ -138,6 +143,6 @@ export function mutate(G, rnd, amt = 0.3) {
     return out;
   };
   const M = { ...G, cells: G.cells.map((c) => ({ ...c, ar: walk(c.ar) })) };
-  M.layers = G.layers.map((l) => [l[0], Math.round(l[1] * (1 + (rnd() * 2 - 1) * amt * 0.6)), l[2], l[3]]);
+  M.layers = G.layers.map((l) => [l[0], Math.round(l[1] * (1 + (rnd() * 2 - 1) * amt * 0.6)), l[2], l[3], l[4]]);
   return M;
 }
