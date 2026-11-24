@@ -12,7 +12,7 @@ unpacker. No stored images, models or sound files.
 | [`2mb/`](2mb/) | 2,000,000 bytes | A forest that keeps time: animals are born, hunt, age and die; trees grow, die, fall and are replaced; plus night, seasons, flowers, insects, storms, and four more forests |
 
 `index.html` reports the real byte count of every rung against its allowance. The three small rungs are full. The two
-large ones are not: the 200 kB rung uses about 28 kB and the 2 MB rung about 32 kB, because that is how many rules have
+large ones are not: the 200 kB rung uses about 30 kB and the 2 MB rung about 36 kB, because that is how many rules have
 been written. The 2 MB build would fit in the 200 kB allowance; the split follows the order things were asked for.
 
 ## How the pages fit
@@ -54,6 +54,14 @@ and a shade tolerance; one call to `succeed` is one year of growth, death, fall,
 is regrown from the records. `node tools/life_test.mjs [biome]` runs 14 years of animals and 300 years of trees and
 prints what happened. In the aspen grove, spruce climbs from 7 trees to about 40 over two centuries.
 
+Things act on each other. Deer eat the smallest trees, in proportion to how many deer there are and how palatable the
+species is, so regeneration depends on wolves keeping the deer down (`node tools/life_test.mjs aspen 0 12` shows aspen
+giving way to unpalatable spruce under twelve deer). Beavers fell soft young trees near the water; each one raises a dam
+that floods the low ground and drowns what stands there. Fire is a grid of fuel: a burning cell lights its neighbours
+readily downwind, hardly at all when wet, never across water; trees survive by bark and height; light-loving species
+seed into the ash. Animals inherit leg length and boldness from both parents, and seedlings a pace of life from theirs
+(fast growers bear shade badly and die young), each with a small random change, so selection shows up in the counts.
+
 The clock button steps through still, days (a year is 8 minutes), seasons (a year a minute) and decades (five years
 every three seconds, trees only).
 
@@ -63,6 +71,9 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Not seen in a render: a wolf, a hare or a beaver up close, a hunt or a birth as it happens, and a large fire. Those are
+confirmed in the simulation log only.
 
 Not checked: frame rate on real hardware (the upper rungs evaluate cloud shadow for every pixel, which costs
 something), touch on a real phone, and all of the sound.

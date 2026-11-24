@@ -51,7 +51,9 @@ export function build(G, seed, q = 1, den = 1, stand) {
     const bed = (x) => y0 - 0.3 - 0.006 * (x + hs), dist = (x, z) => abs(z - zc(x)) - wid(x);           // metres outside the water's edge
     Hgt = (x, z) => { const d = dist(x, z), w = wid(x), b = bed(x); return d < 0 ? b - 0.55 * sqrt(w / sw) * (1 - ((d + w) / w) ** 2) : b + (H0(x, z) - b) * sm(d / 7); };
     wet = (x, z) => max(W0(x, z), 1 - max(0, dist(x, z)) / 6);
-    strm = { zc, wid, lvl: (x) => bed(x) - 0.1, dist };
+    // beavers (2 MB rung): a dam just below the pool holds the water back, and it spreads over the low ground behind
+    const fl = TIER > 3 && stand && stand.world ? stand.world.dam : 0, xd = px + sr + 3, lvl = (x) => max(bed(x) - 0.1, fl > 0 && x < xd ? bed(xd) - 0.1 + fl * 0.9 : -1e9);
+    strm = { zc, wid, lvl, dist, xd, px, fl, deep: (x, z) => fl > 0 && dist(x, z) > 0 && lvl(x) - Hgt(x, z) > 0.12 };
   }
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
   const cap = (a, ra, b, rb, s0, s1, id, k) => caps.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, s0, s1, id, k);
@@ -74,6 +76,12 @@ export function build(G, seed, q = 1, den = 1, stand) {
   for (let n = round(L.peb * (low ? 0.5 : 1)); n > 0; n--) rock(3, rr(-hs, hs), rr(-hs, hs), rr(0.04, 0.14), rr(0.5, 0.9), rnd());
   if (TIER > 2 && strm) for (let n = low ? 30 : 56; n > 0; n--) {                       // stones in and along the stream
     const x = rr(-hs + 1, hs - 1), z = strm.zc(x) + gs() * (strm.wid(x) * 0.7 + 0.4); if (abs(z) < hs - 1) rock((rnd() * 4) | 0, x, z, rr(0.12, 0.5) * (rnd() < 0.15 ? 2.2 : 1), rr(0.5, 0.9), rr(0.3, 1));
+  }
+
+  if (TIER > 3 && strm && strm.fl > 0) {                                     // the dam itself, and the lodge in the pool: sticks
+    const X0 = strm.xd, lx = strm.px, lz = strm.zc(lx) + strm.wid(lx) * 0.45, ly = strm.lvl(lx), id = () => floor(rnd() * G.trees.length) + rnd() * 0.98;
+    for (let k = round(12 + 30 * strm.fl); k > 0; k--) { const X = X0 + gs() * 0.5, Z = strm.zc(X0) + gs() * (strm.wid(X0) + 1.2), y = Hgt(X, Z) + rr(0, 0.25 + strm.fl * 0.8), a = PI / 2 + rr(-0.5, 0.5), l = rr(0.6, 1.6); cap([X - cos(a) * l, y + rr(-0.1, 0.1), Z - sin(a) * l], rr(0.05, 0.11), [X + cos(a) * l, y + rr(-0.1, 0.1), Z + sin(a) * l], rr(0.04, 0.08), 0, 1, id(), 1); }
+    for (let k = 16; k > 0; k--) { const a = rnd() * TAU; cap([lx + cos(a) * 1.2, ly - 0.15, lz + sin(a) * 1.2], 0.07, [lx + gs() * 0.2, ly + 0.6, lz + gs() * 0.2], 0.05, 0, 1, id(), 1); }
   }
 
   // ---- trees
@@ -101,7 +109,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
         t.p = p; t.d = d; t.par = i; t.fresh = 0; t.s += sl; t.len -= sl;
         if (!t.dead && (t.o >= lf.o || (t.o === lf.o - 1 && pos > 0.62))) {         // foliage, and the load it puts on the wood below
           let n = sl * lf.per * (sap ? 0.7 : 1); n = floor(n) + (rnd() < n % 1 ? 1 : 0);
-          for (; n > 0; n--) { if (!dd) leafAt(rnd() < 0.5 ? mid : p, d, 0.4 + 0.6 * sqrt(pos)); segs[i].load++; }
+          for (; n > 0; n--) { if (TIER < 4 || !dd) leafAt(rnd() < 0.5 ? mid : p, d, 0.4 + 0.6 * sqrt(pos)); segs[i].load++; }
         }
         const C = A[t.o + 1];
         if (C && !t.dead) {
@@ -120,7 +128,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
             }
           }
         }
-        if (t.len > 1e-3) next.push(t); else if (!t.dead) { if (!dd) { leafAt(p, d, 1); leafAt(p, d, 1); } segs[i].load += 2; }
+        if (t.len > 1e-3) next.push(t); else if (!t.dead) { if (TIER < 4 || !dd) { leafAt(p, d, 1); leafAt(p, d, 1); } segs[i].load += 2; }
       }
       tips = next;
     }
@@ -129,8 +137,8 @@ export function build(G, seed, q = 1, den = 1, stand) {
     const R = (i) => sp.rt * pow(segs[i].load, 1 / sp.dv), fl = (s) => 1 + sp.fl * exp(-s / 0.5);
     segs.forEach((g, i) => {
       const r0 = R(i) * (g.o ? 1 : fl(g.s0)), r1 = (g.cont >= 0 ? R(g.cont) : sp.rt * 0.7) * (g.o ? 1 : fl(g.s1));
-      if (dd && g.o > 1) return;
-      cap(g.a, r0, g.b, min(r0, r1), g.s0, g.s1, sid, dd ? 1 : 0); st.wood += g.s1 - g.s0;
+      if (TIER > 3 && dd && g.o > 1) return;
+      cap(g.a, r0, g.b, min(r0, r1), g.s0, g.s1, sid, TIER > 3 && dd ? (dd > 1 ? 18 : 1) : 0); st.wood += g.s1 - g.s0;
     });
     const Rb = R(0) * (1 + sp.fl);
     for (let k = 3 + floor(rnd() * 4), a0 = rnd() * TAU; k > 0 && !sap; k--) {      // surface roots
@@ -148,8 +156,8 @@ export function build(G, seed, q = 1, den = 1, stand) {
     const sp = G.trees[t.si], keep = rnd; rnd = rng(t.sd);
     if (t.st === 2) {
       const len = t.H * 0.75, r = 0.05 + 0.011 * t.H; let p = [t.x, Hgt(t.x, t.z) + r * 0.6, t.z];
-      for (let k = 1; k <= 5; k++) { const l = len * k / 5, X = t.x + cos(t.a) * l, Z = t.z + sin(t.a) * l, c = [X, Hgt(X, Z) + r * 0.6, Z]; cap(p, r * (1 - 0.12 * (k - 1)), c, r * (1 - 0.12 * k), l - len / 5, l, t.si + 0.5, 1); p = c; blockers.push({ x: X, z: Z, r: r * 0.8 }); damp.push([X, Z]); }
-    } else { tree(sp, t.si, t.x, t.z, t.H, t.H < 5, t.st === 1); placed.push({ x: t.x, z: t.z, cr: t.H < 5 ? 0.7 : sp.cr * min(1, t.H / sp.H[0]) }); if (!t.st && t.H >= 5) st.trees++; }
+      for (let k = 1; k <= 5; k++) { const l = len * k / 5, X = t.x + cos(t.a) * l, Z = t.z + sin(t.a) * l, c = [X, Hgt(X, Z) + r * 0.6, Z]; cap(p, r * (1 - 0.12 * (k - 1)), c, r * (1 - 0.12 * k), l - len / 5, l, t.si + 0.5, t.burnt ? 18 : 1); p = c; blockers.push({ x: X, z: Z, r: r * 0.8 }); damp.push([X, Z]); }
+    } else { tree(sp, t.si, t.x, t.z, t.H, t.H < 5, t.st === 1 ? (t.burnt ? 2 : 1) : 0); placed.push({ x: t.x, z: t.z, cr: t.H < 5 ? 0.7 : sp.cr * min(1, t.H / sp.H[0]) }); if (!t.st && t.H >= 5) st.trees++; }
     rnd = keep; trees.push(t);
   });
   if (TIER > 3 && stand) { for (const t of stand) grow1(t); rnd = rng(seed ^ 0x5eed); }
@@ -191,7 +199,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
 
   // ---- the floor: ferns where it is damp, grass where it is open
   for (let n = round(F.fern[0] * (low ? 0.6 : 1)), tries = 0; n > 0 && tries < 20000; tries++) {
-    const x = rr(-hs + 0.5, hs - 0.5), z = rr(-hs + 0.5, hs - 0.5); if (rnd() > 1.15 - abs(wet(x, z) - F.fern[1]) * 2.4 || (TIER > 2 && strm && strm.dist(x, z) < 0.2)) continue;
+    const x = rr(-hs + 0.5, hs - 0.5), z = rr(-hs + 0.5, hs - 0.5); if (rnd() > 1.15 - abs(wet(x, z) - F.fern[1]) * 2.4 || (TIER > 2 && strm && strm.dist(x, z) < 0.2) || (TIER > 3 && stand && stand.world && (stand.world.char(x, z) > 0.5 || (strm && strm.deep(x, z))))) continue;
     const y = Hgt(x, z), nf = 5 + floor(rnd() * 5), sz = rr(0.5, 1.1), a0 = rnd() * TAU; n--; st.under++;
     for (let k = 0; k < nf; k++) {
       const a = a0 + k / nf * TAU + gs() * 0.25, el = rr(25, 60) * RAD, c = cos(a), s = sin(a), ce = cos(el), se = sin(el);
@@ -200,7 +208,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   }
   for (let n = round(F.grass[0] * (low ? 0.5 : 1)), tries = 0; n > 0 && tries < 20000; tries++) {
     const x = rr(-hs + 0.3, hs - 0.3), z = rr(-hs + 0.3, hs - 0.3); if (rnd() > 1.1 - abs(wet(x, z) - F.grass[1]) * 2) continue;
-    if (blockers.some((o) => hypot(o.x - x, o.z - z) < o.r + 0.2) || (TIER > 2 && strm && strm.dist(x, z) < 0.2)) continue;
+    if (blockers.some((o) => hypot(o.x - x, o.z - z) < o.r + 0.2) || (TIER > 2 && strm && strm.dist(x, z) < 0.2) || (TIER > 3 && stand && stand.world && (stand.world.char(x, z) > 0.5 || (strm && strm.deep(x, z))))) continue;
     const y = Hgt(x, z) - 0.02, a = rnd() * TAU, sz = rr(0.25, 0.55); n--; st.under++;
     for (let k = 0; k < 2; k++) card([x, y, z], sz, nrm([gs() * 0.12, 1, gs() * 0.12]), 4, 0.7, [cos(a + k * 1.6), 0, sin(a + k * 1.6)], 7, rnd());
   }
@@ -217,8 +225,8 @@ export function build(G, seed, q = 1, den = 1, stand) {
       const y = Hgt(x, z) - 0.03, a = rnd() * TAU, sz = rr(0.7, 1.5); st.under++;
       for (let k = 0; k < 2; k++) card([x, y, z], sz, nrm([gs() * 0.1, 1, gs() * 0.1]), 4, 0.8, [cos(a + k * 1.6), 0, sin(a + k * 1.6)], 7, rnd());
     }
-    const wv = [], wi = [], nx = 128, ny = 8;
-    for (let i = 0; i <= nx; i++) { const x = -hs + S * i / nx, y = strm.lvl(x), ww = strm.wid(x) + 0.6; for (let j = 0; j <= ny; j++) { const z = min(hs, max(-hs, strm.zc(x) + (j / ny * 2 - 1) * ww)); wv.push(x, y, z, 0, 1, 0, y - Hgt(x, z), x); } }
+    const wv = [], wi = [], nx = 128, ny = strm.fl > 0 ? 16 : 8;
+    for (let i = 0; i <= nx; i++) { const x = -hs + S * i / nx, y = strm.lvl(x), ww = strm.wid(x) + 0.6 + (x < strm.xd ? strm.fl * 10 : 0); for (let j = 0; j <= ny; j++) { const z = min(hs, max(-hs, strm.zc(x) + (j / ny * 2 - 1) * ww)); wv.push(x, y, z, 0, 1, 0, y - Hgt(x, z), x); } }
     for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const a = i * (ny + 1) + j; wi.push(a, a + 1, a + ny + 1, a + 1, a + ny + 2, a + ny + 1); }
     water = { v: new Float32Array(wv), i: new Uint16Array(wi) };
   }
@@ -229,7 +237,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
     const x = -hs + S * i / n, z = -hs + S * j / n, y = Hgt(x, z), e = 0.3, nn = nrm([Hgt(x - e, z) - Hgt(x + e, z), 2 * e, Hgt(x, z - e) - Hgt(x, z + e)]);
     let ao = 1; for (const o of blockers) { const d = hypot(o.x - x, o.z - z), s = o.r * 2 + 0.3; if (d < s * 3) ao *= 1 - 0.62 * exp(-d * d / (2 * s * s)); }
-    V.push(x, y, z, nn[0], nn[1], nn[2], max(0.3, ao), wet(x, z)); yb = min(yb, y);
+    V.push(x, y, z, nn[0], nn[1], nn[2], TIER > 3 && stand && stand.world ? max(0.3, ao) * (1 - 0.8 * stand.world.char(x, z)) : max(0.3, ao), wet(x, z)); yb = min(yb, y);
   }
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const a = i + j * w; I.push(a, a + w, a + 1, a + 1, a + w, a + w + 1); }
   const nTop = I.length; yb -= 4;
