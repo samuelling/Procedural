@@ -39,6 +39,18 @@ const pass = (n) => {
   return ev;
 };
 const strike = () => { const a = stand.filter((t) => !t.st && t.H > 8), t = a[(Math.random() * a.length) | 0]; if (!t) return; flash = 1; if (audio) audio.boom(); if (f.wx[0] < 0.5) { fire.light(t.x, t.z); fireT = 0; say('Lightning set ' + G.trees[t.si].nm.toLowerCase() + ' alight'); } else say('Lightning struck, but the wood was too wet to burn'); };
+// the tree of life: each species a line from the year it arose to the year it was lost; a branch joins it to its parent
+const tol = () => {
+  const e = $('evo'); if (TIER < 4 || e.hasAttribute('hidden')) return;
+  const H = G.hist || G.trees.map((s) => ({ nm: s.nm, born: 0, col: s.leaf.b })), rows = [], W = 300, L = 112, X = (y) => L + (W - L - 6) * y / max(year, 1);
+  const dfs = (i) => { rows.push(i); H.forEach((h, j) => { if (h.par === i) dfs(j); }); }; H.forEach((h, i) => { if (h.par === undefined) dfs(i); });
+  const Y = (i) => 9 + rows.indexOf(i) * 13, c = (h) => 'rgb(' + h.col.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
+  e.setAttribute('viewBox', '0 0 ' + W + ' ' + (rows.length * 13 + 14)); e.style.height = rows.length * 13 + 14 + 'px';
+  e.innerHTML = rows.map((i) => { const h = H[i], x0 = X(h.born), x1 = X(h.gone || year);
+    return (h.par !== undefined ? '<path d="M' + x0 + ' ' + Y(h.par) + 'V' + Y(i) + '" stroke="' + c(h) + '" stroke-dasharray="2 2"/>' : '') + '<path d="M' + x0 + ' ' + Y(i) + 'H' + x1 + '" stroke="' + c(h) + '" stroke-width="3"/>'
+      + (h.gone && !h.to ? '<text x="' + (x1 + 2) + '" y="' + (Y(i) + 3) + '">†</text>' : '') + '<text x="' + (L - 4) + '" y="' + (Y(i) + 3) + '" text-anchor="end"' + (h.gone ? ' opacity=".5"' : '') + '>' + h.nm + '</text>'; }).join('')
+    + '<text x="' + L + '" y="' + (rows.length * 13 + 11) + '">0</text><text x="' + (W - 6) + '" y="' + (rows.length * 13 + 11) + '" text-anchor="end">year ' + year + '</text>';
+};
 const say = (s) => { if (TIER < 4) return; const li = document.createElement('li'), L = $('log'); li.textContent = 'Year ' + year + (clock === 3 ? '' : ', ' + SEA[season].toLowerCase()) + ' · ' + s; L.prepend(li); while (L.children.length > 4) L.lastChild.remove(); };
 const snd = (k) => { if (TIER > 3 && audio && sound) audio.ev(k); };
 let flash = 0, wx = 'clear', season = 1, LIFE = null, fogK = 1, night = 0, rainA = 0, snowA = 0;
@@ -90,7 +102,8 @@ function setSun() {
 
 // ---- grow a plot from the current genome
 function grow(keepView, aged) {
-  G = mut ? mutate(GENOMES[key], rng(mut)) : GENOMES[key];
+  if (!(TIER > 3 && aged)) G = mut ? mutate(GENOMES[key], rng(mut)) : GENOMES[key];   // a forest that has been living keeps the species it has evolved
+  if (TIER > 3 && !aged) G = { ...G, trees: G.trees.map((s) => ({ ...s })) };
   const t0 = performance.now(); if (TIER > 3 && !aged) world = { dam: 0, char: (x, z) => (fire ? fire.at(x, z) : 0) };
   if (TIER > 3 && aged) stand.world = world;                                 // the regrowth is told where it has burnt and how high the dam stands
   B = build(G, seed, Q, den, TIER > 3 && aged ? stand : undefined); R.load(B, G);
@@ -109,7 +122,8 @@ function grow(keepView, aged) {
     + (TIER > 2 ? ' · ' + Object.entries(LIFE.counts).filter((e) => e[1]).map((e) => e[1] + ' ' + e[0]).join(' · ') : '') + ' · grown in ' + round(performance.now() - t0) + ' ms';
   if (TIER > 3 && G.span) $('l2').textContent = 'A unit here is a millimetre: the same grammar, a thousand times smaller. ' + G.span + ' across.';
   const css = (c) => 'rgb(' + c.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
-  $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + s.nm + '</li>').join('');
+  if (TIER > 3) tol();
+  $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + (TIER > 3 ? (s.gone ? '<s>' + s.nm + '</s>' : s.nm) + (s.par ? ' <small>← ' + s.par.toLowerCase() + ', year ' + s.born + '</small>' : '') : s.nm) + '</li>').join('');
   for (const b of document.querySelectorAll('[data-g]')) b.setAttribute('aria-pressed', b.dataset.g === key);
   try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '') + (den !== 1 ? '-d' + round(den * 100) : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
 }
@@ -226,6 +240,7 @@ if (TIER > 3) {
   $('day').min = -120; $('day').max = 1120;
   $('b-time').addEventListener('click', () => { clock = (clock + 1) % 4; $('b-time').textContent = 'Time: ' + TIMES[clock]; if (clock === 3) { setSea(1); yearF = Math.floor(yearF) + 0.3; } if (!clock) { day = 0.3; $('day').value = 300; setSun(); } });
   $('b-fire').addEventListener('click', strike);
+  $('b-evo').addEventListener('click', () => { const e = $('evo'), on = e.toggleAttribute('hidden'); $('b-evo').setAttribute('aria-pressed', !on); tol(); });
   $('b-wolf').addEventListener('click', () => LIFE.pack(!LIFE.counts.wolves));
   $('b-fol').addEventListener('click', () => {                             // step through the animals that have names, then let go
     const a = LIFE.herd.filter((d) => d.mode !== 9 && d.name); folI = (folI + 1) % (a.length + 1); fol = a[folI] || null;

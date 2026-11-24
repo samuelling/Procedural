@@ -1,6 +1,7 @@
 // Everything above the 20 kB rung: weather, clouds, water, particles in the air, and animals.
 // The shader chunks here are spliced into the renderer's programs; the rest is the life that walks and flies.
 /* global TIER */
+import { mutate } from './genome.js';
 const { sin, cos, min, max, hypot, atan2, abs, PI, floor } = Math, TAU = PI * 2;
 
 // ---- weather, as rules every surface obeys. uWx: wetness, snow cover, cloud cover, rain on the water.
@@ -341,12 +342,12 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
 // its parent's pace of life with a small change: the fast grow quickly, bear shade badly and die young.
 const TL = { oak: [300, 0.03, 0.5, 0.8, 0.5], birch: [80, 0.07, 0.2, 0.7, 0.1], pine: [220, 0.04, 0.3, 0.2, 0.7], spruce: [250, 0.035, 0.7, 0.1, 0.1], giant: [500, 0.025, 0.45, 0.3, 0.85], hemlock: [400, 0.025, 0.9, 0.5, 0.1], maple: [160, 0.045, 0.7, 0.9, 0.2],
   aspen: [70, 0.08, 0.15, 1, 0.1], beech: [300, 0.03, 0.9, 0.4, 0.15], alder: [70, 0.07, 0.3, 0.5, 0.2], willow: [55, 0.08, 0.2, 1, 0.15], larch: [250, 0.04, 0.2, 0.3, 0.7], redwood: [800, 0.03, 0.7, 0.2, 0.9] };
-export const tl = (sp) => TL[sp.id] || [150, 0.04, 0.5, 0.5, 0.3];
+export const tl = (sp) => sp.tl || TL[sp.id] || [150, 0.04, 0.5, 0.5, 0.3];   // a species that evolved here carries its own
 const an = (nm) => (/^[AO]/.test(nm) ? 'An ' : 'A ') + nm.toLowerCase();
 export function succeed(stand, G, B, rnd, say, env = {}) {
   const hs = B.S / 2 - 2, rr = (a, b) => a + (b - a) * rnd(), gs = () => Math.sqrt(-2 * Math.log(1 - rnd())) * cos(TAU * rnd());
   const shade = (x, z, H, me) => { let s = 0; for (const o of stand) if (o !== me && !o.st && o.H > H * 1.2 + 1) { const r = G.trees[o.si].cr * min(1, o.H / 12) * 1.25, d = hypot(o.x - x, o.z - z); if (d < r) s += 1 - d / r; } return min(1, s); };
-  let ev = 0, eaten = 0, drowned = 0;
+  let ev = 0, eaten = 0, drowned = 0; const wet = stand.wet || (() => 0.5);
   for (let i = stand.length - 1; i >= 0; i--) {
     const t = stand[i], sp = G.trees[t.si], T = tl(sp), g = t.g || 1, tol = min(0.97, T[2] / g), life = T[0] / g ** 0.7;
     if (!t.st) {
@@ -369,13 +370,53 @@ export function succeed(stand, G, B, rnd, say, env = {}) {
     const jay = mast && /oak|beech/.test(sp.id);                            // jays carry the heavy seed far and bury it
     if (mast) { env.mast = 1; say('A mast year for the ' + sp.nm.toLowerCase() + (jay ? ': jays are burying the seed all over the plot' : ': the ground is thick with seed')); }
     for (let k = Math.ceil(min(5, par.length * (0.25 + 0.5 * (1 - T[2])))) * (mast ? 4 : 1); k > 0; k--) {
-      const p = par[(rnd() * par.length) | 0], far = rnd() < (jay ? 0.5 : 0.5 * (1 - T[2])), x = far ? rr(-hs, hs) : p.x + gs() * 7, z = far ? rr(-hs, hs) : p.z + gs() * 7, g = max(0.6, min(1.7, (p.g || 1) * Math.exp(gs() * 0.08))), tol = min(0.97, T[2] / g);
+      const p = par[(rnd() * par.length) | 0], ms = par.filter((o) => o !== p && hypot(o.x - p.x, o.z - p.z) < 14), q = ms[(rnd() * ms.length) | 0] || p;   // pollen comes from a neighbour of its own kind
+      const far = rnd() < (jay ? 0.5 : 0.5 * (1 - T[2])), x = far ? rr(-hs, hs) : p.x + gs() * 7, z = far ? rr(-hs, hs) : p.z + gs() * 7;
+      const g = max(0.6, min(1.7, Math.sqrt((p.g || 1) * (q.g || 1)) * Math.exp(gs() * 0.06))), w = ((p.w ?? sp.wet) + (q.w ?? sp.wet)) / 2 + gs() * 0.05, tol = min(0.97, T[2] / g);
       if (Math.abs(x) > hs || Math.abs(z) > hs || (B.strm && B.strm.dist(x, z) < 1) || (env.deep && env.deep(x, z)) || stand.some((o) => !o.st && hypot(o.x - x, o.z - z) < (o.H < 5 ? 1.2 : 2.2))) continue;
       const ash = env.fire ? env.fire.at(x, z) : 0;                        // on burnt ground the light-lovers take hold fast
-      if (rnd() < ((1 - shade(x, z, 0.5)) * (1 - tol) + tol * 0.35) * (1 + 2 * ash * (1 - T[2])) * (stand.some((o) => o.st === 2 && hypot(o.x - x, o.z - z) < 2.5) ? 1 + T[2] : 1)) stand.push({ si, x, z, H: 0.7, hm: max(sp.H[0] * 0.8, min(sp.H[1] * 1.25, p.hm * Math.exp(gs() * 0.04))), age: 1, sd: (rnd() * 1e9) | 0, st: 0, g });
+      if (rnd() < ((1 - shade(x, z, 0.5)) * (1 - tol) + tol * 0.35) * (1 + 2 * ash * (1 - T[2])) * (stand.some((o) => o.st === 2 && hypot(o.x - x, o.z - z) < 2.5) ? 1 + T[2] : 1) * max(0, 1 - abs(wet(x, z) - w) * 2.2)) stand.push({ si, x, z, H: 0.7, hm: max(sp.H[0] * 0.8, min(sp.H[1] * 1.25, (p.hm + q.hm) / 2 * Math.exp(gs() * 0.04))), age: 1, sd: (rnd() * 1e9) | 0, st: 0, g, w });   // a seed takes best where the ground is as wet as it is suited to
     }
     if (env.year % 40 === 0) { const a = stand.filter((t) => t.si === si && !t.st), m = Math.round((a.reduce((s, t) => s + (t.g || 1), 0) / (a.length || 1) - 1) * 100); if (Math.abs(m) > 4) say(sp.nm + ' here now live ' + Math.abs(m) + '% ' + (m > 0 ? 'faster' : 'slower') + ' than their ancestors'); }
   });
+  return ev + speciate(stand, G, rnd, say, env.year);
+}
+
+// ---- evolution. Each tree carries two heritable traits: the wetness it is suited to (w) and its pace of life (g).
+// Seedlings take the mean of a mother and a nearby father plus a small mutation, and only take hold where the ground
+// suits them, so along the plot's wet-to-dry gradient a species is pulled apart. When a coherent group of one species
+// has drifted far enough from where the species began, it is named as a species of its own and from then on breeds
+// only with its own kind. When the whole species has drifted, it is renamed instead. A species with nothing left alive
+// is gone from the plot, and its place in the palette can be taken by a new one. Six species at most.
+const WORDS = { wet: ['Marsh', 'Fen', 'Bog', 'Carr'], dry: ['Upland', 'Ridge', 'Heath', 'Crag'], fast: ['Swift', 'Pioneer', 'Quick', 'Brief'], slow: ['Slow', 'Patient', 'Ancient', 'Shade'] };
+const TINT = { wet: [-0.05, 0.01, 0.09], dry: [0.12, 0.07, -0.05], fast: [0.09, 0.12, -0.03], slow: [-0.07, -0.05, 0.02] };   // illustrative: so a new species can be told from its parent at a glance
+const low = (s) => (/^Douglas/.test(s) ? s : s[0].toLowerCase() + s.slice(1)), pl = (s) => s + (/(s|sh|ch|x)$/.test(s) ? 'es' : 's');
+const lnM = (a, f) => a.reduce((s, t) => s + f(t), 0) / a.length;
+function speciate(stand, G, rnd, say, year) {
+  let ev = 0; const H = G.hist || (G.hist = G.trees.map((s, i) => ((s.h = i), { nm: s.nm, born: 0, col: s.leaf.b })));   // every species that has lived here, for the tree of life
+  for (let si = 0; si < G.trees.length; si++) {
+    const sp = G.trees[si]; if (sp.gone) continue;
+    const a = stand.filter((t) => t.si === si && !t.st);
+    if (!a.length) { if (!stand.some((t) => t.si === si && t.st < 2)) { sp.gone = H[sp.h].gone = year; say('The ' + low(sp.nm) + (sp.par ? ', which arose here in year ' + sp.born + ',' : '') + ' is gone from the plot'); ev++; } continue; }
+    if (year - max(sp.born || 0, sp.split || 0) < 60 || a.length < 10) continue;   // a species that has just formed, or just split, needs time to drift again
+    const key = (t, c = 1) => { const dw = ((t.w ?? sp.wet) - sp.wet) / 0.2, dg = Math.log(t.g || 1) / 0.25; return abs(dw) >= c ? (dw > 0 ? 'wet' : 'dry') : abs(dg) >= c ? (dg > 0 ? 'fast' : 'slow') : ''; };
+    const by = {}; for (const t of a) { const k = key(t); if (k) (by[k] = by[k] || []).push(t); }
+    const best = Object.entries(by).sort((u, v) => v[1].length - u[1].length)[0]; if (!best) continue;
+    const [k, grp] = best; if (grp.length < 6 || grp.filter((t) => t.H >= 5).length < 3) continue;
+    const kin = a.filter((t) => key(t, 0.5) === k);                          // the new species takes everything leaning its way, so the split is clean
+    const whole = a.length - kin.length < 4, W = lnM(grp, (t) => t.w ?? sp.wet), Gm = Math.exp(lnM(grp, (t) => Math.log(t.g || 1))), Hm = lnM(grp, (t) => t.hm);
+    let ni = whole ? si : G.trees.findIndex((s, i) => s.gone && !stand.some((t) => t.si === i)); if (ni < 0) { if (G.trees.length >= 6) continue; ni = G.trees.length; }
+    const T = tl(sp), b = mutate({ trees: [sp], land: { amp: 1 }, floor: { moss: 1 } }, rnd, 0.15).trees[0], r = Hm / ((sp.H[0] + sp.H[1]) / 2), tint = (c) => c.map((v, i) => max(0.01, v + TINT[k][i] * (0.7 + rnd() * 0.6)));
+    const rest = sp.par ? sp.nm.replace(/^\S+ /, '').replace(/ [IVX]+$/, '') : low(sp.nm), taken = (n) => G.trees.some((s) => s.nm === n);
+    let nm = (WORDS[k].find((w) => !taken(w + ' ' + rest)) || WORDS[k][0]) + ' ' + rest; for (let i = 2; taken(nm); i++) nm = nm.replace(/ [IVX]+$/, '') + ' ' + ['', '', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][min(i, 10)];   // every species gets a name of its own
+    const ns = { ...b, gone: 0, nm, wet: W, H: [sp.H[0] * r, sp.H[1] * r], tl: [T[0] / Gm ** 0.7, T[1] * Gm, min(0.97, T[2] / Gm), T[3], T[4]],
+      leaf: { ...b.leaf, a: tint(b.leaf.a), b: tint(b.leaf.b) }, bark: { ...b.bark, a: tint(b.bark.a) }, par: sp.nm, root: sp.root || sp.nm, born: year };
+    for (const t of whole ? a : kin) { t.si = ni; t.g = (t.g || 1) / Gm; }
+    ns.h = H.push({ nm, born: year, par: sp.h, col: ns.leaf.b }) - 1; if (whole) { H[sp.h].gone = year; H[sp.h].to = 1; }
+    G.trees[ni] = ns; sp.split = year; ev++;
+    say(whole ? 'The ' + pl(low(sp.nm)) + ' here have changed so far that they are now a new species: the ' + low(ns.nm)
+      : kin.length + ' ' + pl(low(sp.nm)) + ' that grow ' + { wet: 'in the wet', dry: 'on the dry ground', fast: 'fast and die young', slow: 'slowly and live long' }[k] + ' no longer breed with the rest: a new species, the ' + low(ns.nm));
+  }
   return ev;
 }
 

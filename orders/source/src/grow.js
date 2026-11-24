@@ -199,12 +199,13 @@ export function build(G, seed, q = 1, den = 1, stand) {
         const x = rr(-hs + 2, hs - 2), z = rr(-hs + 2, hs - 2), cr = sap ? 0.7 : sp.cr;
         if (rnd() > 1 - abs(wet(x, z) - sp.wet) * 1.6 || (TIER > 2 && strm && strm.dist(x, z) < 1)) continue;                    // each species keeps to the moisture it likes
         if (placed.some((o) => hypot(o.x - x, o.z - z) < (o.cr + cr) * gap)) continue;
-        if (TIER > 3) { const T = tl(sp), hm = rr(sp.H[0], sp.H[1]), age = sap ? rr(3, 9) : T[0] * rr(0.2, 0.75); grow1({ si, x, z, hm, age, H: sap ? min(4.6, max(1.2, hm * (1 - exp(-age * T[1])))) : max(5.2, hm * (1 - exp(-age * T[1]))), sd: (rnd() * 1e9) | 0, st: 0 }); n--; continue; }
+        if (TIER > 3) { const T = tl(sp), hm = rr(sp.H[0], sp.H[1]), age = sap ? rr(3, 9) : T[0] * rr(0.2, 0.75); const sd = (rnd() * 1e9) | 0, R = rng(sd ^ 0x9e37); grow1({ si, x, z, hm, age, H: sap ? min(4.6, max(1.2, hm * (1 - exp(-age * T[1])))) : max(5.2, hm * (1 - exp(-age * T[1]))), sd, st: 0, w: sp.wet + (R() - 0.5) * 0.16, g: exp((R() - 0.5) * 0.16) }); n--; continue; }   // founders differ a little in two heritable traits
         tree(sp, si, x, z, sap ? rr(1.4, 4) : rr(sp.H[0], sp.H[1]), sap); placed.push({ x, z, cr }); if (!sap) st.trees++; n--;
       }
     };
     plant(round(sp.n * den * (low ? 0.65 : 1)), 0); plant(round((sp.sap || 0) * den * (low ? 0.5 : 1)), 1);
   });
+  if (TIER > 3) trees.wet = wet;                                            // the stand knows how wet its ground is, for selection
   if (TIER > 3 && !stand) rnd = rng(seed ^ 0x5eed);
   if (TIER > 3 && !G.span) for (let n = low ? 6 : 14, tries = 0; n > 0 && tries < 3000; tries++) {   // builders: orb webs strung between neighbouring trunks
     const a = trees[(rnd() * trees.length) | 0], b = trees[(rnd() * trees.length) | 0]; if (!a || a === b || a.st > 1 || b.st > 1 || a.H < 4 || b.H < 4) continue; const d = hypot(a.x - b.x, a.z - b.z); if (d < 1.2 || d > 3.6) continue;

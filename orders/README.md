@@ -75,6 +75,19 @@ nest of twigs with three eggs. In the moss world the haircap moss is in fruit. T
 ten songs, each bird singing only in its kind of wood and most of all at dawn, and a cicada in summer. The songs were
 written from memory and none has been checked against a recording.
 
+Species evolve. Every tree carries two heritable traits, the wetness it is suited to and its pace of life. A seedling
+takes the mean of its mother and a father within 14 m (pollen travels only so far), plus a small mutation, and it only
+takes hold where the ground is about as wet as it is suited to. Along the plot's wet-to-dry gradient that pulls a
+species apart. When at least six of one species (three of them grown) have drifted a fixed distance from where the
+species began, in the same direction, everything leaning that way becomes a new species: it gets a name (Marsh, Upland,
+Swift, Slow and so on, plus the parent's name), its own height range, lifespan, growth and shade tolerance taken from
+its members, a slightly bent branching grammar, a shifted leaf colour, and from then on breeds only with its own kind.
+If the whole species has drifted, it is renamed instead. A species with nothing left alive is gone from the plot. Six
+species can live at once; a lost species' place goes to the next new one. The Lineages button draws the tree of life.
+`node tools/evo_test.mjs [biome] [years]` runs it without a browser. This is a model of ecological speciation along a
+gradient with instant reproductive isolation at the split, not a population-genetics simulation: inheritance is
+blending, there is no hybridisation, and how far is far enough is a threshold chosen here.
+
 The clock button steps through still, days (a year is 8 minutes), seasons (a year a minute) and decades (five years
 every three seconds, trees only).
 
