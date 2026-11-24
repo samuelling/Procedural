@@ -14,6 +14,7 @@ with sync_playwright() as p:
         for k in s.get("keys", []): pg.evaluate("c => { dispatchEvent(new KeyboardEvent('keydown', {code: c})); dispatchEvent(new KeyboardEvent('keyup', {code: c})); }", k); time.sleep(0.4)
         if "click" in s: pg.evaluate("q => document.querySelector(q).click()", s["click"]); time.sleep(0.4)
         if "set" in s: pg.evaluate("o => window.sylva.set(o)", s["set"])
+        if "slide" in s: pg.evaluate("([id, v]) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); }", s["slide"])
         time.sleep(s.get("wait", 1.5))
         pg.screenshot(path=f"{out}{i}.png")
         print(i, pg.evaluate("JSON.stringify(window.sylva ? window.sylva.info() : null)"), flush=True)

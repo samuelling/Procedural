@@ -13,13 +13,13 @@ let R;
 try { R = mkRenderer(canvas, coarse); } catch (e) { R = null; console.error(e); }
 if (!R) { $('err').hidden = false; $('err').textContent = 'This needs WebGL 2, which this browser did not provide. Try a current Chrome, Safari, Firefox or Edge.'; throw new Error('no WebGL 2'); }
 
-let key = 'mixed', seed = 4821, mut = 0, G, B, audio = null, sound = 0, day = 0.3;
+let key = 'mixed', seed = 4821, mut = 0, G, B, audio = null, sound = 0, day = 0.3, den = 1;
 let yaw = 0, pitch = 0.03, rad = 13, tgt = [0, 0, 0], idle = 9, time = 0, scale = 1, ema = 0.016, fr = 0, dirty = 1;
 const V = new Float32Array(16), LV = new Float32Array(16), SM = new Float32Array(16), IV = new Float32Array(9), K = [1, 1], keys = {}, eye = [0, 0, 0];
 const f = { V, K, IV, cam: eye, SM, LV, LK: [1 / 58, 1 / 58], LNF: [1, 190], wd: [0.8, 0.6, 0.1], fog: [0.01, 0.07, 0], t: 0, moss: 0.3, focus: 10, shafts: 1, shadow: 1 };
 
-const m = /^#?([a-z]+)-(\d+)(?:-m(\d+))?$/.exec(location.hash);
-if (m && GENOMES[m[1]]) { key = m[1]; seed = +m[2]; mut = +(m[3] || 0); }
+const m = /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?$/.exec(location.hash);
+if (m && GENOMES[m[1]]) { key = m[1]; seed = +m[2]; mut = +(m[3] || 0); den = clamp(+(m[4] || 100) / 100, 0.25, 2); }
 
 function lookAt(M, e, t) {
   const fx = t[0] - e[0], fy = t[1] - e[1], fz = t[2] - e[2], fl = hypot(fx, fy, fz), d = [fx / fl, fy / fl, fz / fl], sl = hypot(d[2], d[0]), s = [-d[2] / sl, 0, d[0] / sl];
@@ -45,7 +45,7 @@ function setSun() {
 // ---- grow a plot from the current genome
 function grow(keepView) {
   G = mut ? mutate(GENOMES[key], rng(mut)) : GENOMES[key];
-  const t0 = performance.now(); B = build(G, seed, Q); R.load(B, G);
+  const t0 = performance.now(); B = build(G, seed, Q, den); R.load(B, G);
   f.fog = [G.air.fog, 0.07, 0]; f.moss = G.floor.moss; f.wd = [0.8, 0.6, G.air.wind * 0.18];
   if (!keepView) {
     day = asin(pow((G.air.sun[0] - 6) / 62, 1 / 1.2)) / PI; $('day').value = round(day * 1000);
@@ -58,7 +58,7 @@ function grow(keepView) {
   const css = (c) => 'rgb(' + c.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
   $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + s.nm + '</li>').join('');
   for (const b of document.querySelectorAll('[data-g]')) b.setAttribute('aria-pressed', b.dataset.g === key);
-  try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
+  try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '') + (den !== 1 ? '-d' + round(den * 100) : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
 }
 
 // ---- camera: orbits a point that walks on the ground
@@ -128,6 +128,10 @@ const act = {
 };
 for (const b of document.querySelectorAll('[data-g]')) b.addEventListener('click', () => { key = b.dataset.g; mut = 0; grow(); });
 for (const k in act) $('b-' + k).addEventListener('click', act[k]);
+const denLabel = () => { $('den-l').textContent = 'Trees ×' + den.toFixed(2).replace(/0$/, ''); };
+$('den').value = round(den * 100); denLabel();
+$('den').addEventListener('input', (e) => { den = clamp(e.target.value / 100, 0.25, 2); denLabel(); });   // the label follows the thumb; the forest regrows on release
+$('den').addEventListener('change', () => { grow(1); idle = 0; });
 $('day').addEventListener('input', (e) => { day = clamp(e.target.value / 1000, 0.02, 0.98); setSun(); idle = 0; });
 addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === 'INPUT') return;
@@ -146,5 +150,5 @@ $('hint').textContent = coarse ? 'Drag to look around · pinch to move in and ou
   : 'Drag to look around · scroll to move in and out · right-drag or WASD to walk';
 grow();
 // for tests and screenshots
-window.sylva = { set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } idle = 0; }, info: () => ({ key, seed, mut, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
+window.sylva = { set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
 requestAnimationFrame(frame);

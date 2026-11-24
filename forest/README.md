@@ -37,8 +37,9 @@ Four genomes ship, 1.4 to 1.9 kB each as JSON:
 - **Old growth**: a handful of Douglas-firs up to 2 m across, hemlock and bigleaf maple beneath, logs and stumps.
 - **Aspen grove**: 86 pale stems, yellow crowns, grass.
 
-**Mutate** nudges the growth numbers by up to 30% and regrows. **Reseed** keeps the genome and rolls new dice. The
-address keeps both, for example `#boreal-4821-m3`.
+**Mutate** nudges the growth numbers by up to 30% and regrows. **Reseed** keeps the genome and rolls new dice.
+**Trees** scales every species' stem count from a quarter to double and regrows when you let go; above ×1 the
+trees are also allowed to stand closer together. The address keeps all three, for example `#boreal-4821-m3-d150`.
 
 ## Drawing it
 
@@ -64,15 +65,15 @@ address keeps both, for example `#boreal-4821-m3`.
 ```bash
 npm install
 npm run build     # bundles src/ into index.html
-npm test          # grows every biome at full and low detail plus a mutant, checks for non-finite geometry
+npm test          # grows every biome at full and low detail, a mutant, and at ×0.25 and ×2 trees; checks for non-finite geometry
 ```
 
 `test/shot.py` drives the page in headless Chrome with software WebGL and saves frames.
 
 ## What has and has not been checked
 
-Checked: all four genomes grow in 200 to 450 ms with no non-finite geometry, at both detail levels and after
-mutation; the page renders without console errors in headless Chrome (SwiftShader) at desktop and phone sizes; a
+Checked: all four genomes grow in 200 to 450 ms with no non-finite geometry, at both detail levels, after
+mutation, and at a quarter and double the tree count; the page renders without console errors in headless Chrome (SwiftShader) at desktop and phone sizes; a
 pass over the frame for invalid pixels came back clean in four views.
 
 Not checked: frame rate on real hardware, touch controls on a real phone, and the sound. The page lowers its own

@@ -32,7 +32,8 @@ function stone(sd, sub, rnd) {
   return { v, i: new Uint16Array(Fc.flat()) };
 }
 
-export function build(G, seed, q = 1) {
+// den scales every species' stem count; above 1 the trees are also allowed to stand closer
+export function build(G, seed, q = 1, den = 1) {
   const rnd = rng(seed), rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
   // the two fields everything else reads: height of the ground, and how wet it is (hollows are wetter)
@@ -121,16 +122,17 @@ export function build(G, seed, q = 1) {
     }
     blockers.push({ x, z, r: Rb }); if (!sap) damp.push([x + gs() * 0.6, z + gs() * 0.6]);
   };
+  const gap = 0.42 / sqrt(max(den, 1));
   G.trees.forEach((sp, si) => {
     const plant = (n, sap) => {
       for (let tries = 0; n > 0 && tries < 3000; tries++) {
         const x = rr(-hs + 2, hs - 2), z = rr(-hs + 2, hs - 2), cr = sap ? 0.7 : sp.cr;
         if (rnd() > 1 - abs(wet(x, z) - sp.wet) * 1.6) continue;                    // each species keeps to the moisture it likes
-        if (placed.some((o) => hypot(o.x - x, o.z - z) < (o.cr + cr) * 0.42)) continue;
+        if (placed.some((o) => hypot(o.x - x, o.z - z) < (o.cr + cr) * gap)) continue;
         tree(sp, si, x, z, sap ? rr(1.4, 4) : rr(sp.H[0], sp.H[1]), sap); placed.push({ x, z, cr }); if (!sap) st.trees++; n--;
       }
     };
-    plant(round(sp.n * (low ? 0.65 : 1)), 0); plant(round((sp.sap || 0) * (low ? 0.5 : 1)), 1);
+    plant(round(sp.n * den * (low ? 0.65 : 1)), 0); plant(round((sp.sap || 0) * den * (low ? 0.5 : 1)), 1);
   });
 
   // a clearing to stand in: the spot near the middle that is furthest from any trunk

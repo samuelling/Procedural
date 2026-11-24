@@ -5,8 +5,8 @@ import { rng } from '../src/noise.js';
 const seed = +process.argv[2] || 4821;
 let fail = 0;
 for (const key in GENOMES) {
-  for (const [label, G, q] of [['full', GENOMES[key], 1], ['low', GENOMES[key], 0.5], ['mutant', mutate(GENOMES[key], rng(7)), 1]]) {
-    const t0 = Date.now(), B = build(G, seed, q), ms = Date.now() - t0;
+  for (const [label, G, q, den] of [['full', GENOMES[key], 1, 1], ['low', GENOMES[key], 0.5, 1], ['mutant', mutate(GENOMES[key], rng(7)), 1, 1], ['trees x0.25', GENOMES[key], 1, 0.25], ['trees x2', GENOMES[key], 1, 2]]) {
+    const t0 = Date.now(), B = build(G, seed, q, den), ms = Date.now() - t0;
     let bad = 0; for (const a of [B.caps, B.cards, B.land.v, ...B.rocks]) for (const v of a) if (!Number.isFinite(v)) bad++;
     let rmax = 0; for (let i = 0; i < B.caps.length; i += 12) if (B.caps[i + 11] === 0) rmax = Math.max(rmax, B.caps[i + 3]);
     if (bad || !B.st.trees) fail++;
