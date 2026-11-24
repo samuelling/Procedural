@@ -32,7 +32,7 @@ let stand = null, clock = 0, dayPh = 0.33, yearF = 0.3, year = 1, decT = 0, fol 
 const pass = (n) => {
   let ev = 0;
   for (let i = 0; i < n; i++) {
-    year++; ev += succeed(stand, G, B, rng(seed + year * 7), say, { deer: LIFE.counts.deer, year, deep: B.strm && B.strm.deep, fire });
+    year++; const e = { deer: LIFE.counts.deer || 0, year, deep: B.strm && B.strm.deep, fire }; ev += succeed(stand, G, B, rng(seed + year * 7), say, e); if (e.mast) LIFE.fat = 1;
     fire.rest(1, stand); if (!LIFE.counts.beavers && world.dam > 0) { world.dam = max(0, world.dam - 0.06); ev++; }
     if (n > 1 && Math.random() < 0.016 * (1.4 - G.floor.moss)) { const t = stand[(Math.random() * stand.length) | 0]; fire.light(t.x, t.z); for (let k = 0; k < 400 && fire.n; k++) fire.step(1, f.wd, 0, Math.random, stand, G); say('Fire went through: ' + fire.killed + ' trees killed'); fire.killed = 0; ev++; }
   }
@@ -175,7 +175,7 @@ function frame(now) {
       if (season < 2 && night < 0.5 && rainA < 0.1) f.pts.push([5, 0.018, 0.6 * (1 - night * 2), 500]);   // seeds and midges in the light
     }
     R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night, yrs, season, f.wx[1]));
-    if (audio && fr % 12 === 0) { audio.set(ws, 1 - night); audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night, season, TIER > 3 ? smoke : 0); }
+    if (audio && fr % 12 === 0) { audio.set(ws, 1 - night); audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night, season, TIER > 3 ? smoke : 0, key, day); }
   }
   f.focus = rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
   R.draw(f);

@@ -104,9 +104,20 @@ export const extra = () => {
   const larch = sp({ ...spruce(0), id: 'larch', nm: 'Larch', H: [18, 28], cr: 3, clear: [0.25, 0.4], leaf: { t: 1, sz: 1, per: 4, o: 1, a: [0.3, 0.42, 0.1], b: [0.55, 0.62, 0.18], dr: 0.5 }, bark: { t: 1, sc: 0.9, a: [0.4, 0.3, 0.25], b: [0.16, 0.11, 0.09] } });
   // powers of ten: the same grammar a thousand times smaller. Here a unit is a millimetre, the trees are moss shoots,
   // the boulders are grains of sand, and the animals have six legs or eight.
-  const haircap = sp({ ...spruce(0), id: 'haircap', nm: 'Haircap moss', H: [8, 17], cr: 1.5, clear: [0, 0.06], wet: 0.6, leaf: { t: 1, sz: 0.75, per: 5, o: 1, a: [0.1, 0.3, 0.04], b: [0.32, 0.58, 0.1], dr: 0.2 }, bark: { t: 3, sc: 1, a: [0.3, 0.34, 0.12], b: [0.14, 0.2, 0.06] } });
+  const haircap = sp({ ...spruce(0), spo: 0.45, id: 'haircap', nm: 'Haircap moss', H: [8, 17], cr: 1.5, clear: [0, 0.06], wet: 0.6, leaf: { t: 1, sz: 0.75, per: 5, o: 1, a: [0.1, 0.3, 0.04], b: [0.32, 0.58, 0.1], dr: 0.2 }, bark: { t: 3, sc: 1, a: [0.3, 0.34, 0.12], b: [0.14, 0.2, 0.06] } });
   const fork = sp({ ...aspen(0), id: 'fork', nm: 'Fork moss', H: [6, 11], cr: 1.4, clear: [0.05, 0.2], wet: 0.5, leaf: { t: 0, sz: 0.5, per: 6, o: 2, a: [0.12, 0.34, 0.04], b: [0.4, 0.62, 0.1], dr: 0.1 }, bark: { t: 3, sc: 1, a: [0.28, 0.36, 0.1], b: [0.12, 0.2, 0.05] } });
+  const redwood = sp({ ...giant(0), id: 'redwood', nm: 'Coast redwood', H: [38, 56], cr: 5, bark: { t: 0, sc: 1.6, a: [0.42, 0.2, 0.12], b: [0.2, 0.09, 0.05] } });
   return {
+    redwood: { nm: 'Redwood grove', size: 64,
+      land: { amp: 2.5, f: 0.02, tilt: 0.03, rock: [10, 0.8], peb: 80, log: 9, stump: 4, ra: [0.4, 0.4, 0.38], rb: [0.18, 0.18, 0.17], stream: [1.4, 6, 0.2, 4] },
+      air: { sun: [50, 100], fog: 0.017, haze: [0.8, 0.84, 0.82], sky: [0.25, 0.45, 0.75], wind: 0.3 },
+      floor: { moss: 0.6, lit: [0.3, 0.14, 0.06], la: 0.9, fern: [520, 0.6], grass: [80, 0.4], shroom: 40, fa: [0.08, 0.28, 0.06], fb: [0.26, 0.48, 0.1], ga: [0.14, 0.3, 0.07], gb: [0.36, 0.5, 0.14], flower: 200 },
+      trees: [redwood(12), hemlock(14), maple(5)], life: { deer: 3, birds: 18, hare: 2, fox: 1 } },
+    cloud: { nm: 'Cloud forest', size: 64,
+      land: { amp: 4, f: 0.035, tilt: 0.1, rock: [30, 0.8], peb: 160, log: 8, stump: 3, ra: [0.42, 0.44, 0.4], rb: [0.18, 0.2, 0.18], stream: [1, 7, -0.2, 3] },
+      air: { sun: [58, 60], fog: 0.03, haze: [0.86, 0.9, 0.88], sky: [0.4, 0.55, 0.7], wind: 0.25 },
+      floor: { moss: 1, lit: [0.2, 0.13, 0.06], la: 0.4, fern: [700, 0.6], grass: [100, 0.5], shroom: 60, fa: [0.07, 0.32, 0.06], fb: [0.26, 0.56, 0.1], ga: [0.12, 0.34, 0.07], gb: [0.34, 0.56, 0.14], flower: 500 },
+      trees: [hemlock(26, { H: [12, 20] }), maple(18, { H: [8, 14] }), alder(12)], life: { deer: 3, birds: 24, hare: 2, fox: 1 } },
     moss: { nm: 'Moss on a log', span: '6.4 cm', size: 64,
       land: { amp: 3, f: 0.03, tilt: 0.05, rock: [40, 0.6], peb: 300, log: 0, stump: 0, ra: [0.78, 0.74, 0.66], rb: [0.42, 0.4, 0.36] },
       air: { sun: [38, 120], fog: 0.013, haze: [0.78, 0.84, 0.74], sky: [0.3, 0.5, 0.75], wind: 0.15 },

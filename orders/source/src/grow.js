@@ -157,7 +157,10 @@ export function build(G, seed, q = 1, den = 1, stand) {
     if (t.st === 2) {
       const len = t.H * 0.75, r = 0.05 + 0.011 * t.H; let p = [t.x, Hgt(t.x, t.z) + r * 0.6, t.z];
       for (let k = 1; k <= 5; k++) { const l = len * k / 5, X = t.x + cos(t.a) * l, Z = t.z + sin(t.a) * l, c = [X, Hgt(X, Z) + r * 0.6, Z]; cap(p, r * (1 - 0.12 * (k - 1)), c, r * (1 - 0.12 * k), l - len / 5, l, t.si + 0.5, t.burnt ? 18 : 1); p = c; blockers.push({ x: X, z: Z, r: r * 0.8 }); damp.push([X, Z]); }
-    } else { tree(sp, t.si, t.x, t.z, t.H, t.H < 5, t.st === 1 ? (t.burnt ? 2 : 1) : 0); placed.push({ x: t.x, z: t.z, cr: t.H < 5 ? 0.7 : sp.cr * min(1, t.H / sp.H[0]) }); if (!t.st && t.H >= 5) st.trees++; }
+    } else { tree(sp, t.si, t.x, t.z, t.H, t.H < 5, t.st === 1 ? (t.burnt ? 2 : 1) : 0); placed.push({ x: t.x, z: t.z, cr: t.H < 5 ? 0.7 : sp.cr * min(1, t.H / sp.H[0]) }); if (!t.st && t.H >= 5) st.trees++;
+      if (sp.spo && !t.st && t.H >= 5 && rnd() < sp.spo) {                   // moss in fruit: a bristle with a spore capsule on top
+        const y = Hgt(t.x, t.z) + t.H * 0.96, h = rr(3, 6), x2 = t.x + gs() * 0.4, z2 = t.z + gs() * 0.4; cap([t.x, y, t.z], 0.05, [x2, y + h, z2], 0.035, 0, 1, 0.9, 2); cap([x2, y + h, z2], 0.2, [x2 + gs() * 0.2, y + h + 0.9, z2], 0.16, 0, 1, 0.7, 3);
+      } }
     rnd = keep; trees.push(t);
   });
   if (TIER > 3 && stand) { for (const t of stand) grow1(t); rnd = rng(seed ^ 0x5eed); }
@@ -173,7 +176,16 @@ export function build(G, seed, q = 1, den = 1, stand) {
     };
     plant(round(sp.n * den * (low ? 0.65 : 1)), 0); plant(round((sp.sap || 0) * den * (low ? 0.5 : 1)), 1);
   });
-  if (TIER > 3 && !stand) rnd = rng(seed ^ 0x5eed);                          // whatever is strewn after the trees is the same however they stand
+  if (TIER > 3 && !stand) rnd = rng(seed ^ 0x5eed);
+  if (TIER > 3 && !G.span) for (let n = low ? 6 : 14, tries = 0; n > 0 && tries < 3000; tries++) {   // builders: orb webs strung between neighbouring trunks
+    const a = trees[(rnd() * trees.length) | 0], b = trees[(rnd() * trees.length) | 0]; if (!a || a === b || a.st > 1 || b.st > 1 || a.H < 4 || b.H < 4) continue; const d = hypot(a.x - b.x, a.z - b.z); if (d < 1.2 || d > 3.6) continue;
+    const cx = (a.x + b.x) / 2, cz = (a.z + b.z) / 2, cy = Hgt(cx, cz) + rr(0.9, 2.2), ux = (b.x - a.x) / d, uz = (b.z - a.z) / d, R = min(0.34, d * 0.24), N = 14, M = N * 9;
+    const pt = (ang, r) => [cx + ux * cos(ang) * r, cy + sin(ang) * r, cz + uz * cos(ang) * r], th = (p, q) => cap(p, 0.0025, q, 0.0025, 0, 1, 0.5, 2);
+    th([a.x, cy + R, a.z], pt(PI * 0.75, R)); th([a.x, cy - R * 0.6, a.z], pt(PI * 1.2, R)); th([b.x, cy + R, b.z], pt(PI * 0.25, R)); th([b.x, cy - R * 0.6, b.z], pt(-PI * 0.2, R));   // guy lines to the trunks
+    for (let i = 0; i < N; i++) { const q = i / N * TAU; th(pt(q, 0.02), pt(q, R)); th(pt(q, R), pt(q + TAU / N, R)); }                                                                    // spokes and frame
+    for (let i = 0; i < M; i++) th(pt(i / N * TAU, R * (0.12 + 0.85 * i / M)), pt((i + 1) / N * TAU, R * (0.12 + 0.85 * (i + 1) / M)));                                                      // the sticky spiral, laid outward
+    n--;
+  }                          // whatever is strewn after the trees is the same however they stand
 
   // a clearing to stand in: the spot near the middle that is furthest from any trunk
   let open = [0, 0], od = 0;

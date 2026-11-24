@@ -265,7 +265,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
   };
 
   return {
-    out, herd, birds, who, pack, get dirty() { return self.dirty; }, set dirty(v) { self.dirty = v; },
+    out, herd, birds, who, pack, get dirty() { return self.dirty; }, set dirty(v) { self.dirty = v; }, set fat(v) { self.fat = v; },
     get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
     // how far each kind's inherited legs and boldness have moved from where they started
     genes() { return [0, 1, 2, 3].map((k) => { const a = alive(k); if (a.length < 2 || !a.some((d) => d.gen > 1)) return ''; const m = (i) => Math.round((a.reduce((s, d) => s + d.gn[i], 0) / a.length - 1) * 100); return KIND[k][0] + ' legs ' + (m(0) >= 0 ? '+' : '') + m(0) + '%, boldness ' + (m(1) >= 0 ? '+' : '') + m(1) + '%'; }).filter(Boolean).join(' · '); },
@@ -275,8 +275,9 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
       for (let k = 0; k < KIND.length; k++) {
         const a = alive(k), K = KIND[k]; if (TIER < 4 && k) continue; if (k === 3 ? !a.length : k ? !(L[K[0]] > 0) : L.deer === 0) continue;
         if (k !== 3 && (a.length < 2 || !a.some((d) => d.male) || !a.some((d) => !d.male))) { const d = born(k, rnd() < 0.5 ? -hs : hs, k === 4 ? st.zc(hs) : rr(-hs, hs), K[2] * rr(1.2, 3)); d.male = !a.some((o) => o.male); say(Who(d) + ' came in from outside the plot'); }
-        for (const d of a) if (!d.male && d.age >= K[2] && d.hun < 1.1 && a.length < K[9]) d.preg = rr(6, 50);
+        for (const d of a) if (!d.male && d.age >= K[2] && d.hun < 1.1 && a.length < K[9] + (self.fat && PREY[k] < 0 ? 3 : 0)) d.preg = rr(6, 50);   // after a mast year there is room for more
       }
+      self.fat = 0;
       const dn = alive(0).length, wn = alive(3).length;                    // wolves follow the deer: a full plot draws a pack, an empty one loses it
       if (TIER > 3 && !wn && dn >= 8 && rnd() < 0.35) pack(1); else if (wn && dn < 3 && rnd() < 0.6) pack(0);
     },
@@ -339,7 +340,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
 // and rot; deer eat the smallest; seed lands and takes where there is light enough for its kind. Each seedling inherits
 // its parent's pace of life with a small change: the fast grow quickly, bear shade badly and die young.
 const TL = { oak: [300, 0.03, 0.5, 0.8, 0.5], birch: [80, 0.07, 0.2, 0.7, 0.1], pine: [220, 0.04, 0.3, 0.2, 0.7], spruce: [250, 0.035, 0.7, 0.1, 0.1], giant: [500, 0.025, 0.45, 0.3, 0.85], hemlock: [400, 0.025, 0.9, 0.5, 0.1], maple: [160, 0.045, 0.7, 0.9, 0.2],
-  aspen: [70, 0.08, 0.15, 1, 0.1], beech: [300, 0.03, 0.9, 0.4, 0.15], alder: [70, 0.07, 0.3, 0.5, 0.2], willow: [55, 0.08, 0.2, 1, 0.15], larch: [250, 0.04, 0.2, 0.3, 0.7] };
+  aspen: [70, 0.08, 0.15, 1, 0.1], beech: [300, 0.03, 0.9, 0.4, 0.15], alder: [70, 0.07, 0.3, 0.5, 0.2], willow: [55, 0.08, 0.2, 1, 0.15], larch: [250, 0.04, 0.2, 0.3, 0.7], redwood: [800, 0.03, 0.7, 0.2, 0.9] };
 export const tl = (sp) => TL[sp.id] || [150, 0.04, 0.5, 0.5, 0.3];
 const an = (nm) => (/^[AO]/.test(nm) ? 'An ' : 'A ') + nm.toLowerCase();
 export function succeed(stand, G, B, rnd, say, env = {}) {
@@ -359,11 +360,13 @@ export function succeed(stand, G, B, rnd, say, env = {}) {
   if (eaten > 3 && rnd() < 0.3) say('Deer browsed off ' + eaten + ' seedlings'); if (drowned) say('The beavers\' pond drowned ' + drowned + (drowned > 1 ? ' trees' : ' tree'));
   G.trees.forEach((sp, si) => {                                            // seed: near the parent mostly, far for the light-seeded
     const T = tl(sp), par = stand.filter((t) => t.si === si && !t.st && t.age > 12 && t.H > 6); if (!par.length || stand.length > 170) return;
-    for (let k = Math.ceil(min(5, par.length * (0.25 + 0.5 * (1 - T[2])))); k > 0; k--) {
+    const mast = par.length > 3 && (env.year * 7 + si * 13) % (5 + si) === 0;   // every few years a kind seeds all at once, and the animals fatten on it
+    if (mast) { env.mast = 1; say('A mast year for the ' + sp.nm.toLowerCase() + ': the ground is thick with seed'); }
+    for (let k = Math.ceil(min(5, par.length * (0.25 + 0.5 * (1 - T[2])))) * (mast ? 4 : 1); k > 0; k--) {
       const p = par[(rnd() * par.length) | 0], far = rnd() < 0.5 * (1 - T[2]), x = far ? rr(-hs, hs) : p.x + gs() * 7, z = far ? rr(-hs, hs) : p.z + gs() * 7, g = max(0.6, min(1.7, (p.g || 1) * Math.exp(gs() * 0.08))), tol = min(0.97, T[2] / g);
       if (Math.abs(x) > hs || Math.abs(z) > hs || (B.strm && B.strm.dist(x, z) < 1) || (env.deep && env.deep(x, z)) || stand.some((o) => !o.st && hypot(o.x - x, o.z - z) < (o.H < 5 ? 1.2 : 2.2))) continue;
       const ash = env.fire ? env.fire.at(x, z) : 0;                        // on burnt ground the light-lovers take hold fast
-      if (rnd() < ((1 - shade(x, z, 0.5)) * (1 - tol) + tol * 0.35) * (1 + 2 * ash * (1 - T[2]))) stand.push({ si, x, z, H: 0.7, hm: max(sp.H[0] * 0.8, min(sp.H[1] * 1.25, p.hm * Math.exp(gs() * 0.04))), age: 1, sd: (rnd() * 1e9) | 0, st: 0, g });
+      if (rnd() < ((1 - shade(x, z, 0.5)) * (1 - tol) + tol * 0.35) * (1 + 2 * ash * (1 - T[2])) * (stand.some((o) => o.st === 2 && hypot(o.x - x, o.z - z) < 2.5) ? 1 + T[2] : 1)) stand.push({ si, x, z, H: 0.7, hm: max(sp.H[0] * 0.8, min(sp.H[1] * 1.25, p.hm * Math.exp(gs() * 0.04))), age: 1, sd: (rnd() * 1e9) | 0, st: 0, g });
     }
     if (env.year % 40 === 0) { const a = stand.filter((t) => t.si === si && !t.st), m = Math.round((a.reduce((s, t) => s + (t.g || 1), 0) / (a.length || 1) - 1) * 100); if (Math.abs(m) > 4) say(sp.nm + ' here now live ' + Math.abs(m) + '% ' + (m > 0 ? 'faster' : 'slower') + ' than their ancestors'); }
   });

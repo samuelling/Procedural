@@ -29,5 +29,6 @@ for (let y = 1; y <= 300; y++) {
   if (y % 60 === 0) { console.log('year ' + y + ': ' + census()); const t0 = Date.now(); B = build(G, 4821, 1, 1, stand); for (const a of [B.caps, B.cards]) for (const v of a) if (!Number.isFinite(v)) bad++; console.log('          regrown in ' + (Date.now() - t0) + ' ms: ' + B.caps.length / 12 + ' capsules, ' + B.cards.length / 12 + ' cards'); }
 }
 console.log(flog.length + ' things in the forest chronicle, e.g. ' + flog.filter((s) => /ancestors|browsed/.test(s)).slice(0, 5).join(' | '));
+console.log(flog.filter((s) => /mast year/.test(s)).length + ' mast years in 300, e.g. ' + (flog.find((s) => /mast year/.test(s)) || 'none'));
 console.log('after 300 years unwatched:', JSON.stringify(L.counts), L.genes());
 console.log(bad ? bad + ' BAD VALUES' : 'all finite'); process.exit(bad ? 1 : 0);
