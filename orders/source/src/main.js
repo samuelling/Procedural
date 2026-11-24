@@ -1,9 +1,10 @@
 /* global TIER */
-import { GENOMES, mutate } from './genome.js';
+import { GENOMES, mutate, extra } from './genome.js';
 import { build } from './grow.js';
 import { rng } from './noise.js';
 import { mkRenderer } from './gl.js';
 import { mkAudio } from './audio.js';
+import { mkLife, MORE } from './fx.js';
 
 const { sin, cos, tan, asin, min, max, round, exp, hypot, pow, PI } = Math, RAD = PI / 180, $ = (id) => document.getElementById(id);
 const canvas = $('c'), clamp = (x, a, b) => min(b, max(a, x)), mix3 = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -17,7 +18,12 @@ if (!R) { $('err').hidden = false; $('err').textContent = 'This needs WebGL 2, w
 let key = 'mixed', seed = 4821, mut = 0, G, B, audio = null, sound = 0, day = 0.3, den = 1;
 let yaw = 0, pitch = 0.03, rad = 13, tgt = [0, 0, 0], idle = 9, time = 0, scale = 1, ema = 0.016, fr = 0, dirty = 1;
 const V = new Float32Array(16), LV = new Float32Array(16), SM = new Float32Array(16), IV = new Float32Array(9), K = [1, 1], keys = {}, eye = [0, 0, 0];
-const f = { V, K, IV, cam: eye, SM, LV, LK: [1 / 58, 1 / 58], LNF: [1, 190], wd: [0.8, 0.6, 0.1], fog: [0.01, 0.07, 0], t: 0, moss: 0.3, focus: 10, shafts: 1, shadow: 1 };
+const f = { V, K, IV, cam: eye, SM, LV, LK: [1 / 58, 1 / 58], LNF: [1, 190], wd: [0.8, 0.6, 0.1], fog: [0.01, 0.07, 0], t: 0, moss: 0.3, focus: 10, shafts: 1, shadow: 1, wx: [0, 0, 0.3, 0], se: [0, 0, 0, 0], pts: [] };
+// above the 20 kB rung: weather [cloud cover, fog, rain, snow], the season, and what lives here
+const WXS = { clear: [0.3, 1, 0, 0], cloud: [0.76, 1.4, 0, 0], mist: [0.62, 4.5, 0, 0], rain: [1, 2.4, 1, 0], snow: [1, 2.6, 0, 1] }, WXN = Object.keys(WXS), SEA = ['Spring', 'Summer', 'Autumn', 'Winter'];
+let flash = 0, wx = 'clear', season = 1, LIFE = null, fogK = 1, night = 0, rainA = 0, snowA = 0;
+if (TIER > 2) for (const k in MORE) { GENOMES[k].land.stream = MORE[k].stream; GENOMES[k].life = MORE[k].life; if (TIER > 3) GENOMES[k].floor.flower = MORE[k].flower; }
+if (TIER > 3) { Object.assign(GENOMES, extra()); GENOMES.boreal.air.aur = GENOMES.larch.air.aur = 1; }
 
 const m = /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?$/.exec(location.hash);
 if (m && GENOMES[m[1]]) { key = m[1]; seed = +m[2]; mut = +(m[3] || 0); den = clamp(+(m[4] || 100) / 100, 0.25, 2); }
@@ -29,17 +35,35 @@ function lookAt(M, e, t) {
 }
 
 // ---- the sun: where it is at this time of day, and what colour the light and the air are
-function setSun() {
+function sun3() {
+  const A = G.air, t0 = asin(pow((A.sun[0] - 6) / 62, 1 / 1.2)) / PI, dc = clamp(day, 0, 1), oc = TIER > 2 ? sstep(0.5, 1, f.wx[2]) : 0;
+  let el = 6 + 62 * pow(sin(PI * dc), 1.2) - Math.abs(day - dc) * 160, az = (A.sun[1] + (day - t0) * 170) * RAD;   // past either end of the day the sun goes under
+  const k = sstep(5, 38, el), grey = (c) => c.map((v) => v * (0.3 + 0.7 * k));
+  night = TIER > 3 ? sstep(3, -7, el) : 0;
+  if (night > 0.5) { el = 40; az += PI; }                                  // after dark the light is the moon's, from the other side
+  el *= RAD; f.sun = [cos(el) * sin(az), sin(el), cos(el) * cos(az)];
+  f.sunC = night > 0.5 ? [0.22, 0.3, 0.46].map((v) => v * (night * 2 - 1) * (1 - 0.7 * oc)) : mix3([3.6, 1.5, 0.45], [3.3, 3.1, 2.8], k).map((v) => v * (0.5 + 0.5 * k) * (1 - 0.84 * oc) * (1 - night * 2));
+  f.skyC = mix3(mix3([0.1, 0.14, 0.32], A.sky, k), grey([0.4, 0.44, 0.5]), oc * 0.85); f.horC = mix3(mix3([0.95, 0.5, 0.26], A.haze, k).map((v) => v * (0.7 + 0.3 * k)), grey([0.6, 0.63, 0.66]), oc * 0.85);
+  if (night > 0) { f.skyC = mix3(f.skyC, [0.012, 0.02, 0.05], night); f.horC = mix3(f.horC, [0.03, 0.045, 0.08], night); }
+  f.se[2] = night * (A.aur ? 1.5 : 1);
+  if (TIER > 3 && flash > 0.01) { f.skyC = f.skyC.map((v) => v + flash * 2.5); f.horC = f.horC.map((v) => v + flash * 3); }   // lightning lights the whole sky
+  f.shafts = min(1.5, G.air.fog * fogK * 75) * (0.6 + 0.6 * (1 - k)) * (1 - 0.7 * oc) * (1 - night * 0.6);
+}
+function sun2() {
   const A = G.air, t0 = asin(pow((A.sun[0] - 6) / 62, 1 / 1.2)) / PI, el = (6 + 62 * pow(sin(PI * day), 1.2)) * RAD, az = (A.sun[1] + (day - t0) * 170) * RAD, k = sstep(5 * RAD, 38 * RAD, el);
   f.sun = [cos(el) * sin(az), sin(el), cos(el) * cos(az)];
   f.sunC = mix3([3.6, 1.5, 0.45], [3.3, 3.1, 2.8], k).map((v) => v * (0.5 + 0.5 * k));
   f.skyC = mix3([0.1, 0.14, 0.32], A.sky, k); f.horC = mix3([0.95, 0.5, 0.26], A.haze, k).map((v) => v * (0.7 + 0.3 * k));
+  f.shafts = min(1.5, A.fog * 75) * (0.6 + 0.6 * (1 - k));
+}
+function setSun() {
+  const A = G.air; if (TIER > 2) sun3(); else sun2();
   const C = [0, 12, 0], e = [C[0] + f.sun[0] * 95, C[1] + f.sun[1] * 95, C[2] + f.sun[2] * 95]; lookAt(LV, e, C);
   // world to shadow-map coordinates: the sun's view, squeezed into a unit cube
   const E = 58, n = f.LNF[0], d = f.LNF[1] - n;
   for (let c = 0; c < 4; c++) { SM[c * 4] = LV[c * 4] * 0.5 / E; SM[c * 4 + 1] = LV[c * 4 + 1] * 0.5 / E; SM[c * 4 + 2] = -LV[c * 4 + 2] / d; SM[c * 4 + 3] = 0; }
   SM[12] += 0.5; SM[13] += 0.5; SM[14] -= n / d; SM[15] = 1;
-  f.shafts = min(1.5, A.fog * 75) * (0.6 + 0.6 * (1 - k)); dirty = 1;
+  dirty = 1;
   if (audio) audio.set(A.wind, k);
 }
 
@@ -52,10 +76,12 @@ function grow(keepView) {
     day = asin(pow((G.air.sun[0] - 6) / 62, 1 / 1.2)) / PI; $('day').value = round(day * 1000);
     tgt = [B.open[0], 0, B.open[1]]; rad = 9; pitch = 0.03; yaw = (G.air.sun[1] + 180 + 28) * RAD;      // start low among the trunks, looking toward the light
   }
+  if (TIER > 2) { LIFE = mkLife(B, G, rng(seed + 7), coarse); if (!keepView && B.strm) { yaw = (tgt[2] > B.strm.zc(tgt[0]) ? 0 : PI) + 0.3; pitch = 0.17; rad = 11; } }
   setSun();
   $('l1').textContent = G.nm + (mut ? ' · mutant ' + mut : '') + ' · seed ' + seed;
   $('l2').textContent = JSON.stringify(GENOMES[key]).length.toLocaleString() + ' bytes of genome → ' + B.st.trees + ' trees · ' + (B.st.wood / 1000).toFixed(1) + ' km of wood · '
-    + (B.cards.length / 12).toLocaleString() + ' leaf clusters, fronds and tufts · ' + B.st.rocks + ' stones · grown in ' + round(performance.now() - t0) + ' ms';
+    + (B.cards.length / 12).toLocaleString() + ' leaf clusters, fronds and tufts · ' + B.st.rocks + ' stones'
+    + (TIER > 2 ? ' · ' + Object.entries(LIFE.counts).filter((e) => e[1]).map((e) => e[1] + ' ' + e[0]).join(' · ') : '') + ' · grown in ' + round(performance.now() - t0) + ' ms';
   const css = (c) => 'rgb(' + c.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
   $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + s.nm + '</li>').join('');
   for (const b of document.querySelectorAll('[data-g]')) b.setAttribute('aria-pressed', b.dataset.g === key);
@@ -90,6 +116,24 @@ function frame(now) {
   const sp = max(2, rad * 0.6) * dt, kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), kf = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
   if (kx || kf) { walk(kx * sp, kf * sp); idle = 0; }
   view();
+  if (TIER > 2) {                                                          // weather moves toward what was asked for; rain wets, snow settles, both pass slowly
+    const w = WXS[wx], go = (i, to, r) => { const d = to - f.wx[i]; f.wx[i] += clamp(d, -r * dt, r * dt); return Math.abs(d) > 1e-3; };
+    let ch = go(2, w[0], 0.12); ch = go(0, w[2], w[2] ? 0.3 : 0.04) || ch; ch = go(1, max(w[3], season === 3 ? 0.95 : 0), w[3] ? 0.08 : 0.03) || ch;
+    const d = w[1] - fogK; if (Math.abs(d) > 1e-3) { fogK += clamp(d, -dt * 0.7, dt * 0.7); ch = 1; } f.fog[0] = G.air.fog * fogK;
+    rainA += clamp(w[2] - rainA, -dt * 0.5, dt * 0.5); snowA += clamp(w[3] - snowA, -dt * 0.5, dt * 0.5); f.wx[3] = rainA;
+    if (TIER > 3) { if (rainA > 0.8 && Math.random() < dt * 0.09) { flash = 1; if (audio) audio.boom(); } if (flash > 0.01) { flash *= Math.exp(-dt * 7) * (Math.random() < 0.3 ? 1.6 : 1); flash = min(flash, 1); ch = 1; } }
+    if (ch) setSun();
+    f.pts.length = 0;
+    if (rainA > 0.01) f.pts.push([1, 0.011, rainA, coarse ? 2500 : 6000]);
+    if (snowA > 0.01) f.pts.push([2, 0.03, snowA, coarse ? 2500 : 5000]);
+    if (TIER > 3) {
+      if (night > 0.2 && season < 2 && !w[2]) f.pts.push([3, 0.1, night, 400]);            // fireflies on warm nights
+      if (season === 2) f.pts.push([4, 0.055, 1, coarse ? 250 : 600]);                       // leaves coming down
+      if (season < 2 && night < 0.5 && rainA < 0.1) f.pts.push([5, 0.018, 0.6 * (1 - night * 2), 500]);   // seeds and midges in the light
+    }
+    R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night));
+    if (audio && fr % 12 === 0) audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night);
+  }
   f.focus = rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
   R.draw(f);
   requestAnimationFrame(frame);
@@ -129,11 +173,16 @@ const act = {
 };
 for (const b of document.querySelectorAll('[data-g]')) b.addEventListener('click', () => { key = b.dataset.g; mut = 0; grow(); });
 for (const k in act) $('b-' + k).addEventListener('click', act[k]);
+const setWx = (v) => { wx = v; $('b-wx').textContent = 'Weather: ' + v; }, setSea = (v) => {
+  season = v; $('b-sea').textContent = SEA[v]; f.se[0] = v === 2 ? 1 : 0; f.se[1] = v === 3 ? 1 : v === 2 ? 0.35 : 0; f.se[3] = v === 0 ? 1 : 0; dirty = 1;
+};
+if (TIER > 2) $('b-wx').addEventListener('click', () => setWx(WXN[(WXN.indexOf(wx) + 1) % WXN.length]));
+if (TIER > 3) { $('b-sea').addEventListener('click', () => setSea((season + 1) % 4)); $('day').min = -110; $('day').max = 1110; }
 const denLabel = () => { $('den-l').textContent = 'Trees ×' + den.toFixed(2).replace(/0$/, ''); };
 $('den').value = round(den * 100); denLabel();
 $('den').addEventListener('input', (e) => { den = clamp(e.target.value / 100, 0.25, 2); denLabel(); });   // the label follows the thumb; the forest regrows on release
 $('den').addEventListener('change', () => { grow(1); idle = 0; });
-$('day').addEventListener('input', (e) => { day = clamp(e.target.value / 1000, 0.02, 0.98); setSun(); idle = 0; });
+$('day').addEventListener('input', (e) => { day = TIER > 3 ? e.target.value / 1000 : clamp(e.target.value / 1000, 0.02, 0.98); setSun(); idle = 0; });
 addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === 'INPUT') return;
   keys[e.code] = 1;
@@ -151,5 +200,5 @@ $('hint').textContent = coarse ? 'Drag to look around · pinch to move in and ou
   : 'Drag to look around · scroll to move in and out · right-drag or WASD to walk';
 grow();
 // for tests and screenshots
-window.sylva = { set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
+window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
 requestAnimationFrame(frame);

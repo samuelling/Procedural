@@ -94,3 +94,34 @@ export function mutate(G, rnd, amt = 0.3) {
   };
   return { ...G, trees: G.trees.map(walk), land: { ...G.land, amp: G.land.amp * f() }, floor: { ...G.floor, moss: Math.min(1, G.floor.moss * f()) } };
 }
+
+// ---- the 2 MB rung adds species made by bending the ones above, and two more forests for them
+const droop = (s, k) => ({ ...s, ax: s.ax.map((a, i) => (i ? { ...a, tr: a.tr - k } : a)) });
+export const extra = () => {
+  const beech = sp({ ...oak(0), id: 'beech', nm: 'Beech', H: [20, 28], cr: 5.5, clear: [0.4, 0.55], leaf: { t: 0, sz: 0.8, per: 5.5, o: 2, a: [0.1, 0.3, 0.05], b: [0.32, 0.5, 0.1], dr: 0.2 }, bark: { t: 3, sc: 1, a: [0.5, 0.5, 0.48], b: [0.3, 0.3, 0.29] } });
+  const alder = sp({ ...birch(0), id: 'alder', nm: 'Alder', H: [10, 16], cr: 2.8, wet: 0.9, leaf: { t: 2, sz: 0.8, per: 5.5, o: 2, a: [0.07, 0.22, 0.05], b: [0.2, 0.38, 0.08], dr: 0.15 }, bark: { t: 0, sc: 0.7, a: [0.25, 0.22, 0.2], b: [0.09, 0.08, 0.07] } });
+  const willow = sp({ ...droop(birch(0), 0.24), id: 'willow', nm: 'Willow', H: [9, 14], cr: 4, wet: 0.95, clear: [0.2, 0.35], leaf: { t: 2, sz: 0.75, per: 7, o: 2, a: [0.2, 0.36, 0.1], b: [0.45, 0.58, 0.2], dr: 0.8 }, bark: { t: 0, sc: 0.9, a: [0.3, 0.27, 0.22], b: [0.11, 0.1, 0.08] } });
+  const larch = sp({ ...spruce(0), id: 'larch', nm: 'Larch', H: [18, 28], cr: 3, clear: [0.25, 0.4], leaf: { t: 1, sz: 1, per: 4, o: 1, a: [0.3, 0.42, 0.1], b: [0.55, 0.62, 0.18], dr: 0.5 }, bark: { t: 1, sc: 0.9, a: [0.4, 0.3, 0.25], b: [0.16, 0.11, 0.09] } });
+  return {
+    pine: { nm: 'Pine heath', size: 64,
+      land: { amp: 1.6, f: 0.028, tilt: 0.02, rock: [26, 0.8], peb: 260, log: 5, stump: 6, ra: [0.55, 0.5, 0.45], rb: [0.26, 0.23, 0.2], stream: [1, 7, -0.2, 3] },
+      air: { sun: [44, 80], fog: 0.006, haze: [0.8, 0.8, 0.74], sky: [0.16, 0.4, 0.88], wind: 0.6 },
+      floor: { moss: 0.16, lit: [0.5, 0.3, 0.12], la: 1, fern: [50, 0.6], grass: [700, 0.35], shroom: 14, fa: [0.14, 0.3, 0.07], fb: [0.36, 0.46, 0.12], ga: [0.3, 0.34, 0.1], gb: [0.6, 0.56, 0.22], flower: 600 },
+      trees: [pine(44, { H: [16, 24] }), birch(10, { H: [8, 13] }), oak(4, { H: [9, 13] })], life: { deer: 4, birds: 18, hare: 5, fox: 1 } },
+    larch: { nm: 'Larch slope', size: 64,
+      land: { amp: 3.6, f: 0.03, tilt: 0.09, rock: [44, 1], peb: 260, log: 8, stump: 4, ra: [0.5, 0.5, 0.5], rb: [0.22, 0.22, 0.24], stream: [1.1, 5, 0.3, 2.5] },
+      air: { sun: [30, 250], fog: 0.008, haze: [0.76, 0.8, 0.84], sky: [0.14, 0.36, 0.86], wind: 0.55 },
+      floor: { moss: 0.4, lit: [0.5, 0.36, 0.1], la: 0.7, fern: [80, 0.6], grass: [600, 0.45], shroom: 24, fa: [0.12, 0.28, 0.07], fb: [0.3, 0.44, 0.12], ga: [0.24, 0.36, 0.1], gb: [0.5, 0.56, 0.2], flower: 800 },
+      trees: [larch(48), spruce(10, { H: [10, 18] }), birch(8, { H: [8, 12] })], life: { deer: 4, birds: 16, hare: 3, fox: 1 } },
+    beech: { nm: 'Beech wood', size: 64,
+      land: { amp: 2.8, f: 0.025, tilt: 0.03, rock: [14, 0.7], peb: 100, log: 6, stump: 3, ra: [0.45, 0.44, 0.42], rb: [0.2, 0.2, 0.2], stream: [1.2, 6, 0.2, 3.5] },
+      air: { sun: [36, 140], fog: 0.009, haze: [0.74, 0.78, 0.74], sky: [0.22, 0.42, 0.78], wind: 0.4 },
+      floor: { moss: 0.3, lit: [0.42, 0.22, 0.06], la: 1, fern: [60, 0.6], grass: [80, 0.4], shroom: 30, fa: [0.1, 0.28, 0.06], fb: [0.3, 0.46, 0.1], ga: [0.16, 0.3, 0.07], gb: [0.4, 0.5, 0.15], flower: 700 },
+      trees: [beech(30), oak(5), birch(6)], life: { deer: 4, birds: 22, hare: 2, fox: 1 } },
+    carr: { nm: 'Alder carr', size: 64,
+      land: { amp: 1, f: 0.03, tilt: 0.01, rock: [10, 0.5], peb: 200, log: 8, stump: 4, ra: [0.4, 0.4, 0.38], rb: [0.16, 0.17, 0.17], stream: [2.4, 8, 0, 7] },
+      air: { sun: [30, 300], fog: 0.016, haze: [0.7, 0.78, 0.76], sky: [0.24, 0.4, 0.72], wind: 0.3 },
+      floor: { moss: 0.7, lit: [0.2, 0.13, 0.06], la: 0.5, fern: [380, 0.7], grass: [500, 0.6], shroom: 30, fa: [0.08, 0.3, 0.05], fb: [0.28, 0.5, 0.09], ga: [0.14, 0.32, 0.06], gb: [0.36, 0.52, 0.12], flower: 400 },
+      trees: [alder(44), willow(14), birch(10, { H: [9, 14] })], life: { deer: 3, birds: 26, hare: 2, fox: 1 } },
+  };
+};

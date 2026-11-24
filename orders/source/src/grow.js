@@ -33,12 +33,25 @@ function stone(sd, sub, rnd) {
 }
 
 // den scales every species' stem count; above 1 the trees are also allowed to stand closer
+/* global TIER */
 export function build(G, seed, q = 1, den = 1) {
   const rnd = rng(seed), rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
   // the two fields everything else reads: height of the ground, and how wet it is (hollows are wetter)
-  const Hgt = (x, z) => L.amp * 2 * (fbm(x * L.f + ox, 0, z * L.f + oz, 4) - 0.5) + L.tilt * x + L.amp * 0.3 * (fbm(x * L.f * 3.3 + oz, 9, z * L.f * 3.3 + ox, 2) - 0.5);
-  const wet = (x, z) => min(1, max(0, fbm(x * 0.045 + oz + 31, 3, z * 0.045 + ox, 3) * 1.5 - 0.25 - Hgt(x, z) / (L.amp * 6)));
+  let Hgt = (x, z) => L.amp * 2 * (fbm(x * L.f + ox, 0, z * L.f + oz, 4) - 0.5) + L.tilt * x + L.amp * 0.3 * (fbm(x * L.f * 3.3 + oz, 9, z * L.f * 3.3 + ox, 2) - 0.5);
+  let wet = (x, z) => min(1, max(0, fbm(x * 0.045 + oz + 31, 3, z * 0.045 + ox, 3) * 1.5 - 0.25 - Hgt(x, z) / (L.amp * 6)));
+  // above the 20 kB rung a stream crosses the plot. It falls steadily from one side to the other, the land is drawn
+  // down to it over a few metres to make a valley, it widens into a pool, and everything nearby is wetter.
+  let strm = null;
+  if (TIER > 2 && L.stream) {
+    const [sw, sa, sp, sr] = L.stream, H0 = Hgt, W0 = wet, ph = rnd() * TAU, px = sp * hs, sm = (t) => { t = min(1, max(0, t)); return t * t * (3 - 2 * t); };
+    const zc = (x) => sa * (sin(x * 0.085 + ph) + 0.45 * sin(x * 0.21 + ph * 2.3)), wid = (x) => sw + sr * exp(-(((x - px) / (sr * 0.9 + 1)) ** 2));
+    let y0 = 1e9; for (let x = -hs; x <= hs; x += 2) y0 = min(y0, H0(x, zc(x)) + 0.006 * (x + hs));
+    const bed = (x) => y0 - 0.3 - 0.006 * (x + hs), dist = (x, z) => abs(z - zc(x)) - wid(x);           // metres outside the water's edge
+    Hgt = (x, z) => { const d = dist(x, z), w = wid(x), b = bed(x); return d < 0 ? b - 0.55 * sqrt(w / sw) * (1 - ((d + w) / w) ** 2) : b + (H0(x, z) - b) * sm(d / 7); };
+    wet = (x, z) => max(W0(x, z), 1 - max(0, dist(x, z)) / 6);
+    strm = { zc, wid, lvl: (x) => bed(x) - 0.1, dist };
+  }
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
   const cap = (a, ra, b, rb, s0, s1, id, k) => caps.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, s0, s1, id, k);
   const card = (p, size, u, type, ao, n, pal, sd) => cards.push(p[0], p[1], p[2], size, u[0], u[1], u[2], type + min(1, max(0, ao)) * 0.98, n[0], n[1], n[2], pal + min(0.98, sd));
@@ -58,6 +71,9 @@ export function build(G, seed, q = 1, den = 1) {
     for (let j = 0; j < 3; j++) rock(3, x + gs() * s * 1.4, z + gs() * s * 1.4, rr(0.08, 0.26), 0.6, rr(0.4, 1));
   }
   for (let n = round(L.peb * (low ? 0.5 : 1)); n > 0; n--) rock(3, rr(-hs, hs), rr(-hs, hs), rr(0.04, 0.14), rr(0.5, 0.9), rnd());
+  if (TIER > 2 && strm) for (let n = low ? 30 : 56; n > 0; n--) {                       // stones in and along the stream
+    const x = rr(-hs + 1, hs - 1), z = strm.zc(x) + gs() * (strm.wid(x) * 0.7 + 0.4); if (abs(z) < hs - 1) rock((rnd() * 4) | 0, x, z, rr(0.12, 0.5) * (rnd() < 0.15 ? 2.2 : 1), rr(0.5, 0.9), rr(0.3, 1));
+  }
 
   // ---- trees
   const tree = (sp, si, x, z, Ht, sap) => {
@@ -127,7 +143,7 @@ export function build(G, seed, q = 1, den = 1) {
     const plant = (n, sap) => {
       for (let tries = 0; n > 0 && tries < 3000; tries++) {
         const x = rr(-hs + 2, hs - 2), z = rr(-hs + 2, hs - 2), cr = sap ? 0.7 : sp.cr;
-        if (rnd() > 1 - abs(wet(x, z) - sp.wet) * 1.6) continue;                    // each species keeps to the moisture it likes
+        if (rnd() > 1 - abs(wet(x, z) - sp.wet) * 1.6 || (TIER > 2 && strm && strm.dist(x, z) < 1)) continue;                    // each species keeps to the moisture it likes
         if (placed.some((o) => hypot(o.x - x, o.z - z) < (o.cr + cr) * gap)) continue;
         tree(sp, si, x, z, sap ? rr(1.4, 4) : rr(sp.H[0], sp.H[1]), sap); placed.push({ x, z, cr }); if (!sap) st.trees++; n--;
       }
@@ -137,7 +153,7 @@ export function build(G, seed, q = 1, den = 1) {
 
   // a clearing to stand in: the spot near the middle that is furthest from any trunk
   let open = [0, 0], od = 0;
-  for (let k = 0; k < 200; k++) { const x = rr(-hs * 0.45, hs * 0.45), z = rr(-hs * 0.45, hs * 0.45); let d = 1e9; for (const o of placed) d = min(d, hypot(o.x - x, o.z - z) - o.cr * 0.3); if (d > od) od = d, open = [x, z]; }
+  for (let k = 0; k < 200; k++) { const x = rr(-hs * 0.45, hs * 0.45), z = TIER > 2 && strm ? strm.zc(x) + (rnd() < 0.5 ? -1 : 1) * (strm.wid(x) + rr(2.5, 5)) : rr(-hs * 0.45, hs * 0.45); let d = 1e9; for (const o of placed) d = min(d, hypot(o.x - x, o.z - z) - o.cr * 0.3); if (d > od) od = d, open = [x, z]; }
 
   // ---- dead wood, mushrooms
   for (let n = L.log; n > 0; n--) {
@@ -159,7 +175,7 @@ export function build(G, seed, q = 1, den = 1) {
 
   // ---- the floor: ferns where it is damp, grass where it is open
   for (let n = round(F.fern[0] * (low ? 0.6 : 1)), tries = 0; n > 0 && tries < 20000; tries++) {
-    const x = rr(-hs + 0.5, hs - 0.5), z = rr(-hs + 0.5, hs - 0.5); if (rnd() > 1.15 - abs(wet(x, z) - F.fern[1]) * 2.4) continue;
+    const x = rr(-hs + 0.5, hs - 0.5), z = rr(-hs + 0.5, hs - 0.5); if (rnd() > 1.15 - abs(wet(x, z) - F.fern[1]) * 2.4 || (TIER > 2 && strm && strm.dist(x, z) < 0.2)) continue;
     const y = Hgt(x, z), nf = 5 + floor(rnd() * 5), sz = rr(0.5, 1.1), a0 = rnd() * TAU; n--; st.under++;
     for (let k = 0; k < nf; k++) {
       const a = a0 + k / nf * TAU + gs() * 0.25, el = rr(25, 60) * RAD, c = cos(a), s = sin(a), ce = cos(el), se = sin(el);
@@ -168,9 +184,27 @@ export function build(G, seed, q = 1, den = 1) {
   }
   for (let n = round(F.grass[0] * (low ? 0.5 : 1)), tries = 0; n > 0 && tries < 20000; tries++) {
     const x = rr(-hs + 0.3, hs - 0.3), z = rr(-hs + 0.3, hs - 0.3); if (rnd() > 1.1 - abs(wet(x, z) - F.grass[1]) * 2) continue;
-    if (blockers.some((o) => hypot(o.x - x, o.z - z) < o.r + 0.2)) continue;
+    if (blockers.some((o) => hypot(o.x - x, o.z - z) < o.r + 0.2) || (TIER > 2 && strm && strm.dist(x, z) < 0.2)) continue;
     const y = Hgt(x, z) - 0.02, a = rnd() * TAU, sz = rr(0.25, 0.55); n--; st.under++;
     for (let k = 0; k < 2; k++) card([x, y, z], sz, nrm([gs() * 0.12, 1, gs() * 0.12]), 4, 0.7, [cos(a + k * 1.6), 0, sin(a + k * 1.6)], 7, rnd());
+  }
+
+  if (TIER > 3 && F.flower) for (let n = round(F.flower * (low ? 0.5 : 1)), tries = 0; n > 0 && tries < 9000; tries++) {   // flowers, in drifts
+    const x = rr(-hs + 0.5, hs - 0.5), z = rr(-hs + 0.5, hs - 0.5); if (fbm(x * 0.11 + ox, 7, z * 0.11 + oz, 2) < 0.52 || (strm && strm.dist(x, z) < 0.3)) continue;
+    for (let k = 1 + ((rnd() * 3) | 0); k > 0; k--) { const a = rnd() * TAU, X = x + gs() * 0.2, Z = z + gs() * 0.2; card([X, Hgt(X, Z) + rr(0.12, 0.34), Z], rr(0.14, 0.26), [cos(a), 0.15, sin(a)], 6, 0.95, nrm([gs() * 0.25, 1, gs() * 0.25]), 7, rnd()); } n--; st.under++;
+  }
+  // ---- the water's edge: rushes, and the surface itself as a strip that follows the channel
+  let water = null;
+  if (TIER > 2 && strm) {
+    for (let n = low ? 110 : 220; n > 0; n--) {
+      const x = rr(-hs + 0.5, hs - 0.5), z = strm.zc(x) + (rnd() < 0.5 ? -1 : 1) * (strm.wid(x) + rr(-0.3, 0.55)); if (abs(z) > hs - 0.5) continue;
+      const y = Hgt(x, z) - 0.03, a = rnd() * TAU, sz = rr(0.7, 1.5); st.under++;
+      for (let k = 0; k < 2; k++) card([x, y, z], sz, nrm([gs() * 0.1, 1, gs() * 0.1]), 4, 0.8, [cos(a + k * 1.6), 0, sin(a + k * 1.6)], 7, rnd());
+    }
+    const wv = [], wi = [], nx = 128, ny = 8;
+    for (let i = 0; i <= nx; i++) { const x = -hs + S * i / nx, y = strm.lvl(x), ww = strm.wid(x) + 0.6; for (let j = 0; j <= ny; j++) { const z = min(hs, max(-hs, strm.zc(x) + (j / ny * 2 - 1) * ww)); wv.push(x, y, z, 0, 1, 0, y - Hgt(x, z), x); } }
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const a = i * (ny + 1) + j; wi.push(a, a + 1, a + ny + 1, a + 1, a + ny + 2, a + ny + 1); }
+    water = { v: new Float32Array(wv), i: new Uint16Array(wi) };
   }
 
   // ---- the ground itself, shaded where things stand on it, and the plot's cut sides
@@ -195,5 +229,5 @@ export function build(G, seed, q = 1, den = 1) {
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
   const sr = rng(seed ^ 0x77);
   return { caps: new Float32Array(caps), cards: new Float32Array(cards), rocks: rocks.map((r) => new Float32Array(r)), stones: [stone(1, 3, sr), stone(9, 3, sr), stone(17, 3, sr), stone(23, 1, sr)],
-    land: { v: new Float32Array(V), i: new Uint16Array(I), nTop }, Hgt, S, pal, st, open };
+    land: { v: new Float32Array(V), i: new Uint16Array(I), nTop }, Hgt, S, pal, st, open, water, strm, block: blockers };
 }

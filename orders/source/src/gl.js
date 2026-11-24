@@ -3,6 +3,11 @@
 //   foliage   cards: one quad each, cut to a cluster of leaves, a needle spray, a frond or a tuft by a formula
 //   ground    meshes: the terrain, the plot's cut sides, and stones
 // Then light shafts are marched through the shadow map, and a last pass adds glow, depth of field and tone.
+/* global TIER */
+import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW } from './fx.js';
+// below the 200 kB rung there is no weather: clouds cast no shadow and nothing changes a surface's colour
+const FUR = `if (kd > 3) alb = (kd == 4 ? vec3(.3, .19, .1) : kd == 5 ? vec3(.46, .38, .27) : kd == 6 ? vec3(.06, .055, .06) : kd == 7 ? vec3(.5, .2, .05) : kd == 10 ? .5 + .5 * cos(sd * 30. + vec3(0., 2., 4.)) : vec3(.72, .7, .62)) * (.75 + .5 * vn3(pw * 40.)); else`;   // fur, feather, antler, wing
+const WX = TIER > 2 ? WX3 : `float cshd(vec3 p) { return 1.; } vec3 wxa(vec3 a, vec3 p, vec3 n) { return a; }`;
 const PRE = `#version 300 es
 precision highp float; precision highp sampler2DShadow;
 uniform mat4 uV, uSM; uniform mat3 uIV; uniform vec2 uK, uR, uNF; uniform float uOr, uT, uMoss;
@@ -17,6 +22,7 @@ float vn3(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
              mix(mix(h3(i + vec3(0., 0., 1.)), h3(i + vec3(1., 0., 1.)), f.x), mix(h3(i + vec3(0., 1., 1.)), h3(i + vec3(1., 1., 1.)), f.x), f.y), f.z); }
 float fb3(vec3 p) { return .55 * vn3(p) + .3 * vn3(p * 2.1 + 3.) + .15 * vn3(p * 4.3 + 7.); }
 vec3 sky(vec3 d) { float s = max(dot(d, uSun), 0.); return mix(uHorC * mix(.45, 1., smoothstep(-.7, 0., d.y)), uSkyC, pow(max(d.y, 0.), .55)) + uSunC * (pow(s, 350.) * 5. + pow(s, 6.) * .1); }
+` + WX + `
 // wind: everything leans by its height, in slow waves that cross the plot
 vec3 sway(vec3 p) { float h = max(p.y + 2., 0.) / 24., ph = p.x * .06 + p.z * .05; return vec3(uWd.x, 0., uWd.y) * uWd.z * h * sqrt(h) * (sin(uT * .8 + ph) + .5 * sin(uT * 1.9 + ph * 1.7) + .4); }
 vec4 proj(vec3 v) { float zd = -v.z, n = uNF.x, f = uNF.y; return uOr > .5 ? vec4(uK * v.xy, 2. * (zd - n) / (f - n) - 1., 1.) : vec4(uK * v.xy, ((f + n) * zd - 2. * f * n) / (f - n), zd); }
@@ -29,7 +35,7 @@ float shd(vec3 p, vec3 n) {
   return s * .25;
 }
 vec3 amb(vec3 n, float ao) { return mix(vec3(.19, .16, .11) * (uHorC + .2), uSkyC * 1.1 + uHorC * .45, n.y * .5 + .5) * ao; }
-vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { return alb * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) + amb(n, ao)); }
+vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao)); }
 vec3 fogc(vec3 c, vec3 p) { vec3 d = p - uCam; float l = length(d), f = 1. - exp(-uFog.x * .4 * l * exp(-max(.5 * (p.y + uCam.y) - uFog.z, 0.) * uFog.y)); return mix(c, sky(normalize(vec3(d.x, .06 * l, d.z))) * .8, f); }
 // moss is a rule: it takes where a surface faces up, away from the sun, low down, and where the noise says it is damp
 float mossf(vec3 p, vec3 n, float k) { return smoothstep(.45, .72, n.y * .5 + fb3(p * 1.7) * .7 + k + uMoss - .78 - dot(n.xz, uSun.xz) * .15); }
@@ -77,7 +83,7 @@ void main() {
     if (kd == 1) alb = mix(alb, vec3(dot(alb, vec3(.33))) * vec3(1.05, 1., .9), .55) * .85;                                                               // dead wood greys
     mk = mossf(pw, nw, kd == 1 ? .3 : .36 * exp(-s / 1.1)); alb = mix(alb, mossc(pw), mk);
     ao = kd == 1 ? .8 : .5 + .5 * smoothstep(0., 2.2, s);
-  } else if (kd == 2) alb = vec3(.8, .76, .62);
+  } else ` + (TIER > 2 ? FUR : '') + ` if (kd == 2) alb = vec3(.8, .76, .62);
   else { vec3 cc = sd < .4 ? vec3(.55, .05, .03) : sd < .75 ? vec3(.4, .24, .11) : vec3(.7, .55, .3); alb = mix(cc, vec3(.9, .88, .8), smoothstep(.7, .8, vn3(pw * 90.)) * step(sd, .4)); }
   if (r > 1.5) n = normalize(vec3(n.xy - vec2(dFdx(tex), dFdy(tex)) * min(r, 40.) * .6 * (1. - mk), n.z));
   nw = uIV * n;
@@ -135,6 +141,7 @@ layout(location=0) in vec4 a0; layout(location=1) in vec4 a1; layout(location=2)
 out vec2 uv; out vec3 pw; out float vz; flat out vec3 nn; flat out vec4 ci;
 void main() {
   float ty = floor(a1.w), sd = fract(a2.w); vec3 U = a1.xyz, N = a2.xyz, W = normalize(cross(N, U));
+` + (TIER > 3 ? SEAV : '') + `
   float asp = ty < .5 ? .62 : ty < 1.5 ? 1. : ty < 2.5 ? .42 : ty < 3.5 ? 1. : 2.;
   vec2 c = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1) - .5);
   float ph = dot(a0.xz, vec2(.31, .23)) + sd * 6.3, fl = uWd.z * (sin(uT * 2.3 + ph) + .6 * sin(uT * 4.1 + ph * 1.7)) * .25 * c.x;   // the cluster flutters
@@ -149,6 +156,7 @@ in vec2 uv; in vec3 pw; in float vz; flat in vec3 nn; flat in vec4 ci;
 float lod(float per, float fw) { return per * exp2(ceil(log2(max(fw * 6. / per, 1.)))); }
 float mask(vec2 u, int ty, float sd, out float vein) {
   vein = 0.; float fw = fwidth(u.x) + fwidth(u.y);
+` + (TIER > 3 ? FLW : '') + `
   if (ty == 1) {                                             // needle spray: needles sweeping forward off both sides of a twig
     // side twigs off a main twig, each lined with needles; from far away only the twigs' outline is drawn
     float y = abs(u.y), xs = u.x - y * .8, per = lod(.1, fw), len = .47 * smoothstep(1.02, .78, u.x) * (.8 + .2 * sin(u.x * 31. + sd * 9.)), ff = abs(fract(xs / per) - .5) * 2.;
@@ -180,15 +188,16 @@ void main() {
   float vein; if (mask(uv, int(ci.x + .5), ci.w, vein) < .5) discard;
   int sp = int(ci.z + .5); vec3 n = nn; if (dot(n, uCam - pw) < 0.) n = -n;
   vec3 alb = mix(uLA[sp], uLB[sp], clamp(ci.w * .7 + h1(floor(uv.x * 5.) + ci.w * 57.) * .5 - .1, 0., 1.)) * (.85 + .3 * vein);
+` + (TIER > 3 ? SEAF : '') + `
   float nl = dot(n, uSun), sh = shd(pw, n * sign(nl + 1e-4));
   // lit from the front, or glowing with the sun behind it
-  vec3 c = alb * (uSunC * (max(nl, 0.) * .85 + max(-nl, 0.) * .7 * vec3(1.15, 1.2, .55)) * sh * (.5 + .5 * ci.y) + amb(n, .35 + .65 * ci.y));
+  vec3 c = wxa(alb, pw, vec3(0., abs(n.y), 0.)) * (uSunC * (max(nl, 0.) * .85 + max(-nl, 0.) * .7 * vec3(1.15, 1.2, .55)) * sh * cshd(pw) * (.5 + .5 * ci.y) + amb(n, .35 + .65 * ci.y));
   o = vec4(fogc(c, pw), vz / 300.);
 }`;
 
 const QV = `#version 300 es
 out vec2 v; void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); v = p; gl_Position = vec4(p * 2. - 1., 0., 1.); }`;
-const SKYF = PRE + `in vec2 v; out vec4 o; void main() { o = vec4(sky(normalize(uIV * vec3((v * 2. - 1.) / uK, -1.))), 1.); }`;
+const SKYF = PRE + `in vec2 v; out vec4 o; void main() { o = vec4(` + (TIER > 2 ? 'skyc' : 'sky') + `(normalize(uIV * vec3((v * 2. - 1.) / uK, -1.))), 1.); }`;
 // light shafts: walk each view ray and count how much of the misty air along it is in sunlight
 const RAYF = PRE + `in vec2 v; uniform sampler2D uA; out vec4 o;
 void main() {
@@ -222,7 +231,7 @@ void main() {
   o = vec4(c, 1.);
 }`;
 
-const COMMON = ['uV', 'uSM', 'uIV', 'uK', 'uR', 'uNF', 'uOr', 'uT', 'uMoss', 'uCam', 'uSun', 'uSunC', 'uSkyC', 'uHorC', 'uFog', 'uWd', 'uSh'];
+const COMMON = ['uV', 'uSM', 'uIV', 'uK', 'uR', 'uNF', 'uOr', 'uT', 'uMoss', 'uCam', 'uSun', 'uSunC', 'uSkyC', 'uHorC', 'uFog', 'uWd', 'uSh', 'uWx', 'uSe'];
 export function mkRenderer(canvas, low) {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
   if (!gl) return null;
@@ -254,15 +263,19 @@ export function mkRenderer(canvas, low) {
   };
   const inst = (first) => { for (let i = 0; i < 3; i++) { gl.enableVertexAttribArray(first + i); gl.vertexAttribPointer(first + i, 4, gl.FLOAT, false, 48, i * 16); gl.vertexAttribDivisor(first + i, 1); } };
   const vQ = gl.createVertexArray(); let W = null;
+  // above the 20 kB rung: water, things in the air, and a buffer of limbs that is rewritten every frame
+  const PW = TIER > 2 && prog(PRE + WATV, PRE + WATF), PPT = TIER > 2 && prog(PRE + PTV, PRE + PTF, ['uPt']), lv = TIER > 2 && gl.createVertexArray(), lb = TIER > 2 && gl.createBuffer(); let ln = 0;
+  if (TIER > 2) { gl.bindVertexArray(lv); gl.bindBuffer(gl.ARRAY_BUFFER, lb); gl.bufferData(gl.ARRAY_BUFFER, 420 * 48, gl.DYNAMIC_DRAW); inst(0); gl.bindVertexArray(null); }
   const free = () => { if (!W) return; for (const b of W.bufs) gl.deleteBuffer(b); for (const v of W.vaos) gl.deleteVertexArray(v); };
   const com = (P, f, view, K, R, or, nf) => {
     gl.useProgram(P.p); gl.uniformMatrix4fv(P.uV, false, view); gl.uniformMatrix4fv(P.uSM, false, f.SM); gl.uniformMatrix3fv(P.uIV, false, f.IV);
     gl.uniform2f(P.uK, K[0], K[1]); gl.uniform2f(P.uR, R[0], R[1]); gl.uniform2f(P.uNF, nf[0], nf[1]); gl.uniform1f(P.uOr, or); gl.uniform1f(P.uT, f.t); gl.uniform1f(P.uMoss, f.moss);
     gl.uniform3fv(P.uCam, f.cam); gl.uniform3fv(P.uSun, f.sun); gl.uniform3fv(P.uSunC, f.sunC); gl.uniform3fv(P.uSkyC, f.skyC); gl.uniform3fv(P.uHorC, f.horC); gl.uniform3fv(P.uFog, f.fog); gl.uniform3fv(P.uWd, f.wd);
-    gl.uniform1i(P.uSh, 1);
+    gl.uniform1i(P.uSh, 1); gl.uniform4fv(P.uWx, f.wx); gl.uniform4fv(P.uSe, f.se);
   };
   return {
     hdr: !!hdr,
+    life: TIER > 2 && ((data, n) => { ln = n; if (n) { gl.bindBuffer(gl.ARRAY_BUFFER, lb); gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * 12); } }),
     // take a grown plot: upload its buffers
     load(B, G) {
       free(); const bufs = [], vaos = [];
@@ -275,7 +288,7 @@ export function mkRenderer(canvas, low) {
         if (instances) { buf(instances); inst(3); }
         buf(m.i, gl.ELEMENT_ARRAY_BUFFER); return { v, n: m.i.length, k: instances ? instances.length / 12 : 0 };
       };
-      W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), pal: B.pal, G };
+      W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
       gl.bindVertexArray(null);
     },
     // f: { V, K, IV, cam, sun, sunC, skyC, horC, fog, wd, t, moss, SM, LV, LK, LNF, focus, shadow }
@@ -290,8 +303,10 @@ export function mkRenderer(canvas, low) {
         gl.uniform1f(PMx.uMat, 0); for (const s of W.stones) if (s.k) { gl.bindVertexArray(s.v); gl.drawElementsInstanced(gl.TRIANGLES, s.n, gl.UNSIGNED_SHORT, 0, s.k); }
         com(PCx, f, view, K, R, or, nf); if (!shadow) { gl.uniform3fv(PCx.uBA, pal.ba); gl.uniform3fv(PCx.uBB, pal.bb); gl.uniform4fv(PCx.uBP, pal.bp); }
         gl.bindVertexArray(W.caps.v); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, W.caps.n);
+        if (TIER > 2 && ln) { gl.bindVertexArray(lv); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, ln); }
         com(PKx, f, view, K, R, or, nf); if (!shadow) { gl.uniform3fv(PKx.uLA, pal.la); gl.uniform3fv(PKx.uLB, pal.lb); }
         gl.bindVertexArray(W.cards.v); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, W.cards.n);
+        if (TIER > 2 && !shadow && W.water) { com(PW, f, view, K, R, or, nf); gl.bindVertexArray(W.water.v); gl.drawElements(gl.TRIANGLES, W.water.n, gl.UNSIGNED_SHORT, 0); }
       };
       gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.depthMask(true);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, sm); gl.activeTexture(gl.TEXTURE0);
@@ -305,6 +320,11 @@ export function mkRenderer(canvas, low) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, T[0].f); gl.viewport(0, 0, w, h); gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST); com(PSK, f, f.V, f.K, R, 0, nf); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST);
       geometry(PM, PC, PK, f.V, f.K, R, 0, nf, 0);
+      if (TIER > 2 && f.pts.length) {                                    // the air: drawn over the scene, hidden by what is nearer, leaving the stored depth alone
+        gl.enable(gl.BLEND); gl.depthMask(false); com(PPT, f, f.V, f.K, R, 0, nf); gl.bindVertexArray(vQ);
+        for (const p of f.pts) { gl.blendFuncSeparate(gl.SRC_ALPHA, p[0] === 3 ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE); gl.uniform4fv(PPT.uPt, p); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, p[3]); }
+        gl.disable(gl.BLEND); gl.depthMask(true);
+      }
       gl.disable(gl.DEPTH_TEST); gl.bindVertexArray(vQ);
       gl.useProgram(PD.p); gl.uniform1i(PD.uA, 0);
       for (let i = 1; i < 4; i++) { gl.bindFramebuffer(gl.FRAMEBUFFER, T[i].f); gl.viewport(0, 0, T[i].w, T[i].h); gl.bindTexture(gl.TEXTURE_2D, T[i - 1].t); gl.uniform2f(PD.uP, 1 / T[i - 1].w, 1 / T[i - 1].h); gl.drawArrays(gl.TRIANGLES, 0, 3); }

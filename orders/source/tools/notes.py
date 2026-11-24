@@ -1,0 +1,5 @@
+WHAT = {
+ '200kb': 'Sylva with a living scene. A stream falls across the plot and widens into a pool: the land is drawn down into a valley, rushes and stones line it, and the water has a computed gravel bed, reflections and rain rings. Clouds drift and cast moving shadows. Clear, cloud, mist, rain and snow: surfaces darken when wet, snow settles on whatever faces up, a rainbow follows rain. Deer walk, graze, drink, watch you and run; a flock of birds circles. Rain and brook are synthesised.',
+ '2mb': 'Everything in the 200 kB rung, plus night (moonlight, stars, fireflies, aurora in the north), four seasons (leaves turn and fall, winter stands bare under snow, flowers in spring), hares, a fox and butterflies, lightning with thunder, crickets and owls, and four more forests: beech wood, alder carr, pine heath and larch slope, with four new species.',
+}
+FOOT = 'The two top rungs are far from full, and the bars say so. The 2 MB build would also fit inside the 200 kB allowance; what went on which rung follows the order the things were asked for. Filling them takes more written rules, not padding.'
