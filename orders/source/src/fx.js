@@ -39,6 +39,19 @@ export const WATV = `
 layout(location=0) in vec3 aP; layout(location=1) in vec3 aN; layout(location=2) in vec2 aX;
 out vec3 pw; out vec2 xx; out float vz;
 void main() { pw = aP; xx = aX; vec4 v = uV * vec4(pw, 1.); vz = -v.z; gl_Position = proj(v.xyz); }`;
+// water close: fine capillary ripples, pebbles on the bed, specks of pollen and seed drifting downstream
+export const WATD = `
+  FP = vz / (uK.y * uR.y * .5) / max(dot(vec3(0., 1., 0.), normalize(uCam - pw)), .15);
+  if (FP < .006) { float k = vis(.01); vec2 cp = pw.xz * 60. - vec2(uT * 3., 0.); n = normalize(n + vec3(vn(cp) - .5, 0., vn(cp + 9.) - .5) * .12 * k); }
+`;
+export const WATD2 = `
+  if (FP < .006) {
+    float k = vis(.012); vec3 pb = vor(bp * 22.); bed *= mix(1., (.6 + .6 * pb.z) * (.6 + .4 * smoothstep(0., .1, pb.y)) * (.85 + .25 * smoothstep(.6, 0., pb.x)), k);   // rounded pebbles, a little dark where they touch
+  }
+`;
+export const WATD3 = `
+  if (FP < .006) { vec3 sk = vor((pw.xz - vec2(uT * .25, 0.)) * 40.); float m = step(sk.z, .04) * smoothstep(.16, .08, sk.x) * vis(.004); c = mix(c, mix(vec3(.75, .65, .2), vec3(.3, .2, .1), step(.02, sk.z)) * (amb(vec3(0., 1., 0.), 1.) + uSunC * .6), m); }
+`;
 export const WATF = `
 in vec3 pw; in vec2 xx; in float vz; out vec4 o;
 float wv(vec2 p) {
@@ -49,17 +62,20 @@ float wv(vec2 p) {
 void main() {
   if (xx.x < 0.) discard;                                                  // the bank
   float d = xx.x, w0 = wv(pw.xz), e = .06;
-  vec3 n = normalize(vec3((w0 - wv(pw.xz + vec2(e, 0.))) * .28, 1., (w0 - wv(pw.xz + vec2(0., e))) * .28)), vd = normalize(uCam - pw), rd = reflect(-vd, n);
+  vec3 n = normalize(vec3((w0 - wv(pw.xz + vec2(e, 0.))) * .28, 1., (w0 - wv(pw.xz + vec2(0., e))) * .28));` + (TIER > 3 ? WATD : '') + `
+  vec3 vd = normalize(uCam - pw), rd = reflect(-vd, n);
   rd.y = abs(rd.y);
   float fr = .03 + .97 * pow(1. - max(dot(n, vd), 0.), 5.), sh = shd(pw, vec3(0., 1., 0.)), cs = cshd(pw);
   vec2 bp = pw.xz + n.xz * d * 1.5;                                        // where the bent ray meets the bed
   vec3 bed = mix(vec3(.2, .16, .1), vec3(.5, .45, .34), smoothstep(.3, .7, vn(bp * 8.))) * (.55 + .6 * vn(bp * 27.));
   bed = mix(bed, vec3(.1, .16, .05), smoothstep(.5, .75, vn(bp * 2.3 + 5.)) * .7);                                  // weed on the stones
+` + (TIER > 3 ? WATD2 : '') + `
   float ca = pow(abs(vn(bp * 5. + uT * .6) - vn(bp * 5.3 - uT * .5)), .5);                                       // light gathered by the ripples
   bed = bed * (uSunC * sh * cs * (.35 + .9 * (1. - ca)) * max(uSun.y, 0.) + amb(vec3(0., 1., 0.), 1.)) * exp(-d * vec3(3.2, 1.7, 2.4));
   vec3 rf = mix(vec3(.015, .03, .015) + amb(vec3(0., 1., 0.), .22) * vec3(.3, .5, .2), skyc(rd), smoothstep(.2, .75, rd.y + .25 * vn(pw.xz * 1.3)) * (.35 + .65 * sh));   // in shade it mirrors the canopy, in the open the sky
   vec3 c = mix(bed + vec3(.02, .05, .04) * (1. - exp(-d * 4.)), rf, fr) + uSunC * sh * cs * pow(max(dot(rd, uSun), 0.), 260.) * 4.;
   c = mix(c, vec3(.75, .8, .8) * (amb(n, 1.) + uSunC * sh * cs * .3), smoothstep(.07, .0, d) * smoothstep(.35, .65, vn(pw.xz * 14. - vec2(uT * 1.2, 0.))) * .8);   // a line of foam at the edge
+` + (TIER > 3 ? WATD3 : '') + `
   c = mix(c, vec3(.78, .84, .92) * (amb(n, 1.) + uSunC * sh * .5), smoothstep(.72, .98, uWx.y) * .92);              // deep winter: ice
   o = vec4(fogc(c, pw), vz / 300.);
 }`;
@@ -467,5 +483,126 @@ export const SEAF = `
 `;
 // a flower: five petals round a yellow eye
 export const FLW = `
-  if (ty == 6) { vec2 q = u - vec2(.5, 0.); float r = length(q) * 2., a = atan(q.y, q.x); vein = step(r, .26); return step(r, .5 + .45 * abs(cos(a * 2.5 + sd * 6.))); }
+  if (ty == 6) { vec2 q = u - vec2(.5, 0.); float r = length(q) * 2., a = atan(q.y, q.x); vein = step(r, .26); LF = vec4(r, a, sd, 6.); return step(r, .5 + .45 * abs(cos(a * 2.5 + sd * 6.))); }
+`;
+
+// ---- close detail (2 MB rung). FP is how many metres one pixel spans where it lands. A pattern is drawn only once it is
+// a few pixels across, so from afar it costs nothing and never shimmers; walk up to a trunk, a leaf or a stone and more
+// of it appears, the way a microscope's fine focus brings up one layer after another.
+export const MICRO = `
+uniform float uNdl;
+float FP = 1., GL = 0.; vec4 LF = vec4(-1.);
+float vis(float s) { return smoothstep(1.5, 4., s / max(FP, 1e-6)); }
+vec3 vor(vec2 p) {
+  vec2 i = floor(p), f = fract(p); float d1 = 8., d2 = 8., id = 0.;
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(x, y), r = g + vec2(h2(i + g), h2(i + g + 17.3)) - f; float d = dot(r, r); if (d < d1) { d2 = d1; d1 = d; id = h2(i + g + 5.1); } else if (d < d2) d2 = d; }
+  return vec3(sqrt(d1), sqrt(d2) - sqrt(d1), id);
+}
+vec2 rot(vec2 v, float a) { float c = cos(a), s = sin(a); return vec2(c * v.x - s * v.y, s * v.x + c * v.y); }
+float spec(vec3 n, vec3 p, float g) { return pow(max(dot(reflect(-uSun, n), normalize(uCam - p)), 0.), g); }
+// a bump from a height field, by its screen-space slope; a macro, so vertex shaders that share this preamble never see dFdx
+#define BUMP(n, p, h) { vec3 dx_ = dFdx(p), dy_ = dFdy(p), r1_ = cross(dy_, n), r2_ = cross(n, dx_); float de_ = dot(dx_, r1_); if (abs(de_) > 1e-14) n = normalize(n - (dFdx(h) * r1_ + dFdy(h) * r2_) / de_); }
+vec3 mossc(vec3 p) {
+  vec3 c = mix(vec3(.05, .13, .02), vec3(.26, .38, .06), vn3(p * 9.) * .6 + vn3(p * 31.) * .4);
+  if (FP < .004) {                                                         // close: a turf of separate shoots, each a small star of leaves, pale at its growing tip
+    vec3 v = vor(p.xz * 260. + p.y * 140.); float k = vis(.004);
+    c *= mix(1., (.4 + 1. * smoothstep(.6, .05, v.x)) * (.8 + .4 * v.z), k);
+    c = mix(c, vec3(.5, .6, .18), k * smoothstep(.14, .03, v.x) * step(.45, v.z) * .55);
+    vec3 w = vor(p.xz * 800. + p.y * 500. + 3.); c *= mix(1., .65 + .5 * smoothstep(0., .3, w.y), vis(.0012));
+  }
+  return c;
+}
+`;
+// a leaf, needle, frond, blade or flower seen close: venation, edges, spots, spores, stomata, pollen
+export const LEAFD = `
+  float gl0 = 0., bv = 0., hh = 0.; FP = max(length(dFdx(pw)), length(dFdy(pw)));
+  if (LF.w > -.5 && FP < .004) {
+    float k1 = vis(.006), k2 = vis(.0016), t = LF.x, y = LF.y, ay = abs(y);
+    if (LF.w < .5) {                                                       // a broad leaf
+      float sv = abs(fract(t * 8. - ay * 1.2 + LF.z) - .5), v2 = smoothstep(.07, .02, sv) * smoothstep(.95, .6, ay) * smoothstep(.02, .1, t) * k1;   // side veins, out and forward to the margin
+      vec3 nt = vor(vec2(t * 30., y * 8.) + LF.z * 17.); float v3 = smoothstep(.08, 0., nt.y) * k2;                                               // the finest veins close a net of islands
+      bv = max(max(v2, v3 * .7), vein); hh = smoothstep(0., .2, nt.y) * k2 * .5 - max(v2, vein);
+      alb *= (1. + .22 * max(v2, v3 * .5)) * (.92 + .16 * vn(vec2(t * 24., y * 7.) + LF.z * 31.));
+      alb = mix(alb, vec3(.32, .2, .06), smoothstep(.8, 1., ay) * step(.55, LF.z) * .55 * k1);                                                   // a dry margin on some
+      vec3 s2 = vor(vec2(t * 16., y * 5.) + LF.z * 53.); float spot = step(.82, LF.z) * step(s2.z, .06) * k1;                                       // a fungus's spots, each in a yellow halo
+      alb = mix(alb, vec3(.55, .5, .1), spot * smoothstep(.42, .25, s2.x)); alb = mix(alb, vec3(.08, .05, .02), spot * smoothstep(.16, .1, s2.x));
+      alb = mix(alb, vec3(.75, .72, .5), step(LF.z, .08) * smoothstep(.06, .02, abs(y - .55 * sin(t * 9. + LF.z * 40.) * t)) * step(.15, t) * k1);  // a leaf-miner's pale trail
+      gl0 = .35;
+    } else if (LF.w < 1.5) {                                               // a needle: round in section, a pale band of stomata down one side
+      float a = clamp(LF.x, -1., 1.); alb *= mix(1., (.65 + .45 * sqrt(1. - a * a)) * (.75 + .4 * LF.y), k1); alb = mix(alb, vec3(.62, .72, .64), smoothstep(.14, 0., abs(a + .35)) * .5 * k2);
+      hh = sqrt(1. - a * a) * k1; gl0 = .5;
+    } else if (LF.w < 3.5) {                                               // a fern pinna: a midvein, and beneath, two rows of brown spore dots
+      float so = step(dot(nn, uCam - pw), 0.) * smoothstep(.3, .2, length(vec2(fract(y * 7.) - .5, (t - .5) * 1.4))) * step(y, .85) * k1;
+      alb = mix(alb, vec3(.33, .18, .05), so); alb *= 1. + .25 * smoothstep(.08, 0., t) * k1; hh = so - smoothstep(.08, 0., t) * k1; gl0 = .2;
+    } else if (LF.w < 4.5) {                                               // a grass blade: parallel veins, a drying tip on some
+      alb *= 1. + (step(.5, fract(LF.x * 3. + .25)) - .5) * .2 * k2; alb = mix(alb, vec3(.62, .55, .3), smoothstep(.7, 1., y) * step(.6, LF.z) * k1); hh = (step(.5, fract(LF.x * 3. + .25)) - .5) * k2; gl0 = .25;
+    } else {                                                               // a flower: veins along each petal, paler tips, pollen on the anthers
+      vec2 q = vec2(cos(y), sin(y)) * t; vec3 an = vor(q * 70. + LF.z * 9.);
+      if (t > .26) { float pv = smoothstep(.12, 0., abs(fract(y * 9.) - .5)) * smoothstep(.26, .4, t) * k1; alb *= 1. - .35 * pv; alb = mix(alb, min(alb * 1.25 + .08, vec3(1.)), smoothstep(.55, .95, t) * k1); alb *= mix(1., .8, smoothstep(.4, .26, t) * k1); hh = -pv; }
+      else { float po = smoothstep(.4, .15, an.x) * k1; alb = mix(alb * mix(1., .55, k1), vec3(1., .7, .1), po); hh = po * 2.; }
+    }
+  }
+  BUMP(n, pw, hh * .0004)
+`;
+// bark close: fine cracks, lichens with their fruiting cups, beetles' exit holes, and galleries in dead wood
+export const BARKD = `
+    if (FP < .003) {
+      vec2 Q = vec2(atan(nw.z, nw.x) * wr, s); float k = vis(.003), fc = abs(vn3(P * 7.) - .5), fi = vn3(vec3(P.x * 60., P.y * 5., P.z * 60.)) * .6 + vn3(vec3(P.x * 150., P.y * 12., P.z * 150.)) * .4;
+      float fs = smoothstep(0., .12, fc) * (.55 + .45 * smoothstep(0., .06, abs(vn3(P * vec3(16., 5., 16.)) - .5)));      // fissures within fissures; fibres running along the limb
+      tex = mix(tex, tex * fs * (.7 + .5 * fi), k); alb *= mix(1., (.45 + .55 * fs) * (.75 + .5 * fi), k);
+      vec3 lv = vor(Q * 7. + sd * 9.); float rr = .26 + .16 * vn(Q * 28.) + .06 * vn(Q * 90.), li = step(lv.z, .22) * smoothstep(rr, rr - .04, lv.x) * k;   // a rosette with a lobed rim
+      vec3 lb = vor(Q * 110. + lv.z * 30.), lc = (lv.z < .09 ? vec3(.55, .58, .46) : lv.z < .18 ? vec3(.66, .64, .38) : vec3(.8, .48, .12)) * (.7 + .35 * smoothstep(0., .18, lb.y)) * (.9 + .2 * lb.z);   // each lobe pale, darker where lobes meet
+      vec3 ap = vor(Q * 60. + lv.z * 50.); float apo = li * step(ap.z, .2) * step(lv.x, rr * .6) * smoothstep(.3, .18, ap.x) * vis(.001);                      // cup-shaped fruit bodies toward the centre
+      alb = mix(alb, lc, li); alb = mix(alb, lc * vec3(.75, .45, .25), apo); tex = mix(tex, .55 + .35 * smoothstep(0., .18, lb.y) + apo * .3, li * .6);
+      vec3 hv = vor(Q * 45. + 3.1); float ho = step(hv.z, .025) * smoothstep(.22, .14, hv.x) * vis(.0015) * (1. - li); alb *= 1. - .85 * ho; tex -= ho * .8;
+      if (kd == 1) { float ga = smoothstep(.05, 0., abs(vn(Q * vec2(30., 6.)) - .5)) * k * (1. - li); alb *= 1. - .45 * ga; tex -= ga * .5; }   // beetles' galleries in wood that has lost its bark
+    }
+`;
+// the forest floor close: single fallen leaves, needles and twigs lying over each other, and the soil's grains between
+export const LITTER = `
+  if (FP < .006) {
+    float k = vis(.02), cov = (.2 + .8 * smoothstep(.42, .6, f1 * .6 + f3 * .4)) * uLa, hit = 0.; vec3 lc = alb;
+    vec2 P = pw.xz * 3.5, i = floor(P), f = fract(P);
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {           // twigs on top
+      vec2 g = vec2(x, y), id = i + g; if (h2(id + 4.4) > .35 * uLa || hit > .5) continue;
+      vec2 d = rot(f - g - vec2(h2(id + 3.3), h2(id + 7.7)), h2(id) * 6.3); float w = .018 + .012 * h2(id + 1.);
+      if (abs(d.y) < w && abs(d.x) < .45) { hit = 1.; lc = mix(vec3(.2, .13, .08), vec3(.34, .26, .18), vn(d * 90.)) * (.6 + .4 * sqrt(1. - pow(d.y / w, 2.))); hh = 1.5; }
+    }
+    for (int L = 0; L < 3; L++) {
+      if (hit > .5) break;
+      P = pw.xz * 15. + float(L) * vec2(7.31, 3.17); i = floor(P); f = fract(P);
+      for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+        vec2 g = vec2(x, y), id = i + g; float h = h2(id + float(L) * 9.1); if (h > cov * 1.3 || hit > .5) continue;
+        vec2 d = rot(f - g - vec2(h2(id + 3.3), h2(id + 7.7)), h * 40.);
+        if (h2(id + 1.9) < uNdl) {                                         // a fallen needle
+          if (abs(d.y) < .03 && abs(d.x) < .6) { hit = 1.; lc = mix(vec3(.42, .22, .08), vec3(.62, .4, .15), h2(id + 5.)) * (.75 + .25 * sqrt(1. - pow(d.y / .03, 2.))); hh = 1. - float(L) * .3; }
+        } else {                                                           // a fallen leaf: midrib and side veins, edges curling and darker, some eaten down to their veins
+          float t = d.x / .45 * .5 + .5, hw = .2 * pow(sin(3.1416 * clamp(t, 0., 1.)), .8);
+          if (t > 0. && t < 1. && abs(d.y) < hw) {
+            float e = abs(d.y) / hw, vv = max(smoothstep(.035, 0., abs(d.y)), smoothstep(.06, .02, abs(fract(t * 6. - abs(d.y) * 4.) - .5)) * step(e, .85) * .7);
+            if (h2(id + 8.) < .12 && vv < .3) continue;
+            hit = 1.; vec3 b = mix(uLit, mix(vec3(.45, .25, .07), vec3(.22, .12, .05), h2(id + 2.)), .5) * (.7 + .5 * h2(id + 4.));
+            lc = b * (1. + .3 * vv) * (1. - .35 * smoothstep(.7, 1., e)) * (.85 + .3 * vn(d * 30. + h * 50.)); hh = 1. - float(L) * .3 - e * .4 + vv * .2;
+          }
+        }
+      }
+      if (hit > .5) lc *= 1. - float(L) * .22;                               // the lower layers lie in the upper ones' shade
+    }
+    vec3 gr = vor(pw.xz * 260.); alb = mix(alb, hit > .5 ? lc : alb * (.65 + .6 * gr.z) * (.7 + .3 * smoothstep(0., .2, gr.y)), k);
+    hh *= k;
+  }
+`;
+// stone close: mineral grains, glints of mica, map lichen in black-rimmed tiles
+export const STONED = `
+    if (FP < .004) {
+      vec3 an = abs(nw); vec2 S = an.y > max(an.x, an.z) ? po.xz : an.x > an.z ? po.yz : po.xy; float k = vis(.003);
+      vec3 gv = vor(S * 300.), gc = gv.z < .55 ? alb : gv.z < .75 ? alb * 1.25 + .04 : gv.z < .9 ? alb * vec3(1.15, .95, .85) : vec3(.05, .045, .045);
+      alb = mix(alb, gc * (.85 + .3 * h1(gv.z * 99.)), k * .6 * smoothstep(0., .08, gv.y)); GL = step(.9, gv.z) * k;
+      vec3 mv = vor(S * 40. + 5.); float ml = smoothstep(.55, .62, vn3(po * 1.6 + 4.)) * vis(.01);
+      alb = mix(alb, mix(vec3(.05), vec3(.62, .68, .2) * (.8 + .4 * mv.z), smoothstep(.02, .06, mv.y)), ml);
+    }
+`;
+// fur close: single hairs lying along the limb
+export const FURD = `
+      if (FP < .003) { vec3 H = vec3(nw.x * wr * 900., s * 40., nw.z * wr * 900.); float st = vn3(H) * .6 + vn3(H * vec3(2.1, 1.3, 2.1) + 5.) * .4, k = vis(.002); alb *= mix(1., .62 + .7 * st, k); tex = mix(tex, st, k); }
 `;

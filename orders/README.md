@@ -91,12 +91,32 @@ blending, there is no hybridisation, and how far is far enough is a threshold ch
 The clock button steps through still, days (a year is 8 minutes), seasons (a year a minute) and decades (five years
 every three seconds, trees only).
 
+## Close detail (2 MB rung)
+
+Double-click (or double-tap) anything to fly up to it; the camera now comes as close as 20 cm and focuses there. Every
+fragment knows how many metres one pixel spans where it lands, and a pattern is drawn only once it is a few pixels
+across, so close detail costs nothing from afar and never shimmers. Leaves get toothed margins, side veins and a net of
+fine veins, holes something has eaten, a dry edge, a fungus's spots and a leaf-miner's trail on some, a sheen in
+front and dark veins against the light behind. Spruce and pine sprays resolve into single needles, round in section
+with a pale band of stomata. Fern pinnae get lobed edges and spore dots beneath. Flowers get veined petals and pollen.
+Bark gets fissures within its fissures and fibres along the limb, lichen rosettes with lobed rims and fruiting cups,
+beetles' exit holes, and galleries in dead wood. Moss turns into separate shoots. The forest floor turns into single
+fallen leaves (midrib, side veins, curled darker edges, some eaten down to their veins), needles under conifers, and
+twigs, in three layers that shade one another, over soil grains. Stones show mineral grains, glints of mica and map
+lichen. Fur shows hairs. Water shows fine ripples, pebbles on the bed and specks of pollen drifting downstream.
+
 ## What has and has not been checked
 
 Checked: every forest of every 3D rung grows with no non-finite geometry at both detail levels and after mutation, and
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Seen in close-up renders: a broad leaf (teeth, veins, spots), single spruce needles, a lobed fern, a flower's veins and
+pollen, a trunk's fissures and lichens, moss shoots, leaf and needle litter, a stone's grains, the stream's bed and
+floating specks. Not seen close up: fern spores (the frond rendered was seen from above), a leaf-miner's trail, a hole
+in a leaf, beetle holes and galleries, mica glints, and fur (the deer rendered was a metre away). Frame rate with the
+close detail on real hardware is untested.
 
 Seen in a render: an orb web close up and at a distance, moss with spore capsules, bracket fungi on a snag, the redwood
 grove and the cloud forest. Seen only as a pale thread in one close-up: beard lichen.

@@ -4,7 +4,7 @@
 //   ground    meshes: the terrain, the plot's cut sides, and stones
 // Then light shafts are marched through the shadow map, and a last pass adds glow, depth of field and tone.
 /* global TIER */
-import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW } from './fx.js';
+import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW, MICRO, LEAFD, BARKD, LITTER, STONED, FURD } from './fx.js';
 // below the 200 kB rung there is no weather: clouds cast no shadow and nothing changes a surface's colour
 // animals, flame and charcoal: what a limb is covered in. Q is a place on the animal's own hide, so its markings travel with it.
 const FUR = `if (kd > 3) {
@@ -16,6 +16,7 @@ const FUR = `if (kd > 3) {
       alb = mix(alb * 1.9 + .07, alb, smoothstep(-.8, -.15, nw.y)) * mix(1., .7, smoothstep(.5, .95, nw.y));               // pale beneath, dark along the back
       if (sp == 1) alb = mix(alb, vec3(.8, .74, .62), smoothstep(.7, .78, vn3(Q * 2.2)) * smoothstep(-.2, .5, nw.y));        // a fawn's spots
       alb *= .84 + .32 * vn3(Q * vec3(9., 2.5, 9.));                                                                         // hair lying along the limb
+` + (TIER > 3 ? FURD : '') + `
     } else alb *= .8 + .4 * vn3(Q * 6.);
   } else`;
 const WX = TIER > 2 ? WX3 : `float gst(vec3 p) { return 1.; } float cshd(vec3 p) { return 1.; } vec3 wxa(vec3 a, vec3 p, vec3 n) { return a; }`;
@@ -50,7 +51,7 @@ vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { return wxa(alb, p, n) * (uSunC * 
 vec3 fogc(vec3 c, vec3 p) { vec3 d = p - uCam; float l = length(d), f = 1. - exp(-uFog.x * .4 * l * exp(-max(.5 * (p.y + uCam.y) - uFog.z, 0.) * uFog.y)); return mix(c, sky(normalize(vec3(d.x, .06 * l, d.z))) * .8, f); }
 // moss is a rule: it takes where a surface faces up, away from the sun, low down, and where the noise says it is damp
 float mossf(vec3 p, vec3 n, float k) { return smoothstep(.45, .72, n.y * .5 + fb3(p * 1.7) * .7 + k + uMoss - .78 - dot(n.xz, uSun.xz) * .15); }
-vec3 mossc(vec3 p) { return mix(vec3(.05, .13, .02), vec3(.26, .38, .06), vn3(p * 9.) * .6 + vn3(p * 31.) * .4); }
+` + (TIER > 3 ? MICRO : `vec3 mossc(vec3 p) { return mix(vec3(.05, .13, .02), vec3(.26, .38, .06), vn3(p * 9.) * .6 + vn3(p * 31.) * .4); }`) + `
 `;
 
 const CAPV = PRE + `
@@ -82,7 +83,7 @@ uniform vec3 uBA[8], uBB[8]; uniform vec4 uBP[8]; out vec4 o;
 void main() {
   CAPSULE
   vec3 n = vec3(e / max(dp, 1e-4) * d, nz), pw = uIV * vec3((gl_FragCoord.xy / uR * 2. - 1.) / uK * zs, -zs) + uCam, nw = uIV * n;
-  int kd = int(ax.w + .5), sp = int(ax.z); float s = mix(ax.x, ax.y, h), sd = fract(ax.z), tex = .5, mk = 0., ao = 1.; vec3 alb;
+  int kd = int(ax.w + .5), sp = int(ax.z); float s = mix(ax.x, ax.y, h), sd = fract(ax.z), tex = .5, mk = 0., ao = 1.; vec3 alb;` + (TIER > 3 ? ' FP = zs / (uK.y * uR.y * .5);' : '') + `
   if (kd < 2) {
     vec4 bp = uBP[sp]; vec3 A = uBA[sp], B = uBB[sp];
     vec3 P = vec3(nw.x * wr, s * .35, nw.z * wr) * 9. / bp.y + sd * 50.;        // a point on the bark, seamless around the limb
@@ -91,6 +92,7 @@ void main() {
     else if (bp.x < 2.5) { float ln = smoothstep(.68, .76, vn3(vec3(P.x * .7, P.y * 14., P.z * .7))), scar = smoothstep(.76, .8, vn3(P * vec3(.45, .5, .45) + 5.)), low = smoothstep(1.6, .2, s) * vn3(P * .8);
       tex = 1. - max(ln * .8, max(scar, low * .9)); alb = mix(B, A * (.9 + .15 * vn3(P * .4)), tex); }                                                  // papery, with lenticels and scars
     else { tex = vn3(P * .7); alb = mix(B, A, tex); alb = mix(alb, vec3(.5, .56, .42), smoothstep(.6, .7, vn3(P * .35 + 9.)) * .6); }                   // smooth, with lichen
+` + (TIER > 3 ? BARKD : '') + `
     if (kd == 1) alb = mix(alb, vec3(dot(alb, vec3(.33))) * vec3(1.05, 1., .9), .55) * .85;                                                               // dead wood greys
     mk = mossf(pw, nw, kd == 1 ? .3 : .36 * exp(-s / 1.1)); alb = mix(alb, mossc(pw), mk);
     ao = kd == 1 ? .8 : .5 + .5 * smoothstep(0., 2.2, s);
@@ -98,7 +100,7 @@ void main() {
   else { vec3 cc = sd < .4 ? vec3(.55, .05, .03) : sd < .75 ? vec3(.4, .24, .11) : vec3(.7, .55, .3); alb = mix(cc, vec3(.9, .88, .8), smoothstep(.7, .8, vn3(pw * 90.)) * step(sd, .4)); }
   if (r > 1.5) n = normalize(vec3(n.xy - vec2(dFdx(tex), dFdy(tex)) * min(r, 40.) * .6 * (1. - mk), n.z));
   nw = uIV * n;
-  vec3 c = fogc(lit(alb, nw, pw, ao), pw);
+  vec3 c = fogc(lit(alb, nw, pw, ao)` + (TIER > 3 ? ' + uSunC * spec(nw, pw, 90.) * (kd == 13 || kd == 6 ? .7 : .04) * shd(pw, nw)' : '') + `, pw);
   if (gone || c.x != c.x) discard;                                          // decided last, so the bark's slopes are defined up to the silhouette
   o = vec4(c, zs / 300.); gl_FragDepth = dep(zs);
 }`;
@@ -117,7 +119,7 @@ const MSHF = PRE + `
 in vec3 pw, nw, po; in vec2 xx; in float vz; flat in vec2 ii;
 uniform float uMat; uniform vec3 uRA, uRB, uLit; uniform float uLa; out vec4 o;
 void main() {
-  vec3 n = normalize(nw), alb; float ao = 1.;
+  vec3 n = normalize(nw), alb; float ao = 1.;` + (TIER > 3 ? ' float hh = 0.; FP = vz / (uK.y * uR.y * .5) / max(abs(dot(n, normalize(uCam - pw))), .25);' : '') + `
   if (uMat < .5) {                                                          // stone: strata, speckle, cracks, lichen, then moss
     vec3 fn = cross(dFdx(pw), dFdy(pw)); if (dot(fn, fn) > 1e-14) { fn = normalize(fn); if (dot(fn, n) < 0.) fn = -fn; n = normalize(mix(n, fn, .6)); }
     float st = vn3(po * vec3(1.1, 4.5, 1.1)), spk = vn3(po * 14.), cr = abs(fb3(po * 1.7) - .5);
@@ -125,12 +127,14 @@ void main() {
     alb = mix(alb, vec3(.6, .64, .5), smoothstep(.62, .7, vn3(po * 2.3 + 9.)) * .55);
     alb = mix(alb, vec3(.7, .45, .1), smoothstep(.8, .84, vn3(po * 6. + 3.)) * .6);
     n = normalize(n + (vec3(vn3(po * 11.), vn3(po * 11. + 5.), vn3(po * 11. + 11.)) - .5) * .55);
+` + (TIER > 3 ? STONED : '') + `
     float mk = mossf(pw, n, ii.x * .45 - .1 + .25 * smoothstep(.3, -.6, xx.x));
     alb = mix(alb, mossc(pw), mk); n = normalize(mix(n, normalize(nw), mk * .7)); ao = .45 + .55 * smoothstep(-.5, .25, xx.x);
   } else if (uMat < 1.5) {                                                  // the forest floor: soil, flecks of litter, moss where it is damp and flat
     float f1 = vn(pw.xz * 13.), f2 = vn(pw.xz * 41. + 3.), f3 = vn(pw.xz * 5.5 + 9.);
     alb = mix(vec3(.11, .075, .05), vec3(.2, .14, .09), fb3(pw * 1.2));
     alb = mix(alb, uLit * (.45 + .9 * f2), smoothstep(.42, .6, f1 * .6 + f3 * .4) * uLa);
+` + (TIER > 3 ? LITTER : '') + `
     float g = smoothstep(.45, .65, xx.y * .6 + vn(pw.xz * .7) * .5 + vn(pw.xz * 3.1) * .25 + uMoss * .62 - .5) * smoothstep(.7, .9, n.y);
     alb = mix(alb, mossc(pw) * (.55 + .7 * vn(pw.xz * 5.)), g);                                      // cushions of moss, darker in their hollows
     n = normalize(n + (vec3(vn(pw.xz * 9.), 0., vn(pw.xz * 9. + 7.)) - .5) * (.5 + .5 * g)); ao = xx.x;
@@ -142,7 +146,8 @@ void main() {
     alb = mix(alb, vec3(.09, .06, .04), (1. - smoothstep(0., .03, abs(vn(vec2((pw.x + pw.z) * 2.2, pw.y * .9)) - .5))) * smoothstep(2.2, .3, dd));
     alb *= .8 + .4 * vn3(pw * 9.); ao = .9;
   }
-  o = vec4(fogc(lit(alb, n, pw, ao), pw), vz / 300.);
+` + (TIER > 3 ? '  BUMP(n, pw, hh * .003)' : '') + `
+  o = vec4(fogc(lit(alb, n, pw, ao)` + (TIER > 3 ? ' + uSunC * GL * spec(n, pw, 300.) * 6. * shd(pw, n)' : '') + `, pw), vz / 300.);
 }`;
 const NONE = `#version 300 es
 void main() {}`;
@@ -171,24 +176,27 @@ float mask(vec2 u, int ty, float sd, out float vein) {
   if (ty == 1) {                                             // needle spray: needles sweeping forward off both sides of a twig
     // side twigs off a main twig, each lined with needles; from far away only the twigs' outline is drawn
     float y = abs(u.y), xs = u.x - y * .8, per = lod(.1, fw), len = .47 * smoothstep(1.02, .78, u.x) * (.8 + .2 * sin(u.x * 31. + sd * 9.)), ff = abs(fract(xs / per) - .5) * 2.;
-    float twig = step(ff, .74 * (1. - y / len)) * step(y, len) * step(.02, xs), nd = fw < .0022 ? max(step(abs(fract((u.x + y * .6) / .02 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5), .4), step(ff, .16)) : 1.;
+    float twig = step(ff, .74 * (1. - y / len)) * step(y, len) * step(.02, xs), nd = fw < .0022 ? max(step(abs(fract((u.x + y * .6) / .02 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5), ` + (TIER > 3 ? 'mix(.22, .4, smoothstep(.0003, .0012, fw))' : '.4') + `), step(ff, .16)) : 1.;
+` + (TIER > 3 ? '    LF = vec4((fract((u.x + y * .6) / .02 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5) / mix(.22, .4, smoothstep(.0003, .0012, fw)), y / max(len, 1e-3), h1(floor(xs / per) + sd * 17.), 1.);\n    if (fw < .0008) { float q2 = fract((u.x + y * .6) / .0025 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5; nd = max(step(abs(q2), .19), step(ff, .16)); LF.x = q2 / .19; }' : '') + `
     return max(twig * nd, step(y, .012) * step(u.x, .98));
   }
   if (ty == 3) {                                             // fern frond: pinnae that shorten toward the tip
     float y = abs(u.y), xs = u.x - y * .35, per = lod(.055, fw), len = .5 * pow(sin(3.1416 * pow(clamp(u.x, 0., 1.), .55)), .8), f = abs(fract(xs / per) - .5) * 2.;
-    vein = step(f, .12);
-    return max(step(f, .78 * (1. - y / len)) * step(y, len) * step(.04, xs), step(y, .01) * step(u.x, .97));
+    vein = step(f, .12);` + (TIER > 3 ? ' LF = vec4(f / max(.78 * (1. - y / len), 1e-3), y / max(len, 1e-3), floor(xs / per), 3.);' : '') + `
+    return max(step(f, .78 * (1. - y / len)` + (TIER > 3 ? ' * (1. - smoothstep(per * .15, per * .05, fw) * .35 * pow(abs(sin(y / per * 11.)), .7))' : '') + `) * step(y, len) * step(.04, xs), step(y, .01) * step(u.x, .97));
   }
   if (ty >= 4) {                                             // grass tuft, or a fan of long needles: blades radiating from the base
-    float r = length(u), a = atan(u.y, u.x), da = lod(ty == 4 ? .26 : .12, fw / max(r, .08)), k = floor(a / da + .5), bl = ty == 4 ? .5 + .5 * h1(k + sd * 31.) : .8 + .2 * h1(k + sd * 31.);
+    float r = length(u), a = atan(u.y, u.x), da = lod(ty == 4 ? .26 : .12, fw / max(r, .08)), k = floor(a / da + .5), bl = ty == 4 ? .5 + .5 * h1(k + sd * 31.) : .8 + .2 * h1(k + sd * 31.);` + (TIER > 3 ? ' LF = vec4((a / da - k) / max((ty == 4 ? .34 : .24) * (1. - r / bl), 1e-3), r / bl, h1(k + sd * 31.), 4.);' : '') + `
     return step(abs(a / da - k), (ty == 4 ? .34 : .24) * (1. - r / bl)) * step(r, bl) * step(abs(a), ty == 4 ? 1.25 : 1.5);
   }
   float per = ty == 0 ? .21 : .15, L = ty == 0 ? .34 : .17, W = ty == 0 ? .095 : .075, m = 0.;   // broad or small round leaves, alternate along a twig
   for (int j = 0; j < 2; j++) {
     float c = floor(u.x / per) - float(j); if (c < 0. || c > 1. / per - 1.5) continue;
     float an = (mod(c, 2.) * 2. - 1.) * (.95 + .35 * (h1(c * 7.3 + sd * 91.) - .5)); vec2 dl = u - vec2((c + .5) * per, 0.), l = vec2(cos(an) * dl.x + sin(an) * dl.y, cos(an) * dl.y - sin(an) * dl.x);
-    float t = clamp(l.x / L, 0., 1.), hw = W * (ty == 0 ? sin(3.1416 * pow(t, .7)) * (1. + .12 * sin(t * 38.)) : sqrt(max(0., 1. - pow(2. * t - 1.05, 2.))));
-    if (l.x > 0. && l.x < L && abs(l.y) < hw) { m = 1.; vein = max(vein, step(abs(l.y), .006)); }
+    float t = clamp(l.x / L, 0., 1.), hw = W * (ty == 0 ? sin(3.1416 * pow(t, .7)) * (1. + .12 * sin(t * 38.)) : sqrt(max(0., 1. - pow(2. * t - 1.05, 2.))));` + (TIER > 3 ? `
+    float kk = smoothstep(L * .03, L * .012, fw); if (kk > 0.) { hw *= 1. - kk * .1 * pow(fract(t * (ty == 0 ? 22. : 14.) + .3), 2.);   // a toothed margin, and holes something has eaten
+      vec3 hv = vor(vec2(l.x / L * 11., l.y / W * 3.) + c * 7.13 + sd * 3.); if (h1(c * 3.7 + sd * 13.) < .35 && hv.z < .07 && hv.x < .38 * kk) hw = 0.; }` : '') + `
+    if (l.x > 0. && l.x < L && abs(l.y) < hw) { m = 1.; vein = max(vein, step(abs(l.y), .006));` + (TIER > 3 ? ' LF = vec4(t, l.y / max(hw, 1e-4), h1(c * 3.7 + sd * 13.), 0.);' : '') + ` }
   }
   return max(m, step(abs(u.y), .008) * step(u.x, .95));
 }`;
@@ -199,10 +207,10 @@ void main() {
   float vein; if (mask(uv, int(ci.x + .5), ci.w, vein) < .5) discard;
   int sp = int(ci.z + .5); vec3 n = nn; if (dot(n, uCam - pw) < 0.) n = -n;
   vec3 alb = mix(uLA[sp], uLB[sp], clamp(ci.w * .7 + h1(floor(uv.x * 5.) + ci.w * 57.) * .5 - .1, 0., 1.)) * (.85 + .3 * vein);
-` + (TIER > 3 ? SEAF : '') + `
+` + (TIER > 3 ? SEAF + LEAFD : '') + `
   float nl = dot(n, uSun), sh = shd(pw, n * sign(nl + 1e-4));
   // lit from the front, or glowing with the sun behind it
-  vec3 c = wxa(alb, pw, vec3(0., abs(n.y), 0.)) * (uSunC * (max(nl, 0.) * .85 + max(-nl, 0.) * .7 * vec3(1.15, 1.2, .55)) * sh * cshd(pw) * (.5 + .5 * ci.y) + amb(n, .35 + .65 * ci.y));
+  vec3 c = wxa(alb, pw, vec3(0., abs(n.y), 0.)) * (uSunC * (max(nl, 0.) * .85 + max(-nl, 0.) * .7 * vec3(1.15, 1.2, .55)) * sh * cshd(pw) * (.5 + .5 * ci.y) + amb(n, .35 + .65 * ci.y));` + (TIER > 3 ? ' c = c * (1. - .4 * bv * smoothstep(0., -.3, nl)) + uSunC * spec(n, pw, 40.) * gl0 * .3 * sh * cshd(pw);' : '') + `
   o = vec4(fogc(c, pw), vz / 300.);
 }`;
 
@@ -243,6 +251,8 @@ void main() {
 }`;
 
 const COMMON = ['uV', 'uSM', 'uIV', 'uK', 'uR', 'uNF', 'uOr', 'uT', 'uMoss', 'uCam', 'uSun', 'uSunC', 'uSkyC', 'uHorC', 'uFog', 'uWd', 'uSh', 'uWx', 'uSe'];
+// how far away the surface under a point on the screen is: the view depth the main pass stored beside the colour
+export let pick;
 export function mkRenderer(canvas, low) {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
   if (!gl) return null;
@@ -253,7 +263,7 @@ export function mkRenderer(canvas, low) {
     gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     const U = { p }; for (const n of [...COMMON, ...names]) U[n] = gl.getUniformLocation(p, n); return U;
   };
-  const PC = prog(CAPV, CAPF, ['uBA', 'uBB', 'uBP']), PCS = prog(CAPV, CAPS), PM = prog(MSHV, MSHF, ['uMat', 'uRA', 'uRB', 'uLit', 'uLa']), PMS = prog(MSHV, NONE, ['uMat']);
+  const PC = prog(CAPV, CAPF, ['uBA', 'uBB', 'uBP']), PCS = prog(CAPV, CAPS), PM = prog(MSHV, MSHF, ['uMat', 'uRA', 'uRB', 'uLit', 'uLa', ...(TIER > 3 ? ['uNdl'] : [])]), PMS = prog(MSHV, NONE, ['uMat']);
   const PK = prog(CRDV, CRDF, ['uLA', 'uLB']), PKS = prog(CRDV, CRDS), PSK = prog(QV, SKYF), PR = prog(QV, RAYF, ['uA']), PD = prog(QV, DOWN, ['uA', 'uP']), PP = prog(QV, POST, ['uA', 'uB', 'uC', 'uD', 'uG', 'uP', 'uO', 'uSC']);
   const tex = (f) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
   // shadow map
@@ -284,6 +294,11 @@ export function mkRenderer(canvas, low) {
     gl.uniform3fv(P.uCam, f.cam); gl.uniform3fv(P.uSun, f.sun); gl.uniform3fv(P.uSunC, f.sunC); gl.uniform3fv(P.uSkyC, f.skyC); gl.uniform3fv(P.uHorC, f.horC); gl.uniform3fv(P.uFog, f.fog); gl.uniform3fv(P.uWd, f.wd);
     gl.uniform1i(P.uSh, 1); gl.uniform4fv(P.uWx, f.wx); gl.uniform4fv(P.uSe, f.se);
   };
+  if (TIER > 3) pick = (u, v) => {
+    const t = T[0]; if (!t || !t.w) return 0; gl.bindFramebuffer(gl.READ_FRAMEBUFFER, t.f);
+    const b = hdr ? new Float32Array(4) : new Uint8Array(4); gl.readPixels(Math.floor(u * t.w), Math.floor(v * t.h), 1, 1, gl.RGBA, hdr ? gl.FLOAT : gl.UNSIGNED_BYTE, b);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null); return b[3] * (hdr ? 300 : 300 / 255);
+  };
   return {
     hdr: !!hdr,
     life: TIER > 2 && ((data, n) => { ln = n; if (n) { gl.bindBuffer(gl.ARRAY_BUFFER, lb); gl.bufferSubData(gl.ARRAY_BUFFER, 0, data, 0, n * 12); } }),
@@ -308,7 +323,7 @@ export function mkRenderer(canvas, low) {
       const G = W.G, pal = W.pal;
       const geometry = (PMx, PCx, PKx, view, K, R, or, nf, shadow) => {
         com(PMx, f, view, K, R, or, nf);
-        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); }
+        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
         gl.bindVertexArray(W.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, W.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, W.land.n - W.nTop, gl.UNSIGNED_SHORT, W.nTop * 2); }
         gl.uniform1f(PMx.uMat, 0); for (const s of W.stones) if (s.k) { gl.bindVertexArray(s.v); gl.drawElementsInstanced(gl.TRIANGLES, s.n, gl.UNSIGNED_SHORT, 0, s.k); }
@@ -342,7 +357,7 @@ export function mkRenderer(canvas, low) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, T[4].f); gl.viewport(0, 0, T[4].w, T[4].h); com(PR, f, f.V, f.K, [T[4].w, T[4].h], 0, nf); gl.bindTexture(gl.TEXTURE_2D, T[2].t); gl.uniform1i(PR.uA, 0); gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.useProgram(PP.p);
       ['uA', 'uB', 'uC', 'uD', 'uG'].forEach((n, i) => { gl.activeTexture(gl.TEXTURE0 + (i ? i + 1 : 0)); gl.bindTexture(gl.TEXTURE_2D, T[i].t); gl.uniform1i(PP[n], i ? i + 1 : 0); });
-      gl.uniform2f(PP.uP, 1 / w, 1 / h); gl.uniform4f(PP.uO, f.focus, 2.5, f.shafts, f.t); gl.uniform3fv(PP.uSC, f.sunC);
+      gl.uniform2f(PP.uP, 1 / w, 1 / h); gl.uniform4f(PP.uO, f.focus, TIER > 3 ? 2.5 * Math.min(1, 0.25 + f.focus / 4) : 2.5, f.shafts, f.t); gl.uniform3fv(PP.uSC, f.sunC);
       gl.drawArrays(gl.TRIANGLES, 0, 3); gl.activeTexture(gl.TEXTURE0);
     },
   };
