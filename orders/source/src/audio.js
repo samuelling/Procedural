@@ -14,7 +14,7 @@ export function mkAudio() {
     const E = { roar: [105, 70, 1.5, 1, 0, 'sawtooth', 0.1], frog: [430, 380, 0.08, 5, 0.13, 'square', 0.015], wood: [1000, 800, 0.018, 13, 0.055, 'square', 0.03], cuckoo: [660, 520, 0.26, 2, 0.34, 'sine', 0.05], bark: [760, 480, 0.11, 3, 0.24, 'sawtooth', 0.03], squeal: [1900, 1300, 0.14, 2, 0.17, 'sine', 0.03], howl: [330, 520, 1.9, 2, 1.3, 'sine', 0.05],
       // songs, sketched from memory and not yet checked against recordings
       thrush: [1900, 3500, 0.13, 5, 0.19, 'sine', 0.02], robin: [2300, 4100, 0.09, 7, 0.14, 'sine', 0.018], wren: [3600, 6400, 0.04, 14, 0.06, 'sine', 0.014], chickadee: [3900, 3300, 0.3, 2, 0.4, 'sine', 0.02], warbler: [4100, 6900, 0.06, 8, 0.1, 'sine', 0.014],
-      nuthatch: [2100, 2400, 0.07, 6, 0.16, 'triangle', 0.016], finch: [2700, 4900, 0.07, 9, 0.1, 'sine', 0.016], dove: [470, 540, 0.4, 3, 0.65, 'sine', 0.03], kinglet: [6200, 7800, 0.05, 10, 0.09, 'sine', 0.01], crossbill: [2900, 3400, 0.05, 4, 0.12, 'triangle', 0.016] }[k];
+      nuthatch: [2100, 2400, 0.07, 6, 0.16, 'triangle', 0.016], finch: [2700, 4900, 0.07, 9, 0.1, 'sine', 0.016], dove: [470, 540, 0.4, 3, 0.65, 'sine', 0.03], kinglet: [6200, 7800, 0.05, 10, 0.09, 'sine', 0.01], crossbill: [2900, 3400, 0.05, 4, 0.12, 'triangle', 0.016], cicada: [4300, 4500, 0.012, 60, 0.02, 'square', 0.005] }[k];
     const t = ac.currentTime + 0.05, lp = ac.createBiquadFilter(); lp.frequency.value = k === 'roar' ? 600 : 6000; lp.connect(out);
     for (let i = 0; i < E[3]; i++) {
       const o = ac.createOscillator(), g = ac.createGain(), s = t + i * E[4]; o.type = E[5]; o.frequency.setValueAtTime(k === 'cuckoo' && i ? E[1] : E[0], s); if (k !== 'cuckoo') o.frequency.exponentialRampToValueAtTime(E[1], s + E[2]);
@@ -39,7 +39,7 @@ export function mkAudio() {
       o.start(t); o.stop(t + 1.4); nx2 = t + (owl ? 4 : 0.6) + Math.random() * 1.5;
     }
     if (TIER > 3 && ac.state === 'running' && rn < 0.3) { const r = Math.random(); if (nt < 0.3 && r < 0.012) ev('wood'); else if (nt < 0.3 && r < 0.05 + 0.2 * Math.max(0, 0.2 - ev.d) * 5) { const W = { mixed: ['thrush', 'robin', 'wren', 'nuthatch', 'dove'], boreal: ['kinglet', 'crossbill', 'chickadee', 'thrush'], oldgrowth: ['wren', 'thrush', 'kinglet', 'chickadee'], aspen: ['warbler', 'finch', 'robin', 'chickadee'], beech: ['thrush', 'robin', 'nuthatch', 'dove', 'finch'], carr: ['warbler', 'wren', 'finch'], pine: ['crossbill', 'nuthatch', 'chickadee', 'dove'], larch: ['finch', 'kinglet', 'crossbill'], redwood: ['wren', 'thrush', 'kinglet'], cloud: ['wren', 'warbler', 'thrush'], moss: [] }, b = W[ev.k] || W.mixed; ev(b[(Math.random() * b.length) | 0]); }   // who sings depends on the wood; most of all at dawn
-      else if (nt < 0.3 && se === 0 && r < 0.03) ev('cuckoo'); else if (nt > 0.6 && r < 0.006) ev('bark'); }   // a woodpecker, a cuckoo in spring, a fox at night
+      else if (nt < 0.3 && se === 0 && r < 0.03) ev('cuckoo'); else if (nt < 0.3 && se === 1 && ev.d > 0.35 && r > 0.975) ev('cicada'); else if (nt > 0.6 && r < 0.006) ev('bark'); }   // a woodpecker, a cuckoo in spring, a fox at night
     if (t > next && ac.state === 'running') { if (Math.random() < day) bird(t + 0.05); next = t + 0.5 + Math.random() * 3.5; }
   }, 250);
   return { ac, set(w, dy) { wind = w; day = dy; },

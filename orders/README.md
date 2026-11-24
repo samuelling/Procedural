@@ -64,6 +64,17 @@ readily downwind, hardly at all when wet, never across water; trees survive by b
 seed into the ash. Animals inherit leg length and boldness from both parents, and seedlings a pace of life from theirs
 (fast growers bear shade badly and die young), each with a small random change, so selection shows up in the counts.
 
+Some years are different. Every few years a species masts: it sets four times the seed, the plant-eaters breed more
+the next spring, and in an oak or beech mast jays carry the seed across the whole plot. Seedlings take more easily
+beside a rotting log. About one year in eleven a gale throws some of the tallest trees, all lying the same way.
+
+Smaller builders work on the trees. Spiders string orb webs between neighbouring trunks (four guy lines, fourteen
+spokes, a frame and a nine-turn spiral). Dead standing trees carry bracket fungi and woodpecker holes, seated on the
+real trunk surface. In the wet forests beard lichen hangs from the thin branches. About one tall tree in seven holds a
+nest of twigs with three eggs. In the moss world the haircap moss is in fruit. The top rung also has a bird table:
+ten songs, each bird singing only in its kind of wood and most of all at dawn, and a cicada in summer. The songs were
+written from memory and none has been checked against a recording.
+
 The clock button steps through still, days (a year is 8 minutes), seasons (a year a minute) and decades (five years
 every three seconds, trees only).
 
@@ -74,8 +85,13 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
 
-Not seen in a render: a wolf, a hare or a beaver up close, a hunt or a birth as it happens, and a large fire. Those are
-confirmed in the simulation log only.
+Seen in a render: an orb web close up and at a distance, moss with spore capsules, bracket fungi on a snag, the redwood
+grove and the cloud forest. Seen only as a pale thread in one close-up: beard lichen.
+
+Not seen in a render: a hare or a beaver up close, a hunt or a birth as it happens, a large fire, a nest (fifteen are
+built in the mixed wood, but the camera cannot climb to one), and a woodpecker hole (dark on a dark trunk). Wolves
+have been seen only as two grey animals in the middle distance. Mast years, jays and gales are confirmed in the
+simulation log only (in the mixed wood over 300 years: 91 mast years, 55 of them carried by jays, 29 gales).
 
 Not checked: frame rate on real hardware (the upper rungs evaluate cloud shadow for every pixel, which costs
 something), touch on a real phone, and all of the sound.

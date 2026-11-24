@@ -357,13 +357,19 @@ export function succeed(stand, G, B, rnd, say, env = {}) {
     } else if (t.st === 1) { if (++t.t > (t.H < 5 ? 2 : 4 + t.sd % 9)) { ev++; if (t.H < 5) stand.splice(i, 1); else { t.st = 2; t.t = 0; t.a = rnd() * TAU; if (t.H > 13) say('A dead ' + sp.nm.toLowerCase() + ' fell'); } } }
     else if (++t.t > 10 + t.H) { stand.splice(i, 1); ev++; }
   }
+  if (rnd() < 0.09) {                                                      // a gale: the tall go over whole, and all lie the same way
+    const a = rnd() * TAU; let n = 0;
+    for (const t of stand) if (!t.st && t.H > 14 && rnd() < 0.05 * t.H / 20) { t.st = 2; t.t = 0; t.a = a + gs() * 0.15; n++; ev++; }
+    if (n) say('A gale threw ' + n + (n > 1 ? ' trees, all lying the same way' : ' tree'));
+  }
   if (eaten > 3 && rnd() < 0.3) say('Deer browsed off ' + eaten + ' seedlings'); if (drowned) say('The beavers\' pond drowned ' + drowned + (drowned > 1 ? ' trees' : ' tree'));
   G.trees.forEach((sp, si) => {                                            // seed: near the parent mostly, far for the light-seeded
     const T = tl(sp), par = stand.filter((t) => t.si === si && !t.st && t.age > 12 && t.H > 6); if (!par.length || stand.length > 170) return;
     const mast = par.length > 3 && (env.year * 7 + si * 13) % (5 + si) === 0;   // every few years a kind seeds all at once, and the animals fatten on it
-    if (mast) { env.mast = 1; say('A mast year for the ' + sp.nm.toLowerCase() + ': the ground is thick with seed'); }
+    const jay = mast && /oak|beech/.test(sp.id);                            // jays carry the heavy seed far and bury it
+    if (mast) { env.mast = 1; say('A mast year for the ' + sp.nm.toLowerCase() + (jay ? ': jays are burying the seed all over the plot' : ': the ground is thick with seed')); }
     for (let k = Math.ceil(min(5, par.length * (0.25 + 0.5 * (1 - T[2])))) * (mast ? 4 : 1); k > 0; k--) {
-      const p = par[(rnd() * par.length) | 0], far = rnd() < 0.5 * (1 - T[2]), x = far ? rr(-hs, hs) : p.x + gs() * 7, z = far ? rr(-hs, hs) : p.z + gs() * 7, g = max(0.6, min(1.7, (p.g || 1) * Math.exp(gs() * 0.08))), tol = min(0.97, T[2] / g);
+      const p = par[(rnd() * par.length) | 0], far = rnd() < (jay ? 0.5 : 0.5 * (1 - T[2])), x = far ? rr(-hs, hs) : p.x + gs() * 7, z = far ? rr(-hs, hs) : p.z + gs() * 7, g = max(0.6, min(1.7, (p.g || 1) * Math.exp(gs() * 0.08))), tol = min(0.97, T[2] / g);
       if (Math.abs(x) > hs || Math.abs(z) > hs || (B.strm && B.strm.dist(x, z) < 1) || (env.deep && env.deep(x, z)) || stand.some((o) => !o.st && hypot(o.x - x, o.z - z) < (o.H < 5 ? 1.2 : 2.2))) continue;
       const ash = env.fire ? env.fire.at(x, z) : 0;                        // on burnt ground the light-lovers take hold fast
       if (rnd() < ((1 - shade(x, z, 0.5)) * (1 - tol) + tol * 0.35) * (1 + 2 * ash * (1 - T[2])) * (stand.some((o) => o.st === 2 && hypot(o.x - x, o.z - z) < 2.5) ? 1 + T[2] : 1)) stand.push({ si, x, z, H: 0.7, hm: max(sp.H[0] * 0.8, min(sp.H[1] * 1.25, p.hm * Math.exp(gs() * 0.04))), age: 1, sd: (rnd() * 1e9) | 0, st: 0, g });

@@ -153,11 +153,40 @@ export function build(G, seed, q = 1, den = 1, stand) {
   // whether it is alive (0), dead and standing (1) or fallen (2). The forest can then be regrown a year or a century on.
   const trees = [];
   const grow1 = TIER > 3 && ((t) => {
+    const deco = (t, c0) => {                                    // what lives on a tree: brackets and woodpecker holes on the dead, beard lichen and nests on the living
+    if (G.span || t.H < 5) return;
+    const gy = Hgt(t.x, t.z), n = (caps.length - c0) / 12, at = () => c0 + ((rnd() * n) | 0) * 12;
+    if (t.st) {
+      for (let k = 2 + ((rnd() * 5) | 0); k > 0; k--) {
+        const y = gy + rr(0.4, min(4, t.H * 0.4)), q = rnd() * TAU, c = cos(q), s = sin(q); let r = 0, X, Z;
+        for (let i = c0; i < c0 + n * 12; i += 12) {                           // the trunk where it crosses this height: the stoutest limb that does
+          const f = (y - caps[i + 1]) / (caps[i + 5] - caps[i + 1]), w = caps[i + 3] + (caps[i + 7] - caps[i + 3]) * f;
+          if (f >= 0 && f <= 1 && w > r) { r = w; X = caps[i] + (caps[i + 4] - caps[i]) * f; Z = caps[i + 2] + (caps[i + 6] - caps[i + 2]) * f; }
+        }
+        if (!r) continue;
+        if (rnd() < 0.3) cap([X + c * (r - 0.07), y, Z + s * (r - 0.07)], 0.04, [X + c * (r - 0.03), y, Z + s * (r - 0.03)], 0.04, 0, 1, 0.5, 13);
+        else cap([X + c * r * 0.7, y, Z + s * r * 0.7], 0.1, [X + c * (r + 0.11), y - 0.02, Z + s * (r + 0.11)], 0.03, 0, 1, rr(0.45, 0.98), 3);
+      }
+      return;
+    }
+    if (G.floor.moss >= 0.6) for (let k = min(60, n >> 3); k > 0; k--) {
+      const i = at(); if (caps[i + 11] !== 0 || caps[i + 3] > 0.07 || caps[i + 1] < gy + 2.5) continue;
+      const f = rnd(), p = [caps[i] + (caps[i + 4] - caps[i]) * f, caps[i + 1] + (caps[i + 5] - caps[i + 1]) * f, caps[i + 2] + (caps[i + 6] - caps[i + 2]) * f];
+      cap(p, 0.012, [p[0] + gs() * 0.05, p[1] - rr(0.2, 0.8), p[2] + gs() * 0.05], 0.004, 0, 1, 0.5, 2);
+    }
+    if (t.H > 8 && rnd() < 0.15) for (let k = 40; k > 0; k--) {
+      const i = at(), y = caps[i + 1]; if (caps[i + 11] !== 0 || caps[i + 3] < 0.03 || caps[i + 3] > 0.14 || y < gy + 3 || y > gy + 10) continue;
+      const c = [caps[i], y + caps[i + 3] + 0.02, caps[i + 2]];
+      for (let j = 0; j < 20; j++) { const q = j / 10 * TAU + rnd(), R = j < 10 ? 0.07 : 0.1, h = j < 10 ? 0 : 0.035; cap([c[0] + cos(q) * R, c[1] + h, c[2] + sin(q) * R], 0.014, [c[0] + cos(q + 0.9) * R, c[1] + h + gs() * 0.01, c[2] + sin(q + 0.9) * R], 0.012, 0, 1, rnd(), 1); }
+      for (let j = 0; j < 3; j++) { const q = j / 3 * TAU; cap([c[0] + cos(q) * 0.025, c[1] + 0.03, c[2] + sin(q) * 0.025], 0.02, [c[0] + cos(q) * 0.03, c[1] + 0.035, c[2] + sin(q) * 0.03], 0.017, 0, 1, 0.5, 8); }
+      st.nests = (st.nests || 0) + 1; break;
+    }
+  };
     const sp = G.trees[t.si], keep = rnd; rnd = rng(t.sd);
     if (t.st === 2) {
       const len = t.H * 0.75, r = 0.05 + 0.011 * t.H; let p = [t.x, Hgt(t.x, t.z) + r * 0.6, t.z];
       for (let k = 1; k <= 5; k++) { const l = len * k / 5, X = t.x + cos(t.a) * l, Z = t.z + sin(t.a) * l, c = [X, Hgt(X, Z) + r * 0.6, Z]; cap(p, r * (1 - 0.12 * (k - 1)), c, r * (1 - 0.12 * k), l - len / 5, l, t.si + 0.5, t.burnt ? 18 : 1); p = c; blockers.push({ x: X, z: Z, r: r * 0.8 }); damp.push([X, Z]); }
-    } else { tree(sp, t.si, t.x, t.z, t.H, t.H < 5, t.st === 1 ? (t.burnt ? 2 : 1) : 0); placed.push({ x: t.x, z: t.z, cr: t.H < 5 ? 0.7 : sp.cr * min(1, t.H / sp.H[0]) }); if (!t.st && t.H >= 5) st.trees++;
+    } else { const c0 = caps.length; tree(sp, t.si, t.x, t.z, t.H, t.H < 5, t.st === 1 ? (t.burnt ? 2 : 1) : 0); deco(t, c0); placed.push({ x: t.x, z: t.z, cr: t.H < 5 ? 0.7 : sp.cr * min(1, t.H / sp.H[0]) }); if (!t.st && t.H >= 5) st.trees++;
       if (sp.spo && !t.st && t.H >= 5 && rnd() < sp.spo) {                   // moss in fruit: a bristle with a spore capsule on top
         const y = Hgt(t.x, t.z) + t.H * 0.96, h = rr(3, 6), x2 = t.x + gs() * 0.4, z2 = t.z + gs() * 0.4; cap([t.x, y, t.z], 0.05, [x2, y + h, z2], 0.035, 0, 1, 0.9, 2); cap([x2, y + h, z2], 0.2, [x2 + gs() * 0.2, y + h + 0.9, z2], 0.16, 0, 1, 0.7, 3);
       } }
