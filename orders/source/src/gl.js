@@ -4,7 +4,7 @@
 //   ground    meshes: the terrain, the plot's cut sides, and stones
 // Then light shafts are marched through the shadow map, and a last pass adds glow, depth of field and tone.
 /* global TIER */
-import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW, MICRO, LEAFD, BARKD, LITTER, STONED, FURD } from './fx.js';
+import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW, MICRO, LEAFD, BARKD, LITTER, STONED, FURD, MUSHD, FEATHD } from './fx.js';
 // below the 200 kB rung there is no weather: clouds cast no shadow and nothing changes a surface's colour
 // animals, flame and charcoal: what a limb is covered in. Q is a place on the animal's own hide, so its markings travel with it.
 const FUR = `if (kd > 3) {
@@ -18,7 +18,7 @@ const FUR = `if (kd > 3) {
       alb *= .84 + .32 * vn3(Q * vec3(9., 2.5, 9.));                                                                         // hair lying along the limb
 ` + (TIER > 3 ? FURD : '') + `
     } else alb *= .8 + .4 * vn3(Q * 6.);
-  } else`;
+` + (TIER > 3 ? FEATHD : '') + `  } else`;
 const WX = TIER > 2 ? WX3 : `float gst(vec3 p) { return 1.; } float cshd(vec3 p) { return 1.; } vec3 wxa(vec3 a, vec3 p, vec3 n) { return a; }`;
 const PRE = `#version 300 es
 precision highp float; precision highp sampler2DShadow;
@@ -97,10 +97,10 @@ void main() {
     mk = mossf(pw, nw, kd == 1 ? .3 : .36 * exp(-s / 1.1)); alb = mix(alb, mossc(pw), mk);
     ao = kd == 1 ? .8 : .5 + .5 * smoothstep(0., 2.2, s);
   } else ` + (TIER > 2 ? FUR : '') + ` if (kd == 2) alb = vec3(.8, .76, .62);
-  else { vec3 cc = sd < .4 ? vec3(.55, .05, .03) : sd < .75 ? vec3(.4, .24, .11) : vec3(.7, .55, .3); alb = mix(cc, vec3(.9, .88, .8), smoothstep(.7, .8, vn3(pw * 90.)) * step(sd, .4)); }
+` + (TIER > 3 ? MUSHD : '') + `else { vec3 cc = sd < .4 ? vec3(.55, .05, .03) : sd < .75 ? vec3(.4, .24, .11) : vec3(.7, .55, .3); alb = mix(cc, vec3(.9, .88, .8), smoothstep(.7, .8, vn3(pw * 90.)) * step(sd, .4)); }
   if (r > 1.5) n = normalize(vec3(n.xy - vec2(dFdx(tex), dFdy(tex)) * min(r, 40.) * .6 * (1. - mk), n.z));
   nw = uIV * n;
-  vec3 c = fogc(lit(alb, nw, pw, ao)` + (TIER > 3 ? ' + uSunC * spec(nw, pw, 90.) * (kd == 13 || kd == 6 ? .7 : .04) * shd(pw, nw)' : '') + `, pw);
+  vec3 c = fogc(lit(alb, nw, pw, ao)` + (TIER > 3 ? ' + uSunC * spec(nw, pw, 90.) * max(kd == 13 || kd == 6 ? .7 : .04, GL) * shd(pw, nw)' : '') + `, pw);
   if (gone || c.x != c.x) discard;                                          // decided last, so the bark's slopes are defined up to the silhouette
   o = vec4(c, zs / 300.); gl_FragDepth = dep(zs);
 }`;
@@ -177,7 +177,7 @@ float mask(vec2 u, int ty, float sd, out float vein) {
     // side twigs off a main twig, each lined with needles; from far away only the twigs' outline is drawn
     float y = abs(u.y), xs = u.x - y * .8, per = lod(.1, fw), len = .47 * smoothstep(1.02, .78, u.x) * (.8 + .2 * sin(u.x * 31. + sd * 9.)), ff = abs(fract(xs / per) - .5) * 2.;
     float twig = step(ff, .74 * (1. - y / len)) * step(y, len) * step(.02, xs), nd = fw < .0022 ? max(step(abs(fract((u.x + y * .6) / .02 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5), ` + (TIER > 3 ? 'mix(.22, .4, smoothstep(.0003, .0012, fw))' : '.4') + `), step(ff, .16)) : 1.;
-` + (TIER > 3 ? '    LF = vec4((fract((u.x + y * .6) / .02 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5) / mix(.22, .4, smoothstep(.0003, .0012, fw)), y / max(len, 1e-3), h1(floor(xs / per) + sd * 17.), 1.);\n    if (fw < .0008) { float q2 = fract((u.x + y * .6) / .0025 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5; nd = max(step(abs(q2), .19), step(ff, .16)); LF.x = q2 / .19; }' : '') + `
+` + (TIER > 3 ? '    LF = vec4((fract((u.x + y * .6) / .02 + h1(floor(xs / per) + sd * 17.) + step(0., u.y) * .37) - .5) / mix(.22, .4, smoothstep(.0003, .0012, fw)), y / max(len, 1e-3), h1(floor(xs / per) + sd * 17.), 1.);\n    if (fw < .0022) { float ac = (fract(xs / per) - .5) * per, hit = 0.; vec2 P = vec2(ac, y); LF.w = -1.; for (int k = -1; k <= 1; k++) for (int sg = 0; sg < 2; sg++) { float c = floor(y / .005) + float(k), hn = h1(c * 1.7 + float(sg) * 9.1 + floor(xs / per) * 3.3 + sd * 17.), b0 = (c + hn * .5) * .005; if (b0 < 0. || b0 > len) continue; float th = (.5 + .5 * hn) * (float(sg) * 2. - 1.), w = max(.0011, fw * .7); vec2 dv = vec2(sin(th), cos(th)) * (.016 + .01 * fract(hn * 7.)), pa = P - vec2(0., b0); float t = clamp(dot(pa, dv) / dot(dv, dv), 0., 1.), d = length(pa - dv * t), ww = w * (1. - t * .7); if (d < ww) { hit = 1.; LF = vec4(d / ww * sign(dot(pa, vec2(dv.y, -dv.x))), t, hn, 1.); } } return max(max(hit, step(abs(ac), .0011) * step(y, len)), step(y, .0045) * step(u.x, .98)); }' : '') + `
     return max(twig * nd, step(y, .012) * step(u.x, .98));
   }
   if (ty == 3) {                                             // fern frond: pinnae that shorten toward the tip
@@ -207,10 +207,10 @@ void main() {
   float vein; if (mask(uv, int(ci.x + .5), ci.w, vein) < .5) discard;
   int sp = int(ci.z + .5); vec3 n = nn; if (dot(n, uCam - pw) < 0.) n = -n;
   vec3 alb = mix(uLA[sp], uLB[sp], clamp(ci.w * .7 + h1(floor(uv.x * 5.) + ci.w * 57.) * .5 - .1, 0., 1.)) * (.85 + .3 * vein);
-` + (TIER > 3 ? SEAF + LEAFD : '') + `
+` + (TIER > 3 ? ' DEW = max(smoothstep(.5, .15, uSun.y), uWx.x) * (1. - uWx.y);' + SEAF + LEAFD : '') + `
   float nl = dot(n, uSun), sh = shd(pw, n * sign(nl + 1e-4));
   // lit from the front, or glowing with the sun behind it
-  vec3 c = wxa(alb, pw, vec3(0., abs(n.y), 0.)) * (uSunC * (max(nl, 0.) * .85 + max(-nl, 0.) * .7 * vec3(1.15, 1.2, .55)) * sh * cshd(pw) * (.5 + .5 * ci.y) + amb(n, .35 + .65 * ci.y));` + (TIER > 3 ? ' c = c * (1. - .4 * bv * smoothstep(0., -.3, nl)) + uSunC * spec(n, pw, 40.) * gl0 * .3 * sh * cshd(pw);' : '') + `
+  vec3 c = wxa(alb, pw, vec3(0., abs(n.y), 0.)) * (uSunC * (max(nl, 0.) * .85 + max(-nl, 0.) * .7 * vec3(1.15, 1.2, .55)) * sh * cshd(pw) * (.5 + .5 * ci.y) + amb(n, .35 + .65 * ci.y));` + (TIER > 3 ? ' c = c * (1. - .4 * bv * smoothstep(0., -.3, nl)) + uSunC * spec(n, pw, gl0 > 1. ? 300. : 40.) * gl0 * .3 * sh * cshd(pw);' : '') + `
   o = vec4(fogc(c, pw), vz / 300.);
 }`;
 

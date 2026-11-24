@@ -23,11 +23,18 @@ console.log('genes:', L.genes() || 'no change yet');
 const kinds = {}; for (const s of log) { const k = /caught|pulled down|felled|born|dropped|whelped|old age|starved|came in|moved on|roaring/.exec(s); kinds[k ? k[0] : 'other'] = (kinds[k ? k[0] : 'other'] || 0) + 1; } console.log(kinds);
 // the forest: three centuries
 const stand = B.trees, flog = [], census = () => G.trees.map((sp, si) => sp.nm + ' ' + stand.filter((t) => t.si === si && !t.st && t.H >= 5).length + '+' + stand.filter((t) => t.si === si && !t.st && t.H < 5).length).join(', ') + ' · snags ' + stand.filter((t) => t.st === 1).length + ', logs ' + stand.filter((t) => t.st === 2).length;
+const cum = new Float32Array(256), born = new Float32Array(256);
 console.log('year 0:   ' + census());
 for (let y = 1; y <= 300; y++) {
-  succeed(stand, G, B, rng(4821 + y * 7), (s) => flog.push(s), { deer: +process.argv[4] || 4, year: y }); if (y % 5 === 0) L.lapse(5);
+  for (let c = 0; c < 256; c++) cum[c] += L.fear(((c >> 4) + 0.5) / 16 * B.S - B.S / 2, ((c & 15) + 0.5) / 16 * B.S - B.S / 2);
+  succeed(stand, G, B, rng(4821 + y * 7), (s) => flog.push(s), { deer: +process.argv[4] || 4, year: y, fear: process.argv[5] === 'nofear' ? null : L.fear }); if (y % 5 === 0) L.lapse(5);
   if (y % 60 === 0) { console.log('year ' + y + ': ' + census()); const t0 = Date.now(); B = build(G, 4821, 1, 1, stand); for (const a of [B.caps, B.cards]) for (const v of a) if (!Number.isFinite(v)) bad++; console.log('          regrown in ' + (Date.now() - t0) + ' ms: ' + B.caps.length / 12 + ' capsules, ' + B.cards.length / 12 + ' cards'); }
 }
+{ const cell = (t) => Math.max(0, Math.min(15, Math.floor((t.x / B.S + 0.5) * 16))) * 16 + Math.max(0, Math.min(15, Math.floor((t.z / B.S + 0.5) * 16)));
+  const young = stand.filter((t) => !t.st && t.age < 40), order = [...cum.keys()].sort((a, b) => cum[b] - cum[a]), top = new Set(order.slice(0, 32)), bot = new Set(order.slice(-128));
+  const per = (S) => (young.filter((t) => S.has(cell(t))).length / S.size).toFixed(2);
+  console.log('trees under 40 years per cell: in the most feared eighth of the plot', per(top), '· in the least feared half', per(bot), '· mean fear there', (order.slice(0, 32).reduce((s, c) => s + cum[c], 0) / 32 / 300).toFixed(2), 'vs', (order.slice(-128).reduce((s, c) => s + cum[c], 0) / 128 / 300).toFixed(3)); }
+console.log('saplings under 2.2 m at the end:', stand.filter((t) => !t.st && t.H < 2.2).length, '· deer told to keep clear', log.filter((x) => /keep clear/.test(x)).length + flog.filter((x) => /keep clear/.test(x)).length, 'times');
 console.log(flog.length + ' things in the forest chronicle, e.g. ' + flog.filter((s) => /ancestors|browsed/.test(s)).slice(0, 5).join(' | '));
 console.log(flog.filter((s) => /gale/.test(s)).length + ' gales, ' + flog.filter((s) => /jays/.test(s)).length + ' jay years; ' + (flog.find((s) => /gale/.test(s)) || ''));
 console.log(flog.filter((s) => /mast year/.test(s)).length + ' mast years in 300, e.g. ' + (flog.find((s) => /mast year/.test(s)) || 'none'));

@@ -33,7 +33,7 @@ let stand = null, clock = 0, dayPh = 0.33, yearF = 0.3, year = 1, decT = 0, fol 
 const pass = (n) => {
   let ev = 0;
   for (let i = 0; i < n; i++) {
-    year++; const e = { deer: LIFE.counts.deer || 0, year, deep: B.strm && B.strm.deep, fire }; ev += succeed(stand, G, B, rng(seed + year * 7), say, e); if (e.mast) LIFE.fat = 1;
+    year++; const e = { deer: LIFE.counts.deer || 0, year, deep: B.strm && B.strm.deep, fire, fear: LIFE.fear }; ev += succeed(stand, G, B, rng(seed + year * 7), say, e); if (e.mast) LIFE.fat = 1;
     fire.rest(1, stand); if (!LIFE.counts.beavers && world.dam > 0) { world.dam = max(0, world.dam - 0.06); ev++; }
     if (n > 1 && Math.random() < 0.016 * (1.4 - G.floor.moss)) { const t = stand[(Math.random() * stand.length) | 0]; fire.light(t.x, t.z); for (let k = 0; k < 400 && fire.n; k++) fire.step(1, f.wd, 0, Math.random, stand, G); say('Fire went through: ' + fire.killed + ' trees killed'); fire.killed = 0; ev++; }
   }

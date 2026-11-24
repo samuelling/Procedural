@@ -18,11 +18,12 @@ const glsl = (body) => {                                        // one template 
 };
 // literals are joined end to end, so a space is kept where two words would meet
 const shaders = { name: 'shaders', setup(b) { b.onLoad({ filter: /(gl|fx)\.js$/ }, (a) => ({ contents: readFileSync(a.path, 'utf8').replace(/`([^`]*)`/g, (_, s) => { const m = glsl(s); return '`' + (/^\s/.test(s) && /^\w/.test(m) ? ' ' : '') + m + (/\s$/.test(s) && /\w$/.test(m) ? ' ' : '') + '`'; }), loader: 'js' })); } };
-const r = await build({ entryPoints: ['src/main.js'], bundle: true, format: 'iife', minify: true, target: 'es2020', write: false, define: { TIER: tier }, plugins: [shaders] });
+const r = await build({ entryPoints: ['src/main.js'], bundle: true, format: 'iife', minifySyntax: true, minifyWhitespace: true, target: 'es2020', write: false, define: { TIER: tier }, plugins: [shaders] });
 // names are handed out again after the other rungs' code has been dropped, so that code written for a higher rung cannot change a lower one by a byte
 const js = (await transform(r.outputFiles[0].text, { minify: true, target: 'es2020' })).code;
 const html = readFileSync('src/template.html', 'utf8').replace(/<link[^>]*fonts[^>]*>\n?/, '').replace(/<script>__JS__<\/script>\n?/, '')
-  .replace(/<!--T(\d)-->([^]*?)<!--\/T\d-->/g, (_, n, body) => (+tier >= +n ? body : '')).replace(/\/\*[^]*?\*\//g, '').replace(/\n\s*/g, '\n').replace('__TIER__', tier);
+  .replace(/<!--T(\d)-->([^]*?)<!--\/T\d-->/g, (_, n, body) => (+tier >= +n ? body : '')).replace(/\/\*[^]*?\*\//g, '').replace(/\n\s*/g, '\n').replace('__TIER__', tier)
+  .replace(/<style>([^]*?)<\/style>/, (_, c) => '<style>' + c.replace(/\s*([{};:,>])\s*/g, '$1').replace(/;}/g, '}') + '</style>');   // the style sheet, squeezed
 if (html.includes('__JS__')) throw new Error('template script tag not found');
 writeFileSync(out + '/packed.js', 'document.open();document.write(' + JSON.stringify(html) + ');document.close();' + js);
 writeFileSync(out + '/plain.html', html.replace('</body>', () => '<script>' + js.replace(/<\/script/g, '<\\/script') + '</script></body>'));

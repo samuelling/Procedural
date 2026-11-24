@@ -88,6 +88,12 @@ species can live at once; a lost species' place goes to the next new one. The Li
 gradient with instant reproductive isolation at the split, not a population-genetics simulation: inheritance is
 blending, there is no hybridisation, and how far is far enough is a threshold chosen here.
 
+Deer remember. They keep a map of where wolves have killed, feed elsewhere, and the fear fades over a year or two; the
+succession reads the same map, so browsing is lighter where the deer are afraid. This is the "landscape of fear" idea
+from Yellowstone, whose real-world strength is still argued over. Here too the effect on where young trees end up was not
+clear in 300-year runs at this plot size (in one forest of three the most feared eighth of the plot held more young trees
+than the rest; in the other two it did not); what is certain is only that the rule is in and the deer act on it.
+
 The clock button steps through still, days (a year is 8 minutes), seasons (a year a minute) and decades (five years
 every three seconds, trees only).
 
@@ -103,7 +109,12 @@ Bark gets fissures within its fissures and fibres along the limb, lichen rosette
 beetles' exit holes, and galleries in dead wood. Moss turns into separate shoots. The forest floor turns into single
 fallen leaves (midrib, side veins, curled darker edges, some eaten down to their veins), needles under conifers, and
 twigs, in three layers that shade one another, over soil grains. Stones show mineral grains, glints of mica and map
-lichen. Fur shows hairs. Water shows fine ripples, pebbles on the bed and specks of pollen drifting downstream.
+lichen. Fur shows hairs, birds feathers. Water shows fine ripples, pebbles on the bed and specks of pollen drifting downstream.
+Mushrooms show gills (short ones between the long) or pores beneath, and fibrils above. Lichens grow as irregular colonies
+that favour the bark's ridges and pale at their growing rim. Conifer sprays break into single needles, each with its own
+angle, length and taper. Flowers come as daisies (many narrow rays), buttercups (five glossy cups) or campions (notched
+petals). At dawn and after rain, leaves, fronds and blades carry dew: each drop a small lens with a dark rim and a point of
+sky. Ants run up some trunks, and about one leaf in thirty has a ladybird on it.
 
 ## What has and has not been checked
 
@@ -114,7 +125,9 @@ at desktop and phone sizes; the published pages match the built files byte for b
 
 Seen in close-up renders: a broad leaf (teeth, veins, spots), single spruce needles, a lobed fern, a flower's veins and
 pollen, a trunk's fissures and lichens, moss shoots, leaf and needle litter, a stone's grains, the stream's bed and
-floating specks. Not seen close up: fern spores (the frond rendered was seen from above), a leaf-miner's trail, a hole
+floating specks. Also seen: dew at dawn on a sapling's leaves, single spruce needles, lichen colonies, a fly agaric from the side. Not seen
+close up: mushroom gills (the camera stays 35 cm above the ground), feathers (birds stay overhead), ants, a ladybird, new
+flower shapes up close, fern spores (the frond rendered was seen from above), a leaf-miner's trail, a hole
 in a leaf, beetle holes and galleries, mica glints, and fur (the deer rendered was a metre away). Frame rate with the
 close detail on real hardware is untested.
 

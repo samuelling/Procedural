@@ -150,6 +150,13 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     if (st) for (let i = 0; i < (low ? 4 : 9); i++) { const x = rr(-hs, hs); drag.push({ x, o: rr(-1, 1), ph: rnd() * 99, sd: rnd(), h: rr(0.3, 1.1) }); frogs.push({ x: rr(-hs, hs), e: rnd() < 0.5 ? -1 : 1, t: rr(1, 9), j: 0 }); }
   }
   const alive = (k) => herd.filter((d) => d.kind === k && d.mode !== 9);
+  // memory (2 MB rung): the deer carry a map of where wolves have killed. They keep away from those places, feeding
+  // elsewhere, and the fear fades over a year or two; so where wolves hunt, seedlings escape the browsing.
+  const FR = TIER > 3 && new Float32Array(256), fc = (x, z) => max(0, min(15, floor((x / B.S + 0.5) * 16))) * 16 + max(0, min(15, floor((z / B.S + 0.5) * 16)));
+  const fear = (x, z) => (FR ? FR[fc(x, z)] : 0);
+  const scare = (p) => { if (!FR) return; const c = fc(p.x, p.z), was = FR[c]; for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const x = (c >> 4) + i, z = (c & 15) + j; if (x >= 0 && x < 16 && z >= 0 && z < 16) FR[x * 16 + z] = min(3, FR[x * 16 + z] + 1.2 / (1 + i * i + j * j)); }
+    if (was < 1) say('The deer now keep clear of the place where ' + who(p) + ' fell'); };
+  const calm = (d) => { let b = spot(), bf = 9; for (let i = 0; i < 6; i++) { const s = spot(), f = fear(s[0], s[1]) + hypot(s[0] - d.x, s[1] - d.z) / 60; if (f < bf) { bf = f; b = s; } } return b; };
   const die = (d, why) => { if (d.mode === 9) return; d.mode = 9; d.dead = 0; d.v = 0; if (why && (d.name || why !== 'died of old age')) say(Who(d) + ' ' + why); };
   const bank = (d) => { const x = cl(d.x + rr(-9, 9)); return [x, st.zc(x) + (d.z > st.zc(x) ? 1 : -1) * (st.wid(x) + 0.2)]; };
   // a pack arrives, or leaves
@@ -168,7 +175,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     }
     if (d.thi > 0.7 && st) { d.tg = bank(d); d.want = 4; d.t = 30; return; }
     if (d.hun > 0.5) {
-      if (PREY[k] < 0) { d.mode = 1; d.t = rr(6, 13); return; }
+      if (PREY[k] < 0) { if (TIER > 3 && !k && fear(d.x, d.z) > 0.4) { d.tg = calm(d); d.want = 1; d.t = 30; return; } d.mode = 1; d.t = rr(6, 13); return; }   // a frightened deer goes elsewhere to eat
       const dead = herd.find((o) => o.mode === 9 && o.dead < 25), prey = alive(PREY[k]).sort((a, b) => dst(a, d) - dst(b, d) + (k === 3 ? (a.age > 1 && a.age < a.life * 0.75 ? 8 : 0) - (b.age > 1 && b.age < b.life * 0.75 ? 8 : 0) : 0))[0];
       if (dead) { d.tg = [dead.x, dead.z]; d.want = 1; d.t = 30; return; }       // carrion first, then the hunt: wolves pick the young and the old
       if (prey) { d.mode = 6; d.prey = prey; d.t = 45; if (k === 3) for (const o of alive(3)) if (o !== d && o.mode < 2 && o.hun > 0.2) { o.mode = 6; o.prey = prey; o.t = 45; } return; }   // and the pack goes with it
@@ -177,7 +184,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     if (k === 0 && d.male && !young && season === 2) {                     // autumn: the stag goes looking for the does, and says so
       const f = alive(0).filter((o) => !o.male)[0]; if (f) { d.tg = [f.x + rr(-3, 3), f.z + rr(-3, 3)]; d.t = 15; if (rnd() < 0.5) { snd('roar'); if (rnd() < 0.3) say(Who(d) + ' is roaring'); } return; }
     }
-    d.tg = spot(); d.t = rr(6, 16);
+    d.tg = TIER > 3 && !k ? calm(d) : spot(); d.t = rr(6, 16);
   };
   const live = (d, cam, dt, yrs, night, season, snow) => {
     const K = KIND[d.kind], k = d.kind, old = d.age > d.life * 0.8, F = env.fire;
@@ -202,7 +209,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
       if (pd < 0 || d.t < 0) { if (d.mode === 7) d.tir += 0.35; choose(d, night, season); }
       else {
         d.tg = [p.x, p.z]; if (d.mode === 6 && pd < (k === 3 ? 11 : 7)) { d.mode = 7; d.t = k === 3 ? 11 : 8; }
-        if (pd < (k === 3 ? 1.1 : 0.7)) { die(p); say(Who(d) + (k === 3 ? ' pulled down ' : ' caught ') + who(p)); snd('squeal'); for (const o of alive(k)) if (o === d || (o.prey === p && dst(o, d) < 20)) { o.mode = 0; o.want = 1; o.tg = [p.x, p.z]; o.t = 20; o.prey = null; } d.hun = min(d.hun, 0.9); }
+        if (pd < (k === 3 ? 1.1 : 0.7)) { die(p); say(Who(d) + (k === 3 ? ' pulled down ' : ' caught ') + who(p)); if (k === 3 && !p.kind) scare(p); snd('squeal'); for (const o of alive(k)) if (o === d || (o.prey === p && dst(o, d) < 20)) { o.mode = 0; o.want = 1; o.tg = [p.x, p.z]; o.t = 20; o.prey = null; } d.hun = min(d.hun, 0.9); }
       }
     } else if (d.mode === 10 && d.t < 0) {                                 // the tree comes down, toward the water, and the dam rises
       const tr = d.tree; if (tr && !tr.st) { tr.st = 2; tr.t = 0; tr.a = atan2(st.zc(tr.x) - tr.z, 0.4); env.world.dam = min(1, env.world.dam + 0.14); say(Who(d) + ' felled a' + (/^[AO]/.test(G.trees[tr.si].nm) ? 'n ' : ' ') + G.trees[tr.si].nm.toLowerCase()); self.dirty = 1; }
@@ -286,7 +293,8 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
     // how far each kind's inherited legs and boldness have moved from where they started
     genes() { return [0, 1, 2, 3].map((k) => { const a = alive(k); if (a.length < 2 || !a.some((d) => d.gen > 1)) return ''; const m = (i) => Math.round((a.reduce((s, d) => s + d.gn[i], 0) / a.length - 1) * 100); return KIND[k][0] + ' legs ' + (m(0) >= 0 ? '+' : '') + m(0) + '%, boldness ' + (m(1) >= 0 ? '+' : '') + m(1) + '%'; }).filter(Boolean).join(' · '); },
-    world(b) { B = b; st = b.strm; },                                      // the forest was regrown around them
+    world(b) { B = b; st = b.strm; },
+    fear,                                      // the forest was regrown around them
     // spring: those old enough conceive, and where a kind has died out, strangers walk in from outside
     spring() {
       for (let k = 0; k < KIND.length; k++) {
@@ -294,7 +302,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
         if (k !== 3 && (a.length < 2 || !a.some((d) => d.male) || !a.some((d) => !d.male))) { const d = born(k, rnd() < 0.5 ? -hs : hs, k === 4 ? st.zc(hs) : rr(-hs, hs), K[2] * rr(1.2, 3)); d.male = !a.some((o) => o.male); say(Who(d) + ' came in from outside the plot'); }
         for (const d of a) if (!d.male && d.age >= K[2] && d.hun < 1.1 && a.length < K[9] + (self.fat && PREY[k] < 0 ? 3 : 0)) d.preg = rr(6, 50);   // after a mast year there is room for more
       }
-      self.fat = 0;
+      self.fat = 0; if (FR) for (let i = 0; i < 256; i++) FR[i] *= 0.55;   // fear fades
       const dn = alive(0).length, wn = alive(3).length;                    // wolves follow the deer: a full plot draws a pack, an empty one loses it
       if (TIER > 3 && !wn && dn >= 8 && rnd() < 0.35) pack(1); else if (wn && dn < 3 && rnd() < 0.6) pack(0);
     },
@@ -303,7 +311,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
       for (let y = 0; y < yrs; y++) {
         for (let i = herd.length - 1; i >= 0; i--) { const d = herd[i]; d.age++; d.hun = 0.2; if (d.age > d.life || d.mode === 9) herd.splice(i, 1); }
         this.spring(); for (const d of herd.slice()) if (d.preg > 0) { d.preg = 0; const K = KIND[d.kind], dad = alive(d.kind).find((o) => o.male); for (let i = d.kind === 1 ? 3 : d.kind === 0 ? 1 : 2; i > 0 && alive(d.kind).length < K[9]; i--) born(d.kind, d.x, d.z, 0.5, d, dad); }
-        for (const p of herd.filter((d) => PREY[d.kind] >= 0)) for (let i = p.kind === 3 ? 1 : 2; i > 0; i--) { const v = alive(PREY[p.kind]).sort((a, b) => a.gn[0] * (a.age > 1 ? 1 : 0.7) - b.gn[0] * (b.age > 1 ? 1 : 0.7))[0]; if (v && rnd() < 0.7) herd.splice(herd.indexOf(v), 1); }   // the slow are taken first
+        for (const p of herd.filter((d) => PREY[d.kind] >= 0)) for (let i = p.kind === 3 ? 1 : 2; i > 0; i--) { const v = alive(PREY[p.kind]).sort((a, b) => a.gn[0] * (a.age > 1 ? 1 : 0.7) - b.gn[0] * (b.age > 1 ? 1 : 0.7))[0]; if (v && rnd() < 0.7) { if (p.kind === 3 && !v.kind) scare(v); herd.splice(herd.indexOf(v), 1); } }   // the slow are taken first
       }
     },
     // one step of everything alive; returns how many limbs to draw. yrs: years gone by in this step.
@@ -367,7 +375,7 @@ export function succeed(stand, G, B, rnd, say, env = {}) {
   for (let i = stand.length - 1; i >= 0; i--) {
     const t = stand[i], sp = G.trees[t.si], T = tl(sp), g = t.g || 1, tol = min(0.97, T[2] / g), life = T[0] / g ** 0.7;
     if (!t.st) {
-      if (t.H < 2.2 && rnd() < min(0.5, (env.deer || 0) * 0.03 * T[3])) { stand.splice(i, 1); eaten++; ev++; continue; }              // browsed off
+      if (t.H < 2.2 && rnd() < min(0.5, (env.deer || 0) * 0.03 * T[3]) * (env.fear ? 1 - min(0.95, env.fear(t.x, t.z) * 2.5) : 1)) { stand.splice(i, 1); eaten++; ev++; continue; }              // browsed off
       if (env.deep && env.deep(t.x, t.z) && rnd() < 0.4) { t.st = 1; t.t = 0; drowned++; ev++; continue; }
       t.age++; const s = shade(t.x, t.z, t.H, t), h0 = t.H; t.H += (t.hm - t.H) * T[1] * g * (1 - s * (1 - tol)); if (h0 < 5 && t.H >= 5) ev++;
       if (rnd() < 0.003 + (t.age > life ? 0.09 : 0) + s * (1 - tol) * (t.H < 8 ? 0.12 : 0.02)) { t.st = 1; t.t = 0; ev++; if (t.H > 13) say(an(sp.nm) + ' died' + (t.age > life ? ' of age' : s > 0.5 ? ' in the shade' : '') + ' and stands dead'); }
@@ -483,7 +491,11 @@ export const SEAF = `
 `;
 // a flower: five petals round a yellow eye
 export const FLW = `
-  if (ty == 6) { vec2 q = u - vec2(.5, 0.); float r = length(q) * 2., a = atan(q.y, q.x); vein = step(r, .26); LF = vec4(r, a, sd, 6.); return step(r, .5 + .45 * abs(cos(a * 2.5 + sd * 6.))); }
+  if (ty == 6) {
+    vec2 q = u - vec2(.5, 0.); float r = length(q) * 2., a = atan(q.y, q.x), hh = h1(sd * 7.3), np = hh < .35 ? 14. : 5., e = hh < .35 ? .3 : .22, c = abs(cos(a * np * .5 + sd * 6.));
+    float rim = hh < .35 ? .3 + .65 * pow(c, 5.) : hh < .8 ? .26 + .7 * pow(c, .8) : .3 + .62 * pow(c, .6) - .14 * smoothstep(.93, 1., c);
+    rim += .02 * sin(a * 37. + sd * 9.) * smoothstep(.0012, .0004, fw); vein = step(r, e); LF = vec4(r, a, sd, 6.); return step(r, rim);
+  }
 `;
 
 // ---- close detail (2 MB rung). FP is how many metres one pixel spans where it lands. A pattern is drawn only once it is
@@ -498,6 +510,12 @@ vec3 vor(vec2 p) {
   for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(x, y), r = g + vec2(h2(i + g), h2(i + g + 17.3)) - f; float d = dot(r, r); if (d < d1) { d2 = d1; d1 = d; id = h2(i + g + 5.1); } else if (d < d2) d2 = d; }
   return vec3(sqrt(d1), sqrt(d2) - sqrt(d1), id);
 }
+vec4 vor2(vec2 p) {
+  vec2 i = floor(p), f = fract(p), o = vec2(0.); float d1 = 8., id = 0.;
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(x, y), r = g + vec2(h2(i + g), h2(i + g + 17.3)) - f; float d = dot(r, r); if (d < d1) { d1 = d; o = r; id = h2(i + g + 5.1); } }
+  return vec4(-o, sqrt(d1), id);
+}
+float DEW = 0.;
 vec2 rot(vec2 v, float a) { float c = cos(a), s = sin(a); return vec2(c * v.x - s * v.y, s * v.x + c * v.y); }
 float spec(vec3 n, vec3 p, float g) { return pow(max(dot(reflect(-uSun, n), normalize(uCam - p)), 0.), g); }
 // a bump from a height field, by its screen-space slope; a macro, so vertex shaders that share this preamble never see dFdx
@@ -527,7 +545,9 @@ export const LEAFD = `
       vec3 s2 = vor(vec2(t * 16., y * 5.) + LF.z * 53.); float spot = step(.82, LF.z) * step(s2.z, .06) * k1;                                       // a fungus's spots, each in a yellow halo
       alb = mix(alb, vec3(.55, .5, .1), spot * smoothstep(.42, .25, s2.x)); alb = mix(alb, vec3(.08, .05, .02), spot * smoothstep(.16, .1, s2.x));
       alb = mix(alb, vec3(.75, .72, .5), step(LF.z, .08) * smoothstep(.06, .02, abs(y - .55 * sin(t * 9. + LF.z * 40.) * t)) * step(.15, t) * k1);  // a leaf-miner's pale trail
-      gl0 = .35;
+      vec2 lbp = vec2((t - .55) * 3.4, y * .8 - .15) / .1;
+      if (abs(LF.z - .415) < .016 && dot(lbp, lbp) < 1.6) { float rb = length(lbp), sp2 = smoothstep(.22, .16, length(fract(lbp * 1.6 + .5) - .5)) * step(.2, abs(lbp.y)); alb = rb > 1. ? vec3(.02) : mix(vec3(.75, .06, .03), vec3(.02), max(sp2, step(abs(lbp.y), .05))); hh = 3. * sqrt(max(1.6 - rb * rb, 0.)); gl0 = 1.; bv = 0.; }
+      gl0 = max(gl0, .35);
     } else if (LF.w < 1.5) {                                               // a needle: round in section, a pale band of stomata down one side
       float a = clamp(LF.x, -1., 1.); alb *= mix(1., (.65 + .45 * sqrt(1. - a * a)) * (.75 + .4 * LF.y), k1); alb = mix(alb, vec3(.62, .72, .64), smoothstep(.14, 0., abs(a + .35)) * .5 * k2);
       hh = sqrt(1. - a * a) * k1; gl0 = .5;
@@ -538,9 +558,13 @@ export const LEAFD = `
       alb *= 1. + (step(.5, fract(LF.x * 3. + .25)) - .5) * .2 * k2; alb = mix(alb, vec3(.62, .55, .3), smoothstep(.7, 1., y) * step(.6, LF.z) * k1); hh = (step(.5, fract(LF.x * 3. + .25)) - .5) * k2; gl0 = .25;
     } else {                                                               // a flower: veins along each petal, paler tips, pollen on the anthers
       vec2 q = vec2(cos(y), sin(y)) * t; vec3 an = vor(q * 70. + LF.z * 9.);
-      if (t > .26) { float pv = smoothstep(.12, 0., abs(fract(y * 9.) - .5)) * smoothstep(.26, .4, t) * k1; alb *= 1. - .35 * pv; alb = mix(alb, min(alb * 1.25 + .08, vec3(1.)), smoothstep(.55, .95, t) * k1); alb *= mix(1., .8, smoothstep(.4, .26, t) * k1); hh = -pv; }
+      if (vein < .5) { float pv = smoothstep(.12, 0., abs(fract(y * 9.) - .5)) * smoothstep(.2, .4, t) * k1; alb *= 1. - .35 * pv; gl0 = abs(h1(LF.z * 7.3) - .47) < .13 ? .9 : .15; alb = mix(alb, min(alb * 1.25 + .08, vec3(1.)), smoothstep(.55, .95, t) * k1); alb *= mix(1., .8, smoothstep(.4, .2, t) * k1); hh = -pv + (1. - abs(cos(y * (h1(LF.z * 7.3) < .35 ? 7. : 2.5)))) * .5 * k1; }
       else { float po = smoothstep(.4, .15, an.x) * k1; alb = mix(alb * mix(1., .55, k1), vec3(1., .7, .1), po); hh = po * 2.; }
     }
+  }
+  if (FP < .004 && DEW > .02) {
+    vec4 dv = vor2(uv * 45. + ci.w * 13.); float R = .2 + .25 * fract(dv.w * 7.), kd = vis(.003); if (dv.w < DEW * .45 && dv.z < R) { vec2 dp = dv.xy / R; float e = length(dp); hh += 8. * sqrt(max(1. - e * e, 0.)) * kd;   // each drop a lens: the leaf seen bright through it, a dark rim, a point of sky
+      alb = mix(alb, mix(alb * 1.6 + .04, vec3(.02), smoothstep(.7, .95, e)) + vec3(.9) * smoothstep(.22, .1, length(dp + vec2(.35, -.35))), kd); gl0 = max(gl0, 2. * kd); bv = 0.; }
   }
   BUMP(n, pw, hh * .0004)
 `;
@@ -550,11 +574,18 @@ export const BARKD = `
       vec2 Q = vec2(atan(nw.z, nw.x) * wr, s); float k = vis(.003), fc = abs(vn3(P * 7.) - .5), fi = vn3(vec3(P.x * 60., P.y * 5., P.z * 60.)) * .6 + vn3(vec3(P.x * 150., P.y * 12., P.z * 150.)) * .4;
       float fs = smoothstep(0., .12, fc) * (.55 + .45 * smoothstep(0., .06, abs(vn3(P * vec3(16., 5., 16.)) - .5)));      // fissures within fissures; fibres running along the limb
       tex = mix(tex, tex * fs * (.7 + .5 * fi), k); alb *= mix(1., (.45 + .55 * fs) * (.75 + .5 * fi), k);
-      vec3 lv = vor(Q * 7. + sd * 9.); float rr = .26 + .16 * vn(Q * 28.) + .06 * vn(Q * 90.), li = step(lv.z, .22) * smoothstep(rr, rr - .04, lv.x) * k;   // a rosette with a lobed rim
-      vec3 lb = vor(Q * 110. + lv.z * 30.), lc = (lv.z < .09 ? vec3(.55, .58, .46) : lv.z < .18 ? vec3(.66, .64, .38) : vec3(.8, .48, .12)) * (.7 + .35 * smoothstep(0., .18, lb.y)) * (.9 + .2 * lb.z);   // each lobe pale, darker where lobes meet
-      vec3 ap = vor(Q * 60. + lv.z * 50.); float apo = li * step(ap.z, .2) * step(lv.x, rr * .6) * smoothstep(.3, .18, ap.x) * vis(.001);                      // cup-shaped fruit bodies toward the centre
-      alb = mix(alb, lc, li); alb = mix(alb, lc * vec3(.75, .45, .25), apo); tex = mix(tex, .55 + .35 * smoothstep(0., .18, lb.y) + apo * .3, li * .6);
+      float ln = vn(Q * 5. + sd * 9.) * .6 + vn(Q * 17. + 3.) * .28 + vn(Q * 55.) * .12 + tex * .1, lt = vn(Q * 1.7 + sd * 4.);   // where a colony has spread: more on the ridges than in the cracks
+      float li = smoothstep(.7, .73, ln) * step(.3, fract(sd * 7.31)) * k, rim = li * smoothstep(.77, .71, ln);
+      vec3 lb = vor(Q * 110. + lt * 30.), lc = mix(mix(vec3(.56, .56, .41), vec3(.64, .62, .34), smoothstep(.35, .65, lt)), vec3(.74, .47, .14), smoothstep(.8, .86, lt));
+      lc *= (.72 + .35 * smoothstep(0., .18, lb.y)) * (.9 + .2 * lb.z) * (1. + .2 * rim);                                                          // lobes pale, dark where they meet, the growing rim paler still
+      vec3 ap = vor(Q * 60. + lt * 50.); float apo = li * (1. - rim) * step(ap.z, .12) * smoothstep(.3, .18, ap.x) * vis(.001);                      // cup-shaped fruit bodies away from the rim
+      alb = mix(alb, mix(lc, alb * lc * 1.6, .25), li * (.75 + .25 * smoothstep(.72, .8, ln))); alb = mix(alb, lc * vec3(.75, .45, .25), apo); tex = mix(tex, .55 + .35 * smoothstep(0., .18, lb.y) + apo * .3, li * .6);
       vec3 hv = vor(Q * 45. + 3.1); float ho = step(hv.z, .025) * smoothstep(.22, .14, hv.x) * vis(.0015) * (1. - li); alb *= 1. - .85 * ho; tex -= ho * .8;
+      if (fract(sd * 13.7) < .3 && kd == 0 && s < 2.5) {                                                                              // an ant trail up some trunks
+        float c0 = fract(sd * 3.1) * 6.283 * wr + .02 * sin(s * 7. + sd), dx = abs(Q.x - c0), ph = fract((s - uT * .035) * 38. + h1(floor((s - uT * .035) * 38.)) * .3);
+        float ant = step(dx, .0035 * (1. - abs(ph * 2. - .3) * .5)) * (step(ph, .1) + step(.13, ph) * step(ph, .2) + step(.23, ph) * step(ph, .36)) * step(.4, h1(floor((s - uT * .035) * 38.) + sd)) * vis(.001);
+        alb = mix(alb, vec3(.03, .02, .015), ant); tex += ant * .6; GL = ant * .5;
+      }
       if (kd == 1) { float ga = smoothstep(.05, 0., abs(vn(Q * vec2(30., 6.)) - .5)) * k * (1. - li); alb *= 1. - .45 * ga; tex -= ga * .5; }   // beetles' galleries in wood that has lost its bark
     }
 `;
@@ -605,4 +636,17 @@ export const STONED = `
 // fur close: single hairs lying along the limb
 export const FURD = `
       if (FP < .003) { vec3 H = vec3(nw.x * wr * 900., s * 40., nw.z * wr * 900.); float st = vn3(H) * .6 + vn3(H * vec3(2.1, 1.3, 2.1) + 5.) * .4, k = vis(.002); alb *= mix(1., .62 + .7 * st, k); tex = mix(tex, st, k); }
+`;
+
+// mushrooms close: gills beneath (short ones between the long), or pores in brackets; fibrils above and a striate margin
+export const MUSHD = `
+  else if (kd == 3 && FP < .003) {
+    vec3 cc = sd < .4 ? vec3(.55, .05, .03) : sd < .75 ? vec3(.4, .24, .11) : vec3(.7, .55, .3), c0 = pw - nw * wr; float ang = atan(pw.z - c0.z, pw.x - c0.x), k = vis(.0015), dn = length((pw - c0).xz) / max(wr, 1e-4);
+    if (nw.y < -.1) { float g = sd < .75 ? smoothstep(.12, .3, abs(fract(ang * 9.55) - .5)) * (mod(floor(ang * 9.55), 2.) > .5 ? step(.6, dn) : 1.) : smoothstep(.25, .4, length(fract(vec2(ang * 30., dn * 22.)) - .5)); alb = mix(vec3(.45, .36, .28), vec3(.86, .8, .68), mix(.6, g, k)); tex = g; }
+    else { alb = mix(cc, vec3(.9, .88, .8), smoothstep(.7, .8, vn3(pw * 90.)) * step(sd, .4)); float fb = vn(vec2(ang * 80., dn * 6.)); alb *= mix(1., .8 + .35 * fb * (1. - .5 * step(sd, .4)), k) * (1. - .25 * k * smoothstep(.75, 1., dn) * step(.5, fract(ang * 9.55))); tex = fb; GL = .5 * step(sd, .4); }
+  }
+`;
+// birds close: feathers overlapping like scales
+export const FEATHD = `
+    if (kd == 6 && FP < .003) { vec3 fv = vor(vec2(atan(nw.z, nw.x) * wr * 2., s) * 150.); alb *= .7 + .6 * smoothstep(0., .3, fv.y) * (.8 + .4 * fv.z); tex = fv.y; GL = .2; }
 `;
