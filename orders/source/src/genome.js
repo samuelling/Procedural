@@ -102,7 +102,16 @@ export const extra = () => {
   const alder = sp({ ...birch(0), id: 'alder', nm: 'Alder', H: [10, 16], cr: 2.8, wet: 0.9, leaf: { t: 2, sz: 0.8, per: 5.5, o: 2, a: [0.07, 0.22, 0.05], b: [0.2, 0.38, 0.08], dr: 0.15 }, bark: { t: 0, sc: 0.7, a: [0.25, 0.22, 0.2], b: [0.09, 0.08, 0.07] } });
   const willow = sp({ ...droop(birch(0), 0.24), id: 'willow', nm: 'Willow', H: [9, 14], cr: 4, wet: 0.95, clear: [0.2, 0.35], leaf: { t: 2, sz: 0.75, per: 7, o: 2, a: [0.2, 0.36, 0.1], b: [0.45, 0.58, 0.2], dr: 0.8 }, bark: { t: 0, sc: 0.9, a: [0.3, 0.27, 0.22], b: [0.11, 0.1, 0.08] } });
   const larch = sp({ ...spruce(0), id: 'larch', nm: 'Larch', H: [18, 28], cr: 3, clear: [0.25, 0.4], leaf: { t: 1, sz: 1, per: 4, o: 1, a: [0.3, 0.42, 0.1], b: [0.55, 0.62, 0.18], dr: 0.5 }, bark: { t: 1, sc: 0.9, a: [0.4, 0.3, 0.25], b: [0.16, 0.11, 0.09] } });
+  // powers of ten: the same grammar a thousand times smaller. Here a unit is a millimetre, the trees are moss shoots,
+  // the boulders are grains of sand, and the animals have six legs or eight.
+  const haircap = sp({ ...spruce(0), id: 'haircap', nm: 'Haircap moss', H: [8, 17], cr: 1.5, clear: [0, 0.06], wet: 0.6, leaf: { t: 1, sz: 0.75, per: 5, o: 1, a: [0.1, 0.3, 0.04], b: [0.32, 0.58, 0.1], dr: 0.2 }, bark: { t: 3, sc: 1, a: [0.3, 0.34, 0.12], b: [0.14, 0.2, 0.06] } });
+  const fork = sp({ ...aspen(0), id: 'fork', nm: 'Fork moss', H: [6, 11], cr: 1.4, clear: [0.05, 0.2], wet: 0.5, leaf: { t: 0, sz: 0.5, per: 6, o: 2, a: [0.12, 0.34, 0.04], b: [0.4, 0.62, 0.1], dr: 0.1 }, bark: { t: 3, sc: 1, a: [0.28, 0.36, 0.1], b: [0.12, 0.2, 0.05] } });
   return {
+    moss: { nm: 'Moss on a log', span: '6.4 cm', size: 64,
+      land: { amp: 3, f: 0.03, tilt: 0.05, rock: [40, 0.6], peb: 300, log: 0, stump: 0, ra: [0.78, 0.74, 0.66], rb: [0.42, 0.4, 0.36] },
+      air: { sun: [38, 120], fog: 0.013, haze: [0.78, 0.84, 0.74], sky: [0.3, 0.5, 0.75], wind: 0.15 },
+      floor: { moss: 1, lit: [0.16, 0.1, 0.05], la: 0.2, fern: [600, 0.5], grass: [900, 0.5], shroom: 60, fa: [0.08, 0.3, 0.05], fb: [0.3, 0.55, 0.1], ga: [0.14, 0.36, 0.06], gb: [0.4, 0.6, 0.14] },
+      trees: [haircap(100), fork(40)], life: { deer: 0, birds: 0, springtail: 12, mite: 3 } },
     pine: { nm: 'Pine heath', size: 64,
       land: { amp: 1.6, f: 0.028, tilt: 0.02, rock: [26, 0.8], peb: 260, log: 5, stump: 6, ra: [0.55, 0.5, 0.45], rb: [0.26, 0.23, 0.2], stream: [1, 7, -0.2, 3] },
       air: { sun: [44, 80], fog: 0.006, haze: [0.8, 0.8, 0.74], sky: [0.16, 0.4, 0.88], wind: 0.6 },

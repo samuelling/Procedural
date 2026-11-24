@@ -10,7 +10,7 @@ import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW } from './fx.js';
 const FUR = `if (kd > 3) {
     vec3 Q = vec3(nw.x * 3., s * 5. + sd * 20., nw.z * 3.);
     alb = kd == 4 ? mix(vec3(.32, .19, .1), vec3(.25, .22, .19), uSe.y) : kd == 5 ? mix(vec3(.42, .34, .24), vec3(.85), uSe.y) : kd == 6 ? vec3(.06, .055, .06) : kd == 7 ? vec3(.52, .21, .05) : kd == 10 ? .5 + .5 * cos(sd * 30. + vec3(0., 2., 4.)) : kd == 11 ? vec3(.33, .28, .24)
-      : kd == 12 ? vec3(.1, .3, .07) : kd == 13 ? vec3(.03) : kd == 14 ? vec3(.34, .33, .31) : kd == 15 ? vec3(.17, .1, .06) : kd == 18 ? vec3(.02) : vec3(.72, .7, .62);   // deer and hare change coat for winter
+      : kd == 12 ? vec3(.1, .3, .07) : kd == 13 ? vec3(.03) : kd == 14 ? vec3(.34, .33, .31) : kd == 15 ? vec3(.17, .1, .06) : kd == 18 ? vec3(.02) : kd == 19 ? vec3(.3, .36, .52) : kd == 20 ? vec3(.62, .06, .03) : vec3(.72, .7, .62);   // deer and hare change coat for winter
     if (kd == 17) alb = vec3(90., 28., 3.) * (.4 + vn3(pw * 6. - vec3(0., uT * 7., 0.))) * (1.25 - s);                    // flame gives its own light
     else if (kd == 4 || kd == 5 || kd == 7 || kd == 11 || kd == 14 || kd == 15) {
       alb = mix(alb * 1.9 + .07, alb, smoothstep(-.8, -.15, nw.y)) * mix(1., .7, smoothstep(.5, .95, nw.y));               // pale beneath, dark along the back

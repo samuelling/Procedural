@@ -107,6 +107,7 @@ function grow(keepView, aged) {
   $('l2').textContent = JSON.stringify(GENOMES[key]).length.toLocaleString() + ' bytes of genome → ' + B.st.trees + ' trees · ' + (B.st.wood / 1000).toFixed(1) + ' km of wood · '
     + (B.cards.length / 12).toLocaleString() + ' leaf clusters, fronds and tufts · ' + B.st.rocks + ' stones'
     + (TIER > 2 ? ' · ' + Object.entries(LIFE.counts).filter((e) => e[1]).map((e) => e[1] + ' ' + e[0]).join(' · ') : '') + ' · grown in ' + round(performance.now() - t0) + ' ms';
+  if (TIER > 3 && G.span) $('l2').textContent = 'A unit here is a millimetre: the same grammar, a thousand times smaller. ' + G.span + ' across.';
   const css = (c) => 'rgb(' + c.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
   $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + s.nm + '</li>').join('');
   for (const b of document.querySelectorAll('[data-g]')) b.setAttribute('aria-pressed', b.dataset.g === key);

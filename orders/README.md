@@ -12,8 +12,10 @@ unpacker. No stored images, models or sound files.
 | [`2mb/`](2mb/) | 2,000,000 bytes | A forest that keeps time: animals are born, hunt, age and die; trees grow, die, fall and are replaced; plus night, seasons, flowers, insects, storms, and four more forests |
 
 `index.html` reports the real byte count of every rung against its allowance. The three small rungs are full. The two
-large ones are not: the 200 kB rung uses about 30 kB and the 2 MB rung about 36 kB, because that is how many rules have
+large ones are not: the 200 kB rung uses about 31 kB and the 2 MB rung about 37 kB, because that is how many rules have
 been written. The 2 MB build would fit in the 200 kB allowance; the split follows the order things were asked for.
+
+[`ROADMAP.md`](ROADMAP.md) is the plan for filling the 2 MB rung, track by track, and the state of each.
 
 ## How the pages fit
 

@@ -100,11 +100,13 @@ const NM1 = 'Al Bri Ca Da El Fa Ha Is Ka Li Mo Ne Or Ra Sa Ta Ur Va Wy Yo'.split
 // a kind of animal: name, lifespan in years, age of maturity, walking and running speed, leg length, coat, the distance at
 // which it notices you, the distance at which it runs, how many the plot can hold, adult size, seconds between meals
 const KIND = [['deer', 11, 1.6, 0.95, 4.4, 1, 4, 7, 4, 9, 1, 45], ['hare', 3.5, 0.5, 1.6, 5.6, 0.55, 5, 5, 3, 12, 0.3, 40], ['fox', 6, 1, 1.4, 6.3, 0.62, 7, 0, 2.5, 3, 0.42, 75],
-  ['wolf', 9, 1.6, 1.6, 6.9, 0.82, 14, 0, 5, 5, 0.66, 150], ['beaver', 8, 1.5, 0.55, 1.5, 0.24, 15, 4, 2, 4, 0.4, 60]];
+  ['wolf', 9, 1.6, 1.6, 6.9, 0.82, 14, 0, 5, 5, 0.66, 150], ['beaver', 8, 1.5, 0.55, 1.5, 0.24, 15, 4, 2, 4, 0.4, 60],
+  // a thousand times smaller, where a unit is a millimetre: springtails that graze and leap, and the mites that hunt them
+  ['springtail', 2, 0.3, 0.9, 5.5, 0.3, 19, 6, 3.5, 16, 1, 40], ['mite', 3, 0.5, 0.7, 2.4, 0.3, 20, 0, 2, 4, 0.8, 90]];
 // its build: body radius, how far the neck reaches forward and up, head length, ear, tail length and thickness, half the body's length
 const SHP = [[0.2, 0.3, 0.52, 0.3, 0.17, 0.16, 0.05, 0.48], [0.3, 0.2, 0.22, 0.26, 0.42, 0.1, 0.1, 0.42], [0.19, 0.26, 0.22, 0.3, 0.2, 0.6, 0.1, 0.5], [0.22, 0.3, 0.3, 0.36, 0.14, 0.5, 0.07, 0.52], [0.4, 0.2, 0.05, 0.3, 0.05, 0.55, 0.14, 0.42]];
-const YOUNG = ['fawn', 'leveret', 'kit', 'pup', 'kit'], SEX = [['doe', 'stag'], ['hare', 'hare'], ['vixen', 'fox'], ['she-wolf', 'wolf'], ['beaver', 'beaver']];
-const PREY = [-1, -1, 1, 0, -1], FOE = [3, 2, -1, -1, -1];             // what each kind hunts, and what it runs from
+const YOUNG = ['fawn', 'leveret', 'kit', 'pup', 'kit', 'springtail', 'mite'], SEX = [['doe', 'stag'], ['hare', 'hare'], ['vixen', 'fox'], ['she-wolf', 'wolf'], ['beaver', 'beaver'], ['springtail', 'springtail'], ['mite', 'mite']];
+const PREY = [-1, -1, 1, 0, -1, -1, 5], FOE = [3, 2, -1, -1, -1, 6, -1];             // what each kind hunts, and what it runs from
 export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}) {
   let B = B0, n = 0, st = B.strm, tick = 0;
   const hs = B.S / 2 - 3, out = new Float32Array(LIMB * MAXL), self = { dirty: 0 };
@@ -115,12 +117,12 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
   const herd = [], L = G.life || {};
   const born = (kind, x, z, age, mom, dad) => {
     const K = KIND[kind], gene = (i) => (mom ? max(0.7, min(1.4, (mom.gn[i] + (dad || mom).gn[i]) / 2 * Math.exp(gs() * 0.06))) : 1);   // handed down from both parents, with a little change
-    const d = { kind, x, z, a: rnd() * TAU, ph: rnd() * 9, age, life: K[1] * rr(0.75, 1.15), male: rnd() < 0.5, name: kind === 1 ? '' : NM1[(rnd() * 20) | 0] + NM2[(rnd() * 16) | 0], gn: [gene(0), gene(1)], gen: mom ? mom.gen + 1 : 0,
+    const d = { kind, x, z, a: rnd() * TAU, ph: rnd() * 9, age, life: K[1] * rr(0.75, 1.15), male: rnd() < 0.5, name: kind === 1 || kind === 5 ? '' : NM1[(rnd() * 20) | 0] + NM2[(rnd() * 16) | 0], gn: [gene(0), gene(1)], gen: mom ? mom.gen + 1 : 0,
       hun: rnd() * 0.4, thi: rnd() * 0.5, tir: rnd() * 0.3, mode: 0, want: 0, t: rr(1, 6), tg: [x, z], g: 0, lie: 0, v: 0, sd: rnd(), mom, preg: 0, dead: 0, sc: 1, prey: null, tree: null };
     herd.push(d); return d;
   };
   const who = (d) => (d.name ? d.name + ' the ' : 'a ') + (d.age < KIND[d.kind][2] * 0.6 ? YOUNG[d.kind] : SEX[d.kind][+d.male]), Who = (d) => who(d).replace(/^a /, 'A ');
-  [L.deer !== undefined ? L.deer : 3, TIER > 3 ? L.hare || 0 : 0, TIER > 3 ? L.fox || 0 : 0, 0, TIER > 3 && st ? L.beaver || 0 : 0].forEach((c, kind) => {
+  [L.deer !== undefined ? L.deer : 3, TIER > 3 ? L.hare || 0 : 0, TIER > 3 ? L.fox || 0 : 0, 0, TIER > 3 && st ? L.beaver || 0 : 0, TIER > 3 ? L.springtail || 0 : 0, TIER > 3 ? L.mite || 0 : 0].forEach((c, kind) => {
     for (let i = 0; i < c; i++) { const p = kind === 4 ? [0, st.zc(0)] : spot(), d = born(kind, p[0], p[1], KIND[kind][1] * rr(0.18, 0.7)); if (i < 2) d.male = !i; }
   });
   const nb = low ? 10 : (L.birds !== undefined ? L.birds : 20), birds = [];
@@ -167,9 +169,9 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     d.hun += dt / K[11] * d.gn[0] ** 1.5; d.thi += dt / 110; d.tir += dt / (night > 0.5 ? 25 : 150);       // long legs are quick, and hungry
     if (d.age > d.life) return die(d, 'died of old age'); if (d.hun > 1.7) return die(d, snow > 0.5 ? 'starved in the snow' : 'starved');
     if (d.preg > 0 && (d.preg -= dt) <= 0) {                               // birth
-      const c = k === 0 ? (rnd() < 0.15 ? 2 : 1) : k === 1 ? 2 + ((rnd() * 2) | 0) : 2, kids = [], dad = alive(k).find((o) => o.male && o.age >= K[2]);
+      const c = k === 0 ? (rnd() < 0.15 ? 2 : 1) : k === 1 || k === 5 ? 2 + ((rnd() * 2) | 0) : 2, kids = [], dad = alive(k).find((o) => o.male && o.age >= K[2]);
       for (let i = 0; i < c && alive(k).length < K[9]; i++) kids.push(born(k, d.x + rr(-0.6, 0.6), d.z + rr(-0.6, 0.6), 0.01, d, dad));
-      if (kids.length) say(k === 1 ? 'A litter of ' + kids.length + ' leverets was born' : Who(d) + (k === 0 ? ' dropped ' : ' whelped ') + kids.map(who).join(' and '));
+      if (kids.length) say(k === 1 ? 'A litter of ' + kids.length + ' leverets was born' : k === 5 ? kids.length + ' springtails hatched' : Who(d) + (k === 0 ? ' dropped ' : k === 6 ? ' hatched ' : ' whelped ') + kids.map(who).join(' and '));
     }
     // what frightens it: you, whatever hunts its kind, and fire. The bold let danger come closer.
     let tx = cam[0], tz = cam[2], td = hypot(tx - d.x, tz - d.z), fr = K[8] / d.gn[1];
@@ -245,16 +247,33 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     else { c(add(hip, F, -rb * 0.8), S[6] * s, add(add(add(hip, F, -rb * 0.8 - T), U, (k === 1 ? 0.06 : -0.05) * s), R, wag * (k ? 0 : 1)), S[6] * s * (k === 1 ? 1 : 0.6), 8); if (k === 0) c(add(add(hip, F, -rb * 0.5), U, -0.02 * s), rb * 0.72, add(hip, F, -rb * 0.75), rb * 0.5, 8); }   // scut or flag, and the deer's pale rump
   };
 
+  // at the scale of moss the animals have six legs or eight: a springtail in three parts with feelers, a mite as one round body
+  const bug = (d, t) => {
+    const s = d.sc, k = d.kind, fx = cos(d.a), fz = sin(d.a), mv = min(1, d.v), bone = d.mode === 9 && d.dead > 25, coat = bone ? 9 : KIND[k][6];
+    const hop = k === 5 ? max(0, sin(d.ph * 0.8)) * 1.7 * s * min(1, d.v / 4) : 0, y0 = B.Hgt(d.x, d.z) + (0.2 - 0.08 * d.lie) * s + hop;   // a frightened springtail leaps
+    const P = (f, r, u) => [d.x + (fx * f - fz * r) * s, y0 + u * s, d.z + (fz * f + fx * r) * s], c = (a, ra, b, rb, kd) => cap(a, ra * s, b, rb * s, kd === undefined ? coat : kd, d.sd);
+    if (k === 5) { c(P(-0.45, 0, 0.02), 0.13, P(-0.05, 0, 0.06), 0.2); c(P(-0.05, 0, 0.06), 0.2, P(0.3, 0, 0.03), 0.15); c(P(0.3, 0, 0.03), 0.14, P(0.46, 0, -0.06 * d.g), 0.11); }
+    else c(P(-0.22, 0, 0.05), 0.24, P(0.2, 0, 0.02), 0.17);
+    if (bone) return;
+    for (const e of [-1, 1]) {
+      if (k === 5) { const w = 0.1 * sin(t * 5 + d.sd * 30 + e); c(P(0.48, e * 0.05, 0), 0.025, P(0.75, e * (0.16 + w), 0.12 + w), 0.012); c(P(0.47, e * 0.07, 0.04), 0.02, P(0.5, e * 0.09, 0.05), 0.016, 13); }   // a feeler and an eye
+      for (let i = 0; i < (k === 5 ? 3 : 4); i++) {                          // legs: alternate ones step together
+        const f0 = (k === 5 ? 0.22 : 0.18) - i * (k === 5 ? 0.2 : 0.13), ph = d.ph * 2 + (i + (e > 0 ? 1 : 0)) * PI, sw = sin(ph) * 0.1 * mv, kn = P(f0 + sw * 0.5, e * 0.3, 0.12), fp = P(f0 + sw + (i - 1) * 0.06, e * 0.46, 0);
+        fp[1] = B.Hgt(fp[0], fp[2]) + max(0, cos(ph)) * 0.08 * mv * s + hop; c(P(f0, e * 0.12, 0), 0.035, kn, 0.022); cap(kn, 0.022 * s, fp, 0.012 * s, coat, d.sd);
+      }
+    }
+  };
+
   return {
     out, herd, birds, who, pack, get dirty() { return self.dirty; }, set dirty(v) { self.dirty = v; },
-    get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; } return c; },
+    get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
     // how far each kind's inherited legs and boldness have moved from where they started
     genes() { return [0, 1, 2, 3].map((k) => { const a = alive(k); if (a.length < 2 || !a.some((d) => d.gen > 1)) return ''; const m = (i) => Math.round((a.reduce((s, d) => s + d.gn[i], 0) / a.length - 1) * 100); return KIND[k][0] + ' legs ' + (m(0) >= 0 ? '+' : '') + m(0) + '%, boldness ' + (m(1) >= 0 ? '+' : '') + m(1) + '%'; }).filter(Boolean).join(' · '); },
     world(b) { B = b; st = b.strm; },                                      // the forest was regrown around them
     // spring: those old enough conceive, and where a kind has died out, strangers walk in from outside
     spring() {
-      for (let k = 0; k < 5; k++) {
-        const a = alive(k), K = KIND[k]; if (TIER < 4 && k) continue; if (k === 3 ? !a.length : k && !(L[K[0]] > 0)) continue;
+      for (let k = 0; k < KIND.length; k++) {
+        const a = alive(k), K = KIND[k]; if (TIER < 4 && k) continue; if (k === 3 ? !a.length : k ? !(L[K[0]] > 0) : L.deer === 0) continue;
         if (k !== 3 && (a.length < 2 || !a.some((d) => d.male) || !a.some((d) => !d.male))) { const d = born(k, rnd() < 0.5 ? -hs : hs, k === 4 ? st.zc(hs) : rr(-hs, hs), K[2] * rr(1.2, 3)); d.male = !a.some((o) => o.male); say(Who(d) + ' came in from outside the plot'); }
         for (const d of a) if (!d.male && d.age >= K[2] && d.hun < 1.1 && a.length < K[9]) d.preg = rr(6, 50);
       }
@@ -274,7 +293,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
       n = 0;
       if ((tick += dt) > 30) { tick = 0; if (TIER > 3 && !yrs && L.hare && alive(1).length < 2) { born(1, rnd() < 0.5 ? -hs : hs, rr(-hs, hs), 1); say('A hare came in from outside the plot'); } }   // with the clock stopped nothing is born, so the fox's larder is topped up
       const an = [0.35, 0.8, 1, 0][season];
-      for (let i = herd.length - 1; i >= 0; i--) { const d = herd[i]; live(d, cam, dt, yrs, night, season, snow); if (d.mode === 9 && d.dead > 80) herd.splice(i, 1); else quad(d, t, an); }
+      for (let i = herd.length - 1; i >= 0; i--) { const d = herd[i]; live(d, cam, dt, yrs, night, season, snow); if (d.mode === 9 && d.dead > 80) herd.splice(i, 1); else (d.kind > 4 ? bug : quad)(d, t, an); }
       if (TIER > 3 && env.fire && env.fire.n) env.fire.draw(cap, B, t);
       // birds: each steers toward the flock's middle, matches its neighbours, keeps its distance, and follows a point that
       // circles the plot; when something lies dead they come down and wheel over it
