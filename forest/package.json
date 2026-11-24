@@ -1,0 +1,8 @@
+{
+  "name": "sylva",
+  "private": true,
+  "description": "A forest genome: a few kilobytes of rules that grow a plot of forest, in one HTML file",
+  "type": "module",
+  "scripts": { "build": "node build.mjs", "test": "node test/grow.mjs" },
+  "devDependencies": { "esbuild": "^0.28.2" }
+}

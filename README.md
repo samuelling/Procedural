@@ -11,6 +11,10 @@ opens.
 > cell types and growth rules grows neocortex, cerebellar cortex or hippocampus CA1, wires a circuit through it and
 > runs it. One 39 kB file, WebGL 2, works on a phone. Play [`lamina/index.html`](lamina/index.html).
 
+> **And [Sylva](forest/)**, the same genome idea pointed at a forest. Under 2 kB of growth rules per biome grows a
+> 64 m plot of trees, moss, stones, ferns and fallen logs: temperate mixed, boreal, old growth or an aspen grove.
+> One 50 kB file, WebGL 2. Play [`forest/index.html`](forest/index.html).
+
 This is a re-skin of [Abyssal Garden](https://github.com/Noniv/abyssal-garden) by Noniv (MIT). The renderer, the
 terrain generator and the scattering rules are that project's; the content, palette and sound are new.
 
