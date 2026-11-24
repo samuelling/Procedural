@@ -5,7 +5,7 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
 
 | Track | Guess | State |
 |---|---|---|
-| **Powers of ten.** The same grammar at other scales. | 400 kB | **Started.** Moss on a log at 6.4 cm (a unit is a millimetre): haircap and fork moss as the trees, sand grains as boulders, springtails hunted by mites. Haircap moss now fruits: bristles with spore capsules. To do: water droplets and lichens; a rotting log at 64 cm; under the bark; inside a leaf; soil with fungal threads between roots; and outward to a valley at 6.4 km and a range at 640 km. Continuous zoom between scales. |
+| **Powers of ten.** The same grammar at other scales. | 400 kB | **Started.** Moss on a log at 6.4 cm (a unit is a millimetre): haircap and fork moss as the trees, sand grains as boulders, springtails hunted by mites. Haircap moss now fruits: bristles with spore capsules. Outward: **the valley** around the plot, 6 km across (ridges, river, lake, a near band of simple trees, a canopy beyond). To do: a rotting log at 64 cm; under the bark; inside a leaf; soil with fungal threads between roots; a range at 640 km; continuous zoom between scales. |
 | **Anywhere on Earth.** Latitude, longitude and altitude choose climate, day length, soils and species. | 300 kB | Not started. Needs a coarse climate table and species ranges. |
 | **Any time.** Four hundred million years of forests, and the ice retreating. | 200 kB | Not started. Needs new branching rules (forking scale trees, fronds, cycads) and period animals. |
 | **The world's flora and fauna.** A few thousand tree species as genome rows, and regional animals. | 400 kB | 17 species, 7 kinds of animal; bracket fungi on snags and beard lichen in the wet forests. |

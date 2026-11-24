@@ -35,6 +35,7 @@ function stone(sd, sub, rnd) {
 // den scales every species' stem count; above 1 the trees are also allowed to stand closer
 /* global TIER */
 import { tl } from './fx.js';
+import { valley } from './valley.js';
 export function build(G, seed, q = 1, den = 1, stand) {
   let rnd = rng(seed); const rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
@@ -291,9 +292,10 @@ export function build(G, seed, q = 1, den = 1, stand) {
 
   // colours and bark settings, by palette slot: one per species, then ferns and grass
   const pal = { la: new Float32Array(24), lb: new Float32Array(24), ba: new Float32Array(24), bb: new Float32Array(24), bp: new Float32Array(32) };
-  G.trees.forEach((sp, i) => { pal.la.set(sp.leaf.a, i * 3); pal.lb.set(sp.leaf.b, i * 3); pal.ba.set(sp.bark.a, i * 3); pal.bb.set(sp.bark.b, i * 3); pal.bp.set([sp.bark.t, sp.bark.sc, 0, 0], i * 4); });
+  G.trees.forEach((sp, i) => { pal.la.set(sp.leaf.a, i * 3); pal.lb.set(sp.leaf.b, i * 3); pal.ba.set(sp.bark.a, i * 3); pal.bb.set(sp.bark.b, i * 3); pal.bp.set([sp.bark.t, sp.bark.sc, TIER > 3 && sp.leaf.t === 1 ? 1 : 0, 0], i * 4); });
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
+  const vy = TIER > 3 && !G.span && valley({ G, Hgt, strm, hs, seed, cap, low });   // the valley round the plot, and the nearest band of its forest
   const sr = rng(seed ^ 0x77);
   return { caps: new Float32Array(caps), cards: new Float32Array(cards), rocks: rocks.map((r) => new Float32Array(r)), stones: [stone(1, 3, sr), stone(9, 3, sr), stone(17, 3, sr), stone(23, 1, sr)],
-    land: { v: new Float32Array(V), i: new Uint16Array(I), nTop }, Hgt, S, pal, st, open, water, strm, block: blockers, trees };
+    land: { v: new Float32Array(V), i: new Uint16Array(I), nTop }, Hgt, S, pal, st, open, water, strm, block: blockers, trees, ...vy };
 }

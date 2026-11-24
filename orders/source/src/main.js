@@ -244,6 +244,7 @@ function frame(now) {
     R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night, yrs, season, f.wx[1]));
     if (audio && fr % 12 === 0) { audio.set(ws, 1 - night); audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night, season, TIER > 3 ? smoke : 0, key, day); }
   }
+  if (TIER > 3) { f.nf = rad > 300 && !fp ? [2, 9000] : [0.1, 4000]; f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke) * (fp || G.span ? 1 : clamp(70 / rad, 0.08, 1)); }   // from high up the valley's air is clear
   f.focus = TIER > 3 && fp ? f.focus + (fd - f.focus) * 0.15 : rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
   R.draw(f);
   requestAnimationFrame(frame);
@@ -284,7 +285,7 @@ if (TIER > 3) {
 const act = {
   seed() { seed = 1 + ((Math.random() * 9999) | 0); grow(1); },
   mut() { mut = 1 + ((Math.random() * 999) | 0); grow(1); },
-  far() { if (TIER > 3) { walking(0); fz = 0; fly = null; } rad = rad > 60 ? 13 : 120; pitch = rad > 60 ? 0.42 : 0.03; idle = 0; },
+  far() { if (TIER > 3) { walking(0); fz = 0; fly = null; } if (TIER > 3 && !G.span && rad > 60 && rad < 600) { rad = 1700; pitch = 0.33; tgt = [B.S * 6, 0, 0]; idle = 0; return; } rad = rad > 60 ? 13 : 120; pitch = rad > 60 ? 0.42 : 0.03; if (TIER > 3 && rad < 60) tgt = [B.open[0], 0, B.open[1]]; idle = 0; },   // close, the plot, the valley
   snd() {
     sound = 1 - sound;
     try { audio = audio || mkAudio(); sound ? audio.ac.resume() : audio.ac.suspend(); setSun(); } catch (e) { sound = 0; }

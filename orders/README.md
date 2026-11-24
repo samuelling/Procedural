@@ -116,6 +116,18 @@ angle, length and taper. Flowers come as daisies (many narrow rays), buttercups 
 petals). At dawn and after rain, leaves, fronds and blades carry dew: each drop a small lens with a dark rim and a point of
 sky. Ants run up some trunks, and about one leaf in thirty has a ladybird on it.
 
+## The valley (2 MB rung)
+
+The plot is no longer an island. The same height field carries on past its edge and, beyond, is lifted into a valley:
+the floor follows the stream, ridges rise a few hundred metres either side (ridged noise), and 700 m downstream the
+stream slows into a lake. The river carries on beyond the plot in both directions and out of the lake. The nearest
+110 m around the plot get about 1,300 simple trees (a trunk and a crown: a spire of three for conifers, two or three
+lobes for broadleaves) chosen by the plot's own species and wetness rules; beyond that the forest is the ground's colour
+and texture, crowns lit on their sunward side with dark gaps between, turning in autumn and bare in winter where the
+forest is broadleaved, giving way to rock where it is steep, to turf above a treeline and to snow on the tops in
+winter. The Overview button now steps from close, to the plot, to the whole valley. The ground is 48 rings of vertices,
+fine at the plot's edge and 270 m apart at the horizon, 3 km out.
+
 ## Walking (2 MB rung)
 
 Press W, A, S or D (or the Walk button) to walk the plot in first person, the way Ashland walks Ashland State Park:
@@ -134,6 +146,9 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Valley: seen in renders from the valley overview in summer, autumn and winter, from the plot overview, and from the
+ground while walking. Not checked: how it runs on a phone (about 4,500 more capsules and 25,000 more vertices).
 
 Walking, checked headless by sending key presses: W walks, Space hops, D strafes, a walk straight at a 0.22 m oak
 stopped 0.52 m from its centre. Not checked: how walking feels at a real frame rate, the mouse capture, the phone

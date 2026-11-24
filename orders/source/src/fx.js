@@ -502,7 +502,7 @@ export const FLW = `
 // a few pixels across, so from afar it costs nothing and never shimmers; walk up to a trunk, a leaf or a stone and more
 // of it appears, the way a microscope's fine focus brings up one layer after another.
 export const MICRO = `
-uniform float uNdl;
+uniform float uNdl; uniform vec3 uFor;
 float FP = 1., GL = 0.; vec4 LF = vec4(-1.);
 float vis(float s) { return smoothstep(1.5, 4., s / max(FP, 1e-6)); }
 vec3 vor(vec2 p) {
@@ -649,4 +649,35 @@ export const MUSHD = `
 // birds close: feathers overlapping like scales
 export const FEATHD = `
     if (kd == 6 && FP < .003) { vec3 fv = vor(vec2(atan(nw.z, nw.x) * wr * 2., s) * 150.); alb *= .7 + .6 * smoothstep(0., .3, fv.y) * (.8 + .4 * fv.z); tex = fv.y; GL = .2; }
+`;
+
+// the valley's ground, by what grows on it: forest canopy below the treeline (crowns lit on their sunward side, dark
+// gaps between, turning in autumn and bare in winter where the trees are broadleaved), rock where it is steep, alpine
+// turf above the trees, snow on the tops, wet ground along the river
+export const FARD = `
+  } else if (uMat > 2.5) {
+    float d = xx.x, alt = pw.y, sl = 1. - n.y, wetb = xx.y, tl = 460. + 50. * vn(pw.xz * .003), sn = mix(900., 260., max(uWx.y, uSe.y * .6)) + 40. * vn(pw.xz * .004 + 3.);
+    float fo = smoothstep(.6, .42, sl) * smoothstep(tl + 25., tl - 25., alt) * (1. - smoothstep(.55, .85, wetb) * .6);
+    vec3 cv = vor(pw.xz / 4.5), cs = vor((pw.xz + uSun.xz * 1.6) / 4.5);
+    float crown = smoothstep(.95, .2, cv.x), lit = smoothstep(.1, .9, cs.x - cv.x + .5), dec = 1. - uNdl;
+    vec3 can = uFor * (.42 + .4 * vn(pw.xz * .02)) * (.35 + .7 * crown * (.6 + .6 * lit));
+    can = mix(can, vec3(dot(can, vec3(.33))), .22) * .85;
+    can = mix(can, mix(vec3(.6, .35, .05), vec3(.5, .1, .03), vn(pw.xz * .05)) * (.5 + .6 * crown), uSe.x * dec * step(.35, cv.z));   // autumn, where broadleaves grow
+    can = mix(can, vec3(.3, .26, .24) * (.6 + .5 * crown), uSe.y * dec * step(.35, cv.z) * .85);                                        // bare twigs in winter
+    vec3 rock = mix(uRB, uRA, vn(vec2(pw.x + pw.z, pw.y * 3.) * .05)) * (.7 + .4 * vn(pw.xz * .3)), turf = mix(vec3(.36, .4, .2), vec3(.5, .45, .3), vn(pw.xz * .01));
+    vec3 grd = mix(turf, rock, smoothstep(.35, .62, sl)); grd = mix(grd, mix(vec3(.18, .2, .1), vec3(.12, .1, .07), .5), wetb * .7);
+    alb = mix(grd, can, fo * smoothstep(40., 110., d) + fo * (1. - smoothstep(40., 110., d)) * .5);
+    alb = mix(alb, vec3(.85, .88, .92), smoothstep(sn - 15., sn + 15., alt) * smoothstep(.75, .5, sl));
+    alb = mix(alb, vec3(.8, .84, .9), uWx.y * smoothstep(.7, .4, sl) * (1. - fo * .6));
+    n = normalize(n + vec3(cv.x - cs.x, 0., cs.x - cv.x) * fo * .6); ao = .75 + .25 * crown * fo + (1. - fo) * .25;
+`;
+// a crown in the near band of the valley: the species' leaf colour in clumps, darker beneath, turning and falling with
+// the year where the species is broadleaved
+export const CROWND = `
+    if (kd == 21) {
+      vec3 cl = vor(pw.xz * 1.6 + pw.y * 1.3 + sd * 9.); float c0 = smoothstep(.8, .15, cl.x), cf = uBP[sp].z;
+      alb = uLB[sp] * (.5 + .6 * c0) * (.75 + .3 * cl.z) * mix(.65, 1.1, smoothstep(-.6, .6, nw.y));
+      alb = mix(alb, mix(vec3(.62, .36, .03), vec3(.45, .07, .02), cl.z) * (.5 + .6 * c0), uSe.x * (1. - cf));
+      alb = mix(alb, vec3(.32, .27, .25) * (.6 + .5 * c0), uSe.y * (1. - cf) * .9); tex = c0;
+    }
 `;
