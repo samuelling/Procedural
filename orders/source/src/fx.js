@@ -126,7 +126,7 @@ const YOUNG = ['fawn', 'leveret', 'kit', 'pup', 'kit', 'springtail', 'mite'], SE
 const PREY = [-1, -1, 1, 0, -1, -1, 5], FOE = [3, 2, -1, -1, -1, 6, -1];             // what each kind hunts, and what it runs from
 export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}) {
   let B = B0, n = 0, st = B.strm, tick = 0;
-  const hs = B.S / 2 - 3, out = new Float32Array(LIMB * MAXL), self = { dirty: 0 };
+  const hs = B.S / 2 - 3, out = new Float32Array(LIMB * MAXL), self = { dirty: 0, noise: 1 };
   const cap = (a, ra, b, rb, kind, sd, fl = 0) => { if (n >= MAXL) return; out.set([a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, 0, 1, fl + min(0.98, sd), kind], n++ * LIMB); };
   const add = (a, b, k) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k], rr = (a, b) => a + (b - a) * rnd(), cl = (v) => max(-hs, min(hs, v)), gs = () => Math.sqrt(-2 * Math.log(1 - rnd())) * cos(TAU * rnd());
   const dry = (x, z) => !st || st.dist(x, z) > 0.3, dst = (a, b) => hypot(a.x - b.x, a.z - b.z);
@@ -198,11 +198,11 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
       if (kids.length) say(k === 1 ? 'A litter of ' + kids.length + ' leverets was born' : k === 5 ? kids.length + ' springtails hatched' : Who(d) + (k === 0 ? ' dropped ' : k === 6 ? ' hatched ' : ' whelped ') + kids.map(who).join(' and '));
     }
     // what frightens it: you, whatever hunts its kind, and fire. The bold let danger come closer.
-    let tx = cam[0], tz = cam[2], td = hypot(tx - d.x, tz - d.z), fr = K[8] / d.gn[1];
+    let tx = cam[0], tz = cam[2], td = hypot(tx - d.x, tz - d.z), fr = K[8] / d.gn[1] * (TIER > 3 ? self.noise : 1);   // sneak and they let you close; run, or snap a twig, and they bolt
     if (FOE[k] >= 0) for (const o of herd) if (o.kind === FOE[k] && o.mode !== 9) { const od = dst(o, d), r = (k ? 9 : 13) / d.gn[1]; if (od < r && od < td * 2) { tx = o.x; tz = o.z; td = od; fr = o.mode === 7 ? r + 4 : r * 0.6; } }
     if (TIER > 3 && F && F.n) { const h = F.near(d.x, d.z); if (h) { if (h[2] < 1.5 && rnd() < dt * 0.6) return die(d, 'died in the fire'); if (h[2] < 11) { tx = h[0]; tz = h[1]; td = h[2]; fr = 12; } } }
     if (td < fr) { if (d.mode !== 3 || d.t < 1.9) { const a = atan2(d.z - tz, d.x - tx) + (k === 1 ? rr(-0.9, 0.9) : rr(-0.25, 0.25)); d.tg = [cl(d.x + cos(a) * 14), cl(d.z + sin(a) * 14)]; } d.mode = 3; d.t = 2.5; d.prey = null; }
-    else if (td < K[7] / d.gn[1] && d.mode < 2 && tx === cam[0]) { d.mode = 2; d.t = 2 + rnd() * 2; }
+    else if (td < K[7] / d.gn[1] * (TIER > 3 ? self.noise : 1) && d.mode < 2 && tx === cam[0]) { d.mode = 2; d.t = 2 + rnd() * 2; }
     d.t -= dt;
     if (d.mode === 6 || d.mode === 7) {                                    // the hunter: creep close, then run it down, or give up
       const p = d.prey, pd = p && p.mode !== 9 ? dst(p, d) : -1;
@@ -289,7 +289,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
   };
 
   return {
-    out, herd, birds, who, pack, get dirty() { return self.dirty; }, set dirty(v) { self.dirty = v; }, set fat(v) { self.fat = v; },
+    out, herd, birds, who, pack, get dirty() { return self.dirty; }, set dirty(v) { self.dirty = v; }, set fat(v) { self.fat = v; }, get noise() { return self.noise; }, set noise(v) { self.noise = v; },
     get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
     // how far each kind's inherited legs and boldness have moved from where they started
     genes() { return [0, 1, 2, 3].map((k) => { const a = alive(k); if (a.length < 2 || !a.some((d) => d.gen > 1)) return ''; const m = (i) => Math.round((a.reduce((s, d) => s + d.gn[i], 0) / a.length - 1) * 100); return KIND[k][0] + ' legs ' + (m(0) >= 0 ? '+' : '') + m(0) + '%, boldness ' + (m(1) >= 0 ? '+' : '') + m(1) + '%'; }).filter(Boolean).join(' · '); },

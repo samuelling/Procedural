@@ -42,8 +42,21 @@ export function mkAudio() {
       else if (nt < 0.3 && se === 0 && r < 0.03) ev('cuckoo'); else if (nt < 0.3 && se === 1 && ev.d > 0.35 && r > 0.975) ev('cicada'); else if (nt > 0.6 && r < 0.006) ev('bark'); }   // a woodpecker, a cuckoo in spring, a fox at night
     if (t > next && ac.state === 'running') { if (Math.random() < day) bird(t + 0.05); next = t + 0.5 + Math.random() * 3.5; }
   }, 250);
-  return { ac, set(w, dy) { wind = w; day = dy; },
+  const A = { ac, set(w, dy) { wind = w; day = dy; },
     boom: TIER > 3 && (() => { const t = ac.currentTime + 0.4 + Math.random() * 2; thun.g.gain.setValueAtTime(0, t); thun.g.gain.linearRampToValueAtTime(9, t + 0.08); thun.g.gain.setTargetAtTime(0, t + 0.3, 1.1); }),   // thunder follows the flash
     // rain is hiss; the brook is a narrow band of the same noise, jostled quickly, louder as you come near
     ev, fx: TIER > 2 && ((r, s, n, sn, fi, k, d) => { nt = n; se = sn; rn = r; if (TIER > 3) { ev.k = k; ev.d = d; } const t = ac.currentTime; if (TIER > 3) burn.g.gain.setTargetAtTime(fi * (0.3 + 3 * Math.random() ** 3), t, 0.05); rain.g.gain.setTargetAtTime(r * 0.8, t, 0.4); brook.g.gain.setTargetAtTime(s * s * (0.7 + 0.9 * Math.random()), t, 0.07); brook.fl.frequency.setTargetAtTime(1100 + 900 * Math.random(), t, 0.1); }) };
+  if (TIER > 3) {                                                          // footsteps. k: 0 moss, 1 dry leaves, 2 bare ground, 3 snow, 4 water
+    const wn = ac.createBuffer(1, ac.sampleRate * 0.4, ac.sampleRate), c = wn.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = Math.random() * 2 - 1;
+    A.step = (k, v, twig) => {                                             // dry leaves crackle in a burst, moss thuds, snow squeaks, water sloshes, a twig snaps
+      if (ac.state !== 'running') return; const t = ac.currentTime;
+      for (let i = 0, n = k === 1 ? 4 + ((Math.random() * 4) | 0) : twig ? 2 : 1; i < n; i++) {
+        const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain(), t0 = t + (k === 1 ? i * (0.012 + Math.random() * 0.03) : i * 0.03), d = [0.09, 0.025, 0.06, 0.13, 0.3][k] * (twig ? 0.4 : 1);
+        s.buffer = wn; s.playbackRate.value = 0.7 + Math.random() * 0.6; fl.type = k === 0 || k === 4 ? 'lowpass' : 'bandpass'; fl.frequency.value = twig ? 2600 : [520, 3400, 900, 1700, 700][k] * (0.8 + Math.random() * 0.4); fl.Q.value = k === 3 ? 6 : 1.2;
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(v * (twig ? 0.9 : [0.35, 0.16, 0.3, 0.22, 0.4][k]), t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0005, t0 + d);
+        s.connect(fl); fl.connect(g); g.connect(out); s.start(t0, Math.random() * 0.3); s.stop(t0 + d + 0.02);
+      }
+    };
+  }
+  return A;
 }

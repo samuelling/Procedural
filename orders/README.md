@@ -116,12 +116,28 @@ angle, length and taper. Flowers come as daisies (many narrow rays), buttercups 
 petals). At dawn and after rain, leaves, fronds and blades carry dew: each drop a small lens with a dark rim and a point of
 sky. Ants run up some trunks, and about one leaf in thirty has a ladybird on it.
 
+## Walking (2 MB rung)
+
+Press W, A, S or D (or the Walk button) to walk the plot in first person, the way Ashland walks Ashland State Park:
+feet on the ground and eyes 1.7 m up, gravity and a hop (Space), Shift to run, Z to sneak, trunks and large boulders in
+the way (you slide around them), and a stream you can wade, which slows you, though not into water over your head. Click to take
+the mouse for looking and Esc to give it back; Esc again or O leaves. The head rises and sways a little with each
+step, and each footstep is synthesised from what is underfoot: a crackle of dry leaves (more in autumn), a soft thud
+on moss, a squeak in snow, a slosh in water, now and then a snapped twig. The animals hear you: sneaking lets them
+come closer, running or a snapped twig sends them off sooner. F floats you free of the ground (Space up, C down) to
+reach the canopy or the underside of a cap, and a double-click floats you up to whatever you clicked. On a phone, the
+left thumb is a joystick (push it all the way to run) and a drag on the right looks.
+
 ## What has and has not been checked
 
 Checked: every forest of every 3D rung grows with no non-finite geometry at both detail levels and after mutation, and
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Walking, checked headless by sending key presses: W walks, Space hops, D strafes, a walk straight at a 0.22 m oak
+stopped 0.52 m from its centre. Not checked: how walking feels at a real frame rate, the mouse capture, the phone
+joystick on a real phone, and the footsteps (no sound has been listened to).
 
 Seen in close-up renders: a broad leaf (teeth, veins, spots), single spruce needles, a lobed fern, a flower's veins and
 pollen, a trunk's fissures and lichens, moss shoots, leaf and needle litter, a stone's grains, the stream's bed and

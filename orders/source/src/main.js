@@ -26,7 +26,11 @@ const WXS = { clear: [0.3, 1, 0, 0], cloud: [0.76, 1.4, 0, 0], mist: [0.62, 4.5,
 const TIMES = ['still', 'days', 'seasons', 'decades'];
 let fire = null, world = null, smoke = 0, fireT = 0;
 const env = { get stand() { return stand; }, get world() { return world; }, get fire() { return fire; } };   // what the animals can see of the forest
-let fz = 0, fly = null, tap = [0, 0, 0];   // fz: looking closely at a point off the ground; fly: where the camera is easing to
+let fz = 0, fly = null, tap = [0, 0, 0], fp = 0, fd = 8;   // fp: walking in first person; fd: how far away the thing in the middle of the view is
+// walking, as in Ashland: feet on the ground at wp, eyes 1.7 m up; gravity, a hop, trunks and boulders in the way, water that drags
+const wp = [0, 0, 0], wv = [0, 0, 0], jv = [0, 0], EYE = 1.7;
+let ong = 1, hov = 0, flo = 0, bob = 0, stepD = 0, sneak = 0, col = [], joy = null, joy0 = [0, 0];
+const stick = () => { const j = $('joy'); j.hidden = joy === null; j.style.left = joy0[0] + 'px'; j.style.top = joy0[1] + 'px'; j.firstChild.style.transform = 'translate(' + jv[0] * 30 + 'px,' + jv[1] * 30 + 'px)'; };   // fz: looking closely at a point off the ground; fly: where the camera is easing to
 let stand = null, clock = 0, dayPh = 0.33, yearF = 0.3, year = 1, decT = 0, fol = null, folI = -1;
 // years of forest: growth, death and seeding; browsing by however many deer there are; the dam silts or rises; now and
 // then, in a dry year, a fire that is over before anyone looks
@@ -109,6 +113,7 @@ function grow(keepView, aged) {
   if (TIER > 3 && aged) stand.world = world;                                 // the regrowth is told where it has burnt and how high the dam stands
   B = build(G, seed, Q, den, TIER > 3 && aged ? stand : undefined); R.load(B, G);
   if (TIER > 3 && !aged) fire = mkFire(B.S, B.strm);
+  if (TIER > 3) { col = B.trees.filter((t) => t.st < 2 && t.H > 1.5).map((t) => [t.x, t.z, 0.05 + 0.011 * t.H, B.Hgt(t.x, t.z) + t.H]); for (const a of B.rocks) for (let i = 0; i < a.length; i += 12) if (a[i + 3] > 0.35) col.push([a[i], a[i + 2], a[i + 3] * 0.8, a[i + 1] + a[i + 3] * 0.7]); }
   if (TIER > 3) { stand = B.trees; if (!aged) { year = 1; fol = null; $('log').textContent = ''; $('b-fol').textContent = 'Follow'; } }
   f.fog = [G.air.fog, 0.07, 0]; f.moss = G.floor.moss; f.wd = [0.8, 0.6, G.air.wind * 0.18];
   if (!keepView) {
@@ -132,6 +137,12 @@ function grow(keepView, aged) {
 // ---- camera: orbits a point that walks on the ground
 const inside = (x, z) => Math.abs(x) < B.S / 2 && Math.abs(z) < B.S / 2;
 function view() {
+  if (TIER > 3 && fp) {                                                     // walking: the eye is where you stand, and looks where you turn
+    const cp = cos(pitch), b = Math.abs(sin(bob)), h = EYE * (sneak ? 0.82 : 1);
+    eye[0] = wp[0] + cos(yaw) * sin(bob) * 0.012; eye[1] = wp[1] + h + b * 0.045 - 0.02; eye[2] = wp[2] - sin(yaw) * sin(bob) * 0.012;   // the head rises and sways a little with each step
+    lookAt(V, eye, [eye[0] - sin(yaw) * cp, eye[1] - sin(pitch), eye[2] - cos(yaw) * cp]); IV.set([V[0], V[4], V[8], V[1], V[5], V[9], V[2], V[6], V[10]]);
+    tgt[0] = wp[0]; tgt[2] = wp[2]; return;
+  }
   const gy = B.Hgt(tgt[0], tgt[2]) + 1.5; if (!(TIER > 3 && fz)) tgt[1] += (gy - tgt[1]) * 0.2;
   // above the horizon the eye orbits the point; below it the eye stays level and the gaze tilts up into the canopy
   const up = max(pitch, 0), cp = cos(up); eye[0] = tgt[0] + rad * cp * sin(yaw); eye[1] = tgt[1] + rad * sin(up); eye[2] = tgt[2] + rad * cp * cos(yaw);
@@ -140,16 +151,25 @@ function view() {
 }
 const walk = (r, fw) => {   // along the ground: right and forward as the camera sees them
   const fx = -V[2], fz2 = -V[10], l = hypot(fx, fz2) || 1, h = B.S / 2 - 0.5;
-  if (TIER > 3) { fz = 0; fly = null; }
+  if (TIER > 3) { fz = 0; fly = null; if (fp) return; }
   tgt[0] = clamp(tgt[0] + V[0] * r + fx / l * fw, -h, h); tgt[2] = clamp(tgt[2] + V[8] * r + fz2 / l * fw, -h, h);
 };
 const perPx = () => rad / (F * canvas.clientHeight / 2);
+// walking (2 MB rung): WASD to move, the mouse to look; Space and C to rise and sink, Shift to run
+const walking = (on) => {
+  if (!(on ^ fp)) return; const d = [-V[2], -V[6], -V[10]];
+  if (on) { fp = 1; wp[0] = clamp(eye[0], -B.S / 2 + 0.5, B.S / 2 - 0.5); wp[2] = clamp(eye[2], -B.S / 2 + 0.5, B.S / 2 - 0.5); wp[1] = B.Hgt(wp[0], wp[2]); wv.fill(0); ong = 1; hov = 0; yaw = Math.atan2(-d[0], -d[2]); pitch = clamp(asin(-d[1]), -1.2, 1.2); fz = 0; fly = null; fol = null; $('b-fol').textContent = 'Follow'; }
+  else { fp = 0; flo = 0; if (document.pointerLockElement) document.exitPointerLock(); tgt = [clamp(wp[0] - sin(yaw) * 3, -B.S / 2, B.S / 2), wp[1] + EYE, clamp(wp[2] - cos(yaw) * 3, -B.S / 2, B.S / 2)]; rad = 3; pitch = max(0.03, pitch); fz = 1; }
+  $('b-walk').setAttribute('aria-pressed', !!fp); $('hint').textContent = fp ? HW : HO; $('hint').hidden = false; idle = 0;
+};
 // double-tap or double-click anything to fly up to it: the depth under the finger gives the point, and the camera
 // settles a hand's breadth away, focused on it
 const look = (x, y) => {
   const r = canvas.getBoundingClientRect(), u = (x - r.left) / r.width, v = 1 - (y - r.top) / r.height, z = pick(u, v); if (!(z > 0.12 && z < 250)) return;
   const vx = (u * 2 - 1) / K[0] * z, vy = (v * 2 - 1) / K[1] * z, p = [0, 1, 2].map((i) => eye[i] + IV[i] * vx + IV[i + 3] * vy - IV[i + 6] * z), b = [eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]], l = hypot(...b);
-  fz = 1; fol = null; fly = [p, clamp(z * 0.2, 0.22, 4), Math.atan2(b[0], b[2]), max(0.02, asin(b[1] / l))]; idle = 0;
+  const rr = clamp(z * 0.2, 0.22, 4); fol = null; idle = 0;
+  if (fp) { hov = 1; wv.fill(0); fly = [[p[0] + b[0] / l * rr, p[1] + b[1] / l * rr - EYE * (sneak ? 0.82 : 1), p[2] + b[2] / l * rr], rad, Math.atan2(b[0], b[2]), asin(b[1] / l)]; return; }
+  fz = 1; fly = [p, rr, Math.atan2(b[0], b[2]), max(0.02, asin(b[1] / l))];
 };
 
 // ---- frame
@@ -164,6 +184,29 @@ function frame(now) {
   idle += dt; if (idle > 6 && !calm) yaw += dt * 0.025;
   const sp = max(2, rad * 0.6) * dt, kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), kf = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
   if (kx || kf) { walk(kx * sp, kf * sp); idle = 0; }
+  if (TIER > 3 && fp) {
+    let fx = kx + jv[0], fw = kf - jv[1]; const run = keys.ShiftLeft || keys.ShiftRight || hypot(jv[0], jv[1]) > 0.92, n = hypot(fx, fw) || 1, st = B.strm;
+    sneak = !run && (keys.KeyZ || (hypot(jv[0], jv[1]) > 0.12 && hypot(jv[0], jv[1]) < 0.55)) ? 1 : 0;
+    if (fx || fw || keys.Space) { fly = null; if (hov && !flo) { hov = 0; ong = 0; } idle = 0; }
+    const depth = st ? max(0, st.lvl(wp[0]) - B.Hgt(wp[0], wp[2])) * (st.dist(wp[0], wp[2]) < 0 ? 1 : 0) : 0, sp = (run ? 6.2 : sneak ? 1.6 : 3.6) * (depth > 0.2 ? 1 - min(0.5, depth * 0.4) : 1) * (flo ? 1.6 : 1);
+    const tx = (-sin(yaw) * fw + cos(yaw) * fx) / n * sp * min(1, n), tz = (-cos(yaw) * fw - sin(yaw) * fx) / n * sp * min(1, n), gr = min(1, dt * 12);
+    wv[0] += (tx - wv[0]) * gr; wv[2] += (tz - wv[2]) * gr;
+    const h = B.S / 2 - 0.4, deep = (x, z) => st && st.dist(x, z) < 0 && st.lvl(x) - B.Hgt(x, z) > 1.15 && !flo;
+    let nx = clamp(wp[0] + wv[0] * dt, -h, h), nz = clamp(wp[2] + wv[2] * dt, -h, h);
+    if (deep(nx, wp[2])) nx = wp[0]; if (deep(nx, nz)) nz = wp[2];                       // deep water is not for walking into
+    for (const c of col) if (wp[1] < c[3]) { const dx = nx - c[0], dz = nz - c[1], d = hypot(dx, dz), m = c[2] + 0.3; if (d < m) { nx = c[0] + dx / (d || 1e-4) * m; nz = c[1] + dz / (d || 1e-4) * m; } }   // round trunks and boulders: slide past them
+    const moved = hypot(nx - wp[0], nz - wp[2]); wp[0] = nx; wp[2] = nz;
+    const g = B.Hgt(nx, nz);
+    if (flo || hov) { if (flo) wp[1] += ((keys.Space || keys.KeyE ? 1 : 0) - (keys.KeyC || keys.KeyQ ? 1 : 0)) * sp * dt; wp[1] = clamp(wp[1], g, 60); wv[1] = 0; ong = wp[1] <= g + 0.01; }
+    else if (!ong || wp[1] > g + 0.03) { wv[1] -= 14 * dt; wp[1] += wv[1] * dt; if (wp[1] <= g) { wp[1] = g; if (!ong && wv[1] < -3 && audio && audio.step) audio.step(depth > 0.1 ? 4 : 2, 1); wv[1] = 0; ong = 1; } else if (wp[1] > g + 0.12) ong = 0; }
+    else wp[1] += (g - wp[1]) * min(1, dt * 18);                                                                        // step up and down the ground gently
+    if (ong && !flo && moved / max(dt, 1e-4) > 0.5) {                                                                     // footsteps: what is underfoot decides how they sound
+      bob += moved * (run ? 2.6 : 3.4); stepD += moved;
+      if (stepD > (run ? 1.05 : 0.72)) { stepD = 0; const tw = !sneak && Math.random() < 0.04; if (audio && audio.step) audio.step(depth > 0.05 ? 4 : f.wx[1] > 0.5 ? 3 : Math.random() < G.floor.la * 0.6 + (season === 2 ? 0.35 : 0) ? 1 : 0, (run ? 1.3 : sneak ? 0.35 : 0.8) + (tw ? 1 : 0), tw); if (tw) LIFE.noise = 2.5; }
+    } else bob *= 0.9;
+    LIFE.noise = max(LIFE.noise * 0.97, !(fx || fw) ? 0.45 : sneak ? 0.5 : run ? 1.6 : 1);                          // how close the animals let you come
+    if (fr % 10 === 0) { const z = pick(0.5, 0.5); if (z > 0.1 && z < 250) fd = z; }                                   // focus on whatever is in the middle of the view
+  }
   let yrs = 0, moved = 0;
   if (TIER > 3) {
     if (clock === 1 || clock === 2) {                                      // a day is an eighth of a year: the sun crosses, night falls, seasons turn
@@ -180,7 +223,7 @@ function frame(now) {
     smoke += (min(1, fire.n / 25) - smoke) * min(1, dt * 0.5);
     if (fr % 30 === 0) { const gn = LIFE.genes(); $('l3').textContent = 'Year ' + year + ' · ' + SEA[season] + ' · ' + Object.entries(LIFE.counts).map((e) => e[1] + ' ' + e[0]).join(' · ') + ' · ' + stand.filter((t) => !t.st && t.H >= 5).length + ' trees' + (gn ? ' · ' + gn : ''); }
   }
-  if (TIER > 3 && fly) { const e = 1 - exp(-min(dt, 0.1) * 5); for (let i = 0; i < 3; i++) tgt[i] += (fly[0][i] - tgt[i]) * e; rad += (fly[1] - rad) * e; yaw += (((fly[2] - yaw + PI * 3) % (PI * 2)) - PI) * e; pitch += (fly[3] - pitch) * e; dirty = 1; if (Math.abs(fly[1] - rad) < 0.003) fly = null; }
+  if (TIER > 3 && fly) { const e = 1 - exp(-min(dt, 0.1) * 5); for (let i = 0; i < 3; i++) (fp ? wp : tgt)[i] += (fly[0][i] - (fp ? wp : tgt)[i]) * e; rad += (fly[1] - rad) * e; if (fp && hypot(fly[0][0] - wp[0], fly[0][1] - wp[1], fly[0][2] - wp[2]) < 0.004) fly = null; yaw += (((fly[2] - yaw + PI * 3) % (PI * 2)) - PI) * e; pitch += (fly[3] - pitch) * e; dirty = 1; if (Math.abs(fly[1] - rad) < 0.003) fly = null; }
   view();
   if (TIER > 2) {                                                          // weather moves toward what was asked for; rain wets, snow settles, both pass slowly
     const w = WXS[wx], go = (i, to, r) => { const d = to - f.wx[i]; f.wx[i] += clamp(d, -r * dt, r * dt); return Math.abs(d) > 1e-3; };
@@ -201,7 +244,7 @@ function frame(now) {
     R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night, yrs, season, f.wx[1]));
     if (audio && fr % 12 === 0) { audio.set(ws, 1 - night); audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night, season, TIER > 3 ? smoke : 0, key, day); }
   }
-  f.focus = rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
+  f.focus = TIER > 3 && fp ? f.focus + (fd - f.focus) * 0.15 : rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
   R.draw(f);
   requestAnimationFrame(frame);
 }
@@ -209,30 +252,39 @@ function frame(now) {
 // ---- controls
 const pts = new Map();
 canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); idle = 0; $('hint').hidden = true;
-  if (TIER > 3) { const now = performance.now(); if (pts.size === 1 && now - tap[2] < 320 && hypot(e.clientX - tap[0], e.clientY - tap[1]) < 30) look(e.clientX, e.clientY); tap = [e.clientX, e.clientY, now]; } });
+  if (TIER > 3 && fp && coarse && joy === null && e.clientX < innerWidth * 0.42) { joy = e.pointerId; joy0 = [e.clientX, e.clientY]; jv[0] = jv[1] = 0; stick(); return; }   // the left thumb walks, the right looks
+  if (TIER > 3) { const now = performance.now(); const lk = document.pointerLockElement === canvas, r = canvas.getBoundingClientRect(), x = lk ? r.left + r.width / 2 : e.clientX, y = lk ? r.top + r.height / 2 : e.clientY;
+    if (pts.size === 1 && now - tap[2] < 320 && hypot(x - tap[0], y - tap[1]) < 30) look(x, y); else if (fp && !coarse && !lk && e.button === 0) canvas.requestPointerLock?.();   // a click while walking takes the mouse for looking; Esc gives it back
+    tap = [x, y, now];  } });
 canvas.addEventListener('pointermove', (e) => {
   const p = pts.get(e.pointerId); if (!p) return;
   const dx = e.clientX - p[0], dy = e.clientY - p[1]; idle = 0;
   if (pts.size === 1) {
-    if (e.buttons & 2 || e.shiftKey) walk(-dx * perPx(), dy * perPx() * 2);
+    if (TIER > 3 && fp) { if (joy === e.pointerId) { jv[0] = clamp((e.clientX - joy0[0]) / 60, -1, 1); jv[1] = clamp((e.clientY - joy0[1]) / 60, -1, 1); stick(); return; } yaw -= dx * 0.005; pitch = clamp(pitch + dy * 0.005, -1.45, 1.45); }
+    else if (e.buttons & 2 || e.shiftKey) walk(-dx * perPx(), dy * perPx() * 2);
     else { yaw -= dx * 0.006; pitch = clamp(pitch + dy * 0.006, -1.3, 1.5); }
     p[0] = e.clientX; p[1] = e.clientY;
   } else if (pts.size === 2) {
     const o = [...pts.values()].find((v) => v !== p), d0 = hypot(p[0] - o[0], p[1] - o[1]);
     p[0] = e.clientX; p[1] = e.clientY;
+    if (TIER > 3 && fp) { const m = (hypot(p[0] - o[0], p[1] - o[1]) - d0) * 0.01; wp[0] -= sin(yaw) * m; wp[2] -= cos(yaw) * m; return; }   // two fingers apart walk forward
     rad = clamp(rad * d0 / max(1, hypot(p[0] - o[0], p[1] - o[1])), TIER > 3 ? 0.2 : 1.5, 190); if (TIER > 3) fly = null;
     walk(-dx * perPx() / 2, dy * perPx());
   }
 });
-const up = (e) => { pts.delete(e.pointerId); };
+const up = (e) => { pts.delete(e.pointerId); if (TIER > 3 && joy === e.pointerId) { joy = null; jv[0] = jv[1] = 0; stick(); } };
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); rad = clamp(rad * exp(e.deltaY * 0.0012), TIER > 3 ? 0.2 : 1.5, 190); if (TIER > 3) fly = null; idle = 0; $('hint').hidden = true; }, { passive: false });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (TIER > 3 && fp) { const m = -e.deltaY * 0.003, cp = cos(pitch); wp[0] -= sin(yaw) * cp * m; wp[1] = max(B.Hgt(wp[0], wp[2]), wp[1] - sin(pitch) * m); wp[2] -= cos(yaw) * cp * m; fly = null; hov = 1; return; } rad = clamp(rad * exp(e.deltaY * 0.0012), TIER > 3 ? 0.2 : 1.5, 190); if (TIER > 3) fly = null; idle = 0; $('hint').hidden = true; }, { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+if (TIER > 3) {
+  addEventListener('mousemove', (e) => { if (fp && document.pointerLockElement === canvas) { yaw -= e.movementX * 0.0022; pitch = clamp(pitch + e.movementY * 0.0022, -1.45, 1.45); idle = 0; } });
+  document.addEventListener('pointerlockchange', () => { $('xh').hidden = document.pointerLockElement !== canvas; });
+}
 
 const act = {
   seed() { seed = 1 + ((Math.random() * 9999) | 0); grow(1); },
   mut() { mut = 1 + ((Math.random() * 999) | 0); grow(1); },
-  far() { if (TIER > 3) { fz = 0; fly = null; } rad = rad > 60 ? 13 : 120; pitch = rad > 60 ? 0.42 : 0.03; idle = 0; },
+  far() { if (TIER > 3) { walking(0); fz = 0; fly = null; } rad = rad > 60 ? 13 : 120; pitch = rad > 60 ? 0.42 : 0.03; idle = 0; },
   snd() {
     sound = 1 - sound;
     try { audio = audio || mkAudio(); sound ? audio.ac.resume() : audio.ac.suspend(); setSun(); } catch (e) { sound = 0; }
@@ -251,6 +303,7 @@ if (TIER > 3) {
   $('day').min = -120; $('day').max = 1120;
   $('b-time').addEventListener('click', () => { clock = (clock + 1) % 4; $('b-time').textContent = 'Time: ' + TIMES[clock]; if (clock === 3) { setSea(1); yearF = Math.floor(yearF) + 0.3; } if (!clock) { day = 0.3; $('day').value = 300; setSun(); } });
   $('b-fire').addEventListener('click', strike);
+  $('b-walk').addEventListener('click', () => walking(!fp));
   $('b-evo').addEventListener('click', () => { const e = $('evo'), on = e.toggleAttribute('hidden'); $('b-evo').setAttribute('aria-pressed', !on); tol(); });
   $('b-wolf').addEventListener('click', () => LIFE.pack(!LIFE.counts.wolves));
   $('b-fol').addEventListener('click', () => {                             // step through the animals that have names, then let go
@@ -266,6 +319,10 @@ $('day').addEventListener('input', (e) => { day = TIER > 3 ? e.target.value / 10
 addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === 'INPUT') return;
   keys[e.code] = 1;
+  if (TIER > 3 && !fp && !coarse && ['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) walking(1);
+  if (TIER > 3 && fp && e.code === 'Space') { e.preventDefault(); if (ong && !flo && !e.repeat) { wv[1] = 5; ong = 0; hov = 0; wp[1] += 0.01; } }
+  if (TIER > 3 && fp && e.code === 'KeyF') { flo = !flo; hov = flo; ong = 0; $('hint').textContent = flo ? 'Floating: Space up · C down · WASD to drift · F to come down' : HW; }
+  if (TIER > 3 && fp && e.code === 'Escape' && !document.pointerLockElement) walking(0);
   const g = { Digit1: 'mixed', Digit2: 'boreal', Digit3: 'oldgrowth', Digit4: 'aspen' }[e.code];
   if (g) { key = g; mut = 0; grow(); }
   else if (e.code === 'KeyR') act.seed();
@@ -278,9 +335,10 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });
 
 $('hint').textContent = coarse ? 'Drag to look around · pinch to move in and out · two fingers to walk'
   : 'Drag to look around · scroll to move in and out · right-drag or WASD to walk';
-if (TIER > 3) $('hint').textContent += coarse ? ' · double-tap anything to look closely' : ' · double-click anything to look closely';
+if (TIER > 3) $('hint').textContent += coarse ? ' · double-tap anything to look closely' : ' · double-click anything to look closely · WASD to walk';
+const HO = TIER > 3 && $('hint').textContent, HW = coarse ? 'Walking: left thumb to walk (push far to run) · drag on the right to look · double-tap to go closer' : 'Walking: WASD · click to look with the mouse (Esc frees it) · Shift run · Z sneak · Space hop · F float · double-click to go closer · O to leave';
 grow();
 // for tests and screenshots
 window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { pass(o.years); LIFE.lapse(o.years); grow(1, 1); } if (TIER > 3 && o.strike) strike(); if (TIER > 3 && o.see !== undefined) fol = LIFE.herd.find((d) => d.kind === o.see && d.mode !== 9) || null; if (TIER > 3 && o.burn) { for (let i = 0; i < o.burn; i++) fire.step(0.5, f.wd, 0, Math.random, stand, G); grow(1, 1); } if (TIER > 3 && o.wolves) LIFE.pack(1); if (TIER > 3 && o.look) look(o.look[0], o.look[1]); if (TIER > 3 && o.at) { fz = 1; fly = [o.at, o.r || 0.35, o.yaw ?? yaw, o.pitch ?? max(0.02, pitch)]; } if (TIER > 3 && o.dam) { world.dam = o.dam; grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
-if (TIER > 3) Object.defineProperty(window.sylva, 'cam', { get: () => ({ tgt, rad, yaw, pitch, fz, fly, eye }) });   // for the headless checks
+if (TIER > 3) Object.defineProperty(window.sylva, 'cam', { get: () => ({ tgt, rad, yaw, pitch, fz, fly, eye, fp, wp, ong, noise: LIFE.noise }) });   // for the headless checks
 requestAnimationFrame(frame);

@@ -28,6 +28,8 @@ h1 { margin: 0; font: 600 15px/1 var(--sans); letter-spacing: .34em; text-transf
 <!--T4-->#l3 { margin: 7px 0 0; font: 500 11px/1.35 var(--mono); }
 #log { list-style: none; margin: 3px 0 0; padding: 0; font: 400 11px/1.4 var(--mono); color: var(--dim); }
 #log li:first-child { color: var(--ink); }
+#joy { position: fixed; width: 92px; height: 92px; margin: -46px; border-radius: 50%; border: 1px solid var(--line); background: rgba(12, 16, 12, .3); pointer-events: none; } #joy i { position: absolute; left: 31px; top: 31px; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); opacity: .55; } #joy[hidden] { display: none; }
+#xh { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: var(--ink); opacity: .7; pointer-events: none; } #xh[hidden] { display: none; }
 #evo { display: block; width: 100%; margin: 8px 0 0; font: 400 9px var(--mono); fill: var(--ink); stroke-linecap: round; fill-opacity: .9; } #evo path { fill: none; } #evo[hidden] { display: none; }
 @media (max-width: 560px) { #l2 { display: none; } #log li:nth-child(n+3) { display: none; } }
 <!--/T4-->#ui { left: 0; right: 0; bottom: 0; padding: 0 16px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
@@ -75,10 +77,10 @@ input[type=range] { width: 150px; margin: 0 11px 0 6px; height: 31px; accent-col
     <label for="den" id="den-l">Trees ×1.0</label><input id="den" type="range" min="25" max="200" step="5" value="100">
   </div>
   <div class="row" role="group" aria-label="Actions">
-    <button id="b-far">Overview</button><button id="b-seed">Reseed</button><button id="b-mut">Mutate</button><button id="b-snd" aria-pressed="false">Sound</button><!--T3--><button id="b-wx">Weather: clear</button><!--/T3--><!--T4--><button id="b-sea">Summer</button><button id="b-time">Time: still</button><button id="b-fol">Follow</button><button id="b-wolf">Wolves</button><button id="b-fire">Lightning</button><button id="b-evo" aria-pressed="false">Lineages</button><!--/T4-->
+    <button id="b-far">Overview</button><button id="b-seed">Reseed</button><button id="b-mut">Mutate</button><button id="b-snd" aria-pressed="false">Sound</button><!--T3--><button id="b-wx">Weather: clear</button><!--/T3--><!--T4--><button id="b-sea">Summer</button><button id="b-time">Time: still</button><button id="b-fol">Follow</button><button id="b-wolf">Wolves</button><button id="b-fire">Lightning</button><button id="b-evo" aria-pressed="false">Lineages</button><button id="b-walk" aria-pressed="false">Walk</button><!--/T4-->
   </div>
 </footer>
-<p id="err" hidden></p>
+<!--T4--><div id="xh" hidden></div><div id="joy" hidden><i></i></div><!--/T4--><p id="err" hidden></p>
 <script>__JS__</script>
 </body>
 </html>
