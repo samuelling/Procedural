@@ -7,6 +7,9 @@
 // The animals for each are in fx.js (woodlice, beetles, slugs and a centipede; nematodes and tardigrades).
 /* global TIER */
 
+// the leaf: a vein runs across as a low ridge of long cells; the rest is a sheet of jigsaw-shaped cells (drawn in the shader)
+export function leafLand(Hgt, rnd) { const z0 = (rnd() - 0.5) * 20, ph = rnd() * 6.28; const zc = (x) => z0 + 3 * Math.sin(x * 0.03 + ph); return { Hgt: (x, z) => Hgt(x, z) + 3.2 * Math.exp(-(((z - zc(x)) / 7) ** 2)), vein: zc }; }
+
 // the log is part of the ground, so animals, seedlings, leaves and your feet all go over it
 export function logLand(Hgt, rnd, hs) {
   const { sin, sqrt, max, abs, PI } = Math, TAU = PI * 2;
@@ -18,7 +21,7 @@ export function logLand(Hgt, rnd, hs) {
 }
 
 export function microBuild(world, c) {
-  const { sin, cos, sqrt, max, abs, hypot, PI } = Math, TAU = PI * 2;
+  const { sin, cos, sqrt, max, abs, hypot, PI } = Math, TAU = PI * 2, atan2s = Math.atan2;
   const { cap, card, Hgt, hs, rnd, blockers, low, log, rocks } = c, rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * Math.log(1 - rnd())) * cos(TAU * rnd());
   const up = (p, h) => [p[0], p[1] + h, p[2]];
   if (world === 'log') {
@@ -57,6 +60,38 @@ export function microBuild(world, c) {
     for (let i = 0, n = low ? 160 : 320; i < n; i++) {                    // fallen leaves, lying where they landed, a few on the log
       const x = rr(-hs, hs), z = rr(-hs, hs), y = Hgt(x, z) + 0.06 + rnd() * 0.12, a = rnd() * TAU, t = gs() * 0.12;
       card([x, y, z], rr(4, 8.5), [cos(a), t, sin(a)], 8, rr(0.5, 1), [gs() * 0.1, 1, gs() * 0.1], 0, rnd());
+    }
+    return;
+  }
+  if (world === 'leaf') {
+    const surf = (x, z) => Hgt(x, z);
+    for (let i = 0, n = low ? 18 : 32; i < n; i++) {                       // stomata: two kidney-shaped guard cells round a dark pore
+      const x = rr(-hs + 3, hs - 3), z = rr(-hs + 3, hs - 3); if (abs(z - c.vein(x)) < 9) { i--; continue; }
+      const a = rnd() * TAU, ca = cos(a), sa = sin(a), y = surf(x, z), P = (u, v, h) => [x + ca * u - sa * v, y + h, z + sa * u + ca * v];
+      cap(P(-1.4, 0, 0.15), 0.35, P(1.4, 0, 0.15), 0.35, 0, 0, 0.5, 13);
+      for (const e of [-1, 1]) { cap(P(-1.7, e * 0.25, 0.3), 0.45, P(-0.6, e * 0.85, 0.55), 0.62, 0, 1, 0.5, 12); cap(P(-0.6, e * 0.85, 0.55), 0.62, P(0.6, e * 0.85, 0.55), 0.62, 0, 1, 0.5, 12); cap(P(0.6, e * 0.85, 0.55), 0.62, P(1.7, e * 0.25, 0.3), 0.45, 0, 1, 0.5, 12); }
+      c.stomata.push([x, z]);
+    }
+    for (let i = 0; i < (low ? 6 : 11); i++) {                            // hairs: a few cells end to end, tapering, curving over
+      const x = rr(-hs + 4, hs - 4), z = rr(-hs + 4, hs - 4), a = rnd() * TAU, L = rr(22, 42), cv = rr(0.6, 1.2); let p = [x, surf(x, z) - 0.3, z];
+      for (let k = 0; k < 5; k++) { const t = (k + 1) / 5, q = [x + cos(a) * L * t * 0.7, surf(x, z) + L * sin((1 - t * cv * 0.6) * PI / 2) * 0.6 * t + L * 0.08, z + sin(a) * L * t * 0.7]; cap(p, 1.6 * (1 - k * 0.18), q, 1.6 * (1 - (k + 1) * 0.18) + 0.1, 0, 1, 0.5, 8); p = q; }
+    }
+    for (let i = 0; i < (low ? 5 : 9); i++) {                             // glandular hairs: a short stalk and a golden head of oil
+      const x = rr(-hs + 3, hs - 3), z = rr(-hs + 3, hs - 3), y = surf(x, z), h = rr(4, 7), t = [x + gs() * 0.5, y + h, z + gs() * 0.5];
+      cap([x, y, z], 0.6, t, 0.5, 0, 1, 0.5, 8); cap(t, rr(2, 2.8), [t[0], t[1] + 0.4, t[2]], rr(2, 2.8), 0, 0, 0.92, 3);
+    }
+    for (let i = 0; i < 3; i++) {                                         // pollen grains, spiny, blown here
+      const x = rr(-hs + 4, hs - 4), z = rr(-hs + 4, hs - 4), r = rr(2, 2.8), o = [x, surf(x, z) + r * 0.9, z];
+      cap(o, r, o, r, 0, 0, 0.88, 3); for (let k = 0; k < 26; k++) { const u = rnd() * 2 - 1, a = rnd() * TAU, d = [sqrt(1 - u * u) * cos(a), u, sqrt(1 - u * u) * sin(a)]; cap([o[0] + d[0] * r, o[1] + d[1] * r, o[2] + d[2] * r], 0.22, [o[0] + d[0] * (r + 0.8), o[1] + d[1] * (r + 0.8), o[2] + d[2] * (r + 0.8)], 0.04, 0, 0, 0.88, 3); }
+    }
+    { // a fungal spore that has germinated: its thread wanders over the cells, branches once, and finds its way into a stoma
+      const st = c.stomata[(rnd() * c.stomata.length) | 0] || [0, 0]; let x = st[0] + rr(-30, 30), z = st[1] + rr(-30, 30); x = Math.max(-hs + 2, Math.min(hs - 2, x)); z = Math.max(-hs + 2, Math.min(hs - 2, z));
+      cap([x, surf(x, z) + 1.3, z], 1.3, [x + 1.5, surf(x, z) + 1.3, z + 0.6], 1.2, 0, 0, 0.7, 3);
+      for (let k = 0; k < 120; k++) { const dx = st[0] - x, dz = st[1] - z, d = hypot(dx, dz); if (d < 0.6) break; const a = atan2s(dz, dx) + gs() * 0.6, nx = x + Math.cos(a) * 0.9, nz = z + Math.sin(a) * 0.9; cap([x, surf(x, z) + 0.35, z], 0.28, [nx, surf(nx, nz) + (hypot(st[0] - nx, st[1] - nz) < 1 ? -0.4 : 0.35), nz], 0.28, 0, 1, 0.2, 8); x = nx; z = nz; }
+    }
+    for (let i = 0; i < (low ? 120 : 260); i++) {                         // bacteria: short rods, in loose colonies
+      const cx = rr(-hs, hs), cz = rr(-hs, hs); for (let k = 0; k < 6; k++) { const x = cx + gs() * 0.8, z = cz + gs() * 0.8, a = rnd() * TAU, y = surf(x, z) + 0.12; cap([x, y, z], 0.1, [x + cos(a) * 0.35, y, z + sin(a) * 0.35], 0.1, 0, 0, 0.5, 9); }
+      i += 5;
     }
     return;
   }

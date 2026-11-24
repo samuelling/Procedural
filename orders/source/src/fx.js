@@ -123,11 +123,13 @@ const KIND = [['deer', 11, 1.6, 0.95, 4.4, 1, 4, 7, 4, 9, 1, 45], ['hare', 3.5, 
   // a hundred times smaller, a unit a centimetre: woodlice that graze the rotting wood, a ground beetle, slugs, and a centipede that hunts the woodlice
   ['woodlouse', 2, 0.5, 1.1, 3.2, 0.3, 14, 8, 5, 14, 1.3, 50], ['beetle', 2, 0.6, 2.4, 6, 0.3, 13, 10, 6, 4, 1.6, 70], ['slug', 1.5, 0.5, 0.35, 0.6, 0.3, 7, 6, 2.5, 4, 1, 60], ['centipede', 3, 0.8, 2.6, 7, 0.3, 15, 0, 4, 2, 1.1, 80],
   // ten thousand times smaller, a unit a tenth of a millimetre: nematodes thrashing through the water films, and the tardigrades that eat them
-  ['nematode', 0.4, 0.1, 0.7, 1.6, 0.3, 8, 3, 2, 12, 1, 30], ['tardigrade', 1, 0.3, 0.25, 0.45, 0.3, 11, 4, 2, 4, 1, 60]];
+  ['nematode', 0.4, 0.1, 0.7, 1.6, 0.3, 8, 3, 2, 12, 1, 30], ['tardigrade', 1, 0.3, 0.25, 0.45, 0.3, 11, 4, 2, 4, 1, 60],
+  // a hundred thousand times smaller, a unit ten micrometres: spider mites feeding on the leaf, and the faster, orange mites that hunt them
+  ['spidermite', 0.25, 0.03, 6, 12, 0.3, 4, 60, 40, 4, 48, 30], ['predmite', 0.3, 0.05, 9, 22, 0.3, 7, 0, 50, 2, 44, 60]];
 // its build: body radius, how far the neck reaches forward and up, head length, ear, tail length and thickness, half the body's length
 const SHP = [[0.2, 0.3, 0.52, 0.3, 0.17, 0.16, 0.05, 0.48], [0.3, 0.2, 0.22, 0.26, 0.42, 0.1, 0.1, 0.42], [0.19, 0.26, 0.22, 0.3, 0.2, 0.6, 0.1, 0.5], [0.22, 0.3, 0.3, 0.36, 0.14, 0.5, 0.07, 0.52], [0.4, 0.2, 0.05, 0.3, 0.05, 0.55, 0.14, 0.42]];
-const YOUNG = ['fawn', 'leveret', 'kit', 'pup', 'kit', 'springtail', 'mite', 'mancalid', 'larva', 'slug', 'centipede', 'juvenile', 'juvenile'], SEX = [['doe', 'stag'], ['hare', 'hare'], ['vixen', 'fox'], ['she-wolf', 'wolf'], ['beaver', 'beaver'], ['springtail', 'springtail'], ['mite', 'mite'], ['woodlouse', 'woodlouse'], ['beetle', 'beetle'], ['slug', 'slug'], ['centipede', 'centipede'], ['nematode', 'nematode'], ['tardigrade', 'tardigrade']];
-const PREY = [-1, -1, 1, 0, -1, -1, 5, -1, -1, -1, 7, -1, 11], FOE = [3, 2, -1, -1, -1, 6, -1, 10, -1, -1, -1, 12, -1];             // what each kind hunts, and what it runs from
+const YOUNG = ['fawn', 'leveret', 'kit', 'pup', 'kit', 'springtail', 'mite', 'mancalid', 'larva', 'slug', 'centipede', 'juvenile', 'juvenile', 'nymph', 'nymph'], SEX = [['doe', 'stag'], ['hare', 'hare'], ['vixen', 'fox'], ['she-wolf', 'wolf'], ['beaver', 'beaver'], ['springtail', 'springtail'], ['mite', 'mite'], ['woodlouse', 'woodlouse'], ['beetle', 'beetle'], ['slug', 'slug'], ['centipede', 'centipede'], ['nematode', 'nematode'], ['tardigrade', 'tardigrade'], ['spider mite', 'spider mite'], ['predatory mite', 'predatory mite']];
+const PREY = [-1, -1, 1, 0, -1, -1, 5, -1, -1, -1, 7, -1, 11, -1, 13], FOE = [3, 2, -1, -1, -1, 6, -1, 10, -1, -1, -1, 12, -1, 14, -1];             // what each kind hunts, and what it runs from
 export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}) {
   let B = B0, n = 0, st = B.strm, tick = 0;
   const hs = B.S / 2 - 3, out = new Float32Array(LIMB * MAXL), self = { dirty: 0, noise: 1 };
@@ -143,7 +145,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     herd.push(d); return d;
   };
   const who = (d) => (d.name ? d.name + ' the ' : 'a ') + (d.age < KIND[d.kind][2] * 0.6 ? YOUNG[d.kind] : SEX[d.kind][+d.male]), Who = (d) => who(d).replace(/^a /, 'A ');
-  [L.deer !== undefined ? L.deer : 3, TIER > 3 ? L.hare || 0 : 0, TIER > 3 ? L.fox || 0 : 0, 0, TIER > 3 && st ? L.beaver || 0 : 0, TIER > 3 ? L.springtail || 0 : 0, TIER > 3 ? L.mite || 0 : 0, ...(TIER > 3 ? ['woodlouse', 'beetle', 'slug', 'centipede', 'nematode', 'tardigrade'].map((k) => L[k] || 0) : [])].forEach((c, kind) => {
+  [L.deer !== undefined ? L.deer : 3, TIER > 3 ? L.hare || 0 : 0, TIER > 3 ? L.fox || 0 : 0, 0, TIER > 3 && st ? L.beaver || 0 : 0, TIER > 3 ? L.springtail || 0 : 0, TIER > 3 ? L.mite || 0 : 0, ...(TIER > 3 ? ['woodlouse', 'beetle', 'slug', 'centipede', 'nematode', 'tardigrade', 'spidermite', 'predmite'].map((k) => L[k] || 0) : [])].forEach((c, kind) => {
     for (let i = 0; i < c; i++) { const p = kind === 4 ? [0, st.zc(0)] : spot(), d = born(kind, p[0], p[1], KIND[kind][1] * rr(0.18, 0.7)); if (i < 2) d.male = !i; }
   });
   const nb = low ? 10 : (L.birds !== undefined ? L.birds : 20), birds = [];
@@ -196,8 +198,9 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     if (d.mode === 9) { d.dead += dt; d.lie += (1 - d.lie) * min(1, dt * 2); d.g += (1 - d.g) * min(1, dt * 2); return; }
     d.hun += dt / K[11] * d.gn[0] ** 1.5; d.thi += dt / 110; d.tir += dt / (night > 0.5 ? 25 : 150);       // long legs are quick, and hungry
     if (d.age > d.life) return die(d, 'died of old age'); if (d.hun > 1.7) return die(d, snow > 0.5 ? 'starved in the snow' : 'starved');
+    if (TIER > 3 && (k > 6 || K[1] < 0.6) && !d.male && d.preg <= 0 && d.age >= K[2] && alive(k).length < K[9] && rnd() < yrs / (K[1] * 0.15)) d.preg = rr(0.3, 1.5);   // the short-lived breed all year round
     if (d.preg > 0 && (d.preg -= dt) <= 0) {                               // birth
-      const c = k === 0 ? (rnd() < 0.15 ? 2 : 1) : k === 1 || k === 5 ? 2 + ((rnd() * 2) | 0) : 2, kids = [], dad = alive(k).find((o) => o.male && o.age >= K[2]);
+      const c = k === 0 ? (rnd() < 0.15 ? 2 : 1) : k === 1 || k === 5 ? 2 + ((rnd() * 2) | 0) : k > 10 ? 3 + ((rnd() * 3) | 0) : 2, kids = [], dad = alive(k).find((o) => o.male && o.age >= K[2]);
       for (let i = 0; i < c && alive(k).length < K[9]; i++) kids.push(born(k, d.x + rr(-0.6, 0.6), d.z + rr(-0.6, 0.6), 0.01, d, dad));
       if (kids.length) say(k === 1 ? 'A litter of ' + kids.length + ' leverets was born' : k === 5 ? kids.length + ' springtails hatched' : Who(d) + (k === 0 ? ' dropped ' : k === 6 || k > 7 ? ' laid eggs that hatched: ' : k === 7 ? ' released from her brood pouch ' : ' whelped ') + kids.map(who).join(' and '));
     }
@@ -296,6 +299,10 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
       if (!bone) for (const e of [-1, 1]) c(P(0.92, e * 0.04, 0.08), 0.015, P(1.3, e * 0.3, 0.15), 0.01);
     } else if (k === 11) {                                                 // nematode: a clear worm, thrashing in a sine wave
       for (let i = 0; i < 14; i++) { const f = 5 - i * 0.75, y = (u) => 0.9 * sin(u * 0.9 - t * 5 + d.sd * 9); c(P(f, y(i), 0.25), 0.22 - i * 0.008, P(f - 0.75, y(i + 1), 0.25), 0.22 - (i + 1) * 0.008); }
+    } else if (k > 12) {                                                   // a mite on a leaf: one oval body, eight long legs; the spider mite pale with two dark spots, the hunter orange
+      c(P(-0.22, 0, 0.12), 0.26, P(0.18, 0, 0.1), 0.2); c(P(0.3, 0, 0.06), 0.08, P(0.36, 0, 0.05), 0.06); if (k === 13) for (const e of [-1, 1]) c(P(-0.04, e * 0.15, 0.24), 0.08, P(0.02, e * 0.15, 0.24), 0.07, 13);
+      if (bone) return; for (const e of [-1, 1]) for (let i = 0; i < 4; i++) leg(0.2 - i * 0.13, e, k === 14 ? 0.62 : 0.5, 0.025, i);
+      for (const e of [-1, 1]) c(P(0.06, e * 0.1, 0.3), 0.004, P(0.04, e * 0.12, 0.5), 0.003, 8);   // a few long setae
     } else {                                                               // tardigrade: a plump barrel in four segments, eight stubby legs with claws
       for (let i = 0; i < 4; i++) c(P(1 - i * 0.65, 0, 0.75), 0.7, P(0.4 - i * 0.65, 0, 0.75), 0.75);
       c(P(1.25, 0, 0.65), 0.45, P(1.6, 0, 0.55), 0.3); if (bone) return;
@@ -322,7 +329,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
 
   return {
     out, herd, birds, who, pack, get dirty() { return self.dirty; }, set dirty(v) { self.dirty = v; }, set fat(v) { self.fat = v; }, get noise() { return self.noise; }, set noise(v) { self.noise = v; },
-    get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; ['woodlice', 'beetles', 'slugs', 'centipedes', 'nematodes', 'tardigrades'].forEach((p, i) => { const n = alive(7 + i).length; if (n) c[p] = n; }); if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
+    get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; ['woodlice', 'beetles', 'slugs', 'centipedes', 'nematodes', 'tardigrades', 'spider mites', 'predatory mites'].forEach((p, i) => { const n = alive(7 + i).length; if (n) c[p] = n; }); if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
     // how far each kind's inherited legs and boldness have moved from where they started
     genes() { return [0, 1, 2, 3].map((k) => { const a = alive(k); if (a.length < 2 || !a.some((d) => d.gen > 1)) return ''; const m = (i) => Math.round((a.reduce((s, d) => s + d.gn[i], 0) / a.length - 1) * 100); return KIND[k][0] + ' legs ' + (m(0) >= 0 ? '+' : '') + m(0) + '%, boldness ' + (m(1) >= 0 ? '+' : '') + m(1) + '%'; }).filter(Boolean).join(' · '); },
     world(b) { B = b; st = b.strm; },
@@ -331,7 +338,8 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     spring() {
       for (let k = 0; k < KIND.length; k++) {
         const a = alive(k), K = KIND[k]; if (TIER < 4 && k) continue; if (k === 3 ? !a.length : k ? !(L[K[0]] > 0) : L.deer === 0) continue;
-        if (k !== 3 && (a.length < 2 || !a.some((d) => d.male) || !a.some((d) => !d.male))) { const d = born(k, rnd() < 0.5 ? -hs : hs, k === 4 ? st.zc(hs) : rr(-hs, hs), K[2] * rr(1.2, 3)); d.male = !a.some((o) => o.male); say(Who(d) + ' came in from outside the plot'); }
+        if (k !== 3 && (a.length < 2 || !a.some((d) => d.male) || !a.some((d) => !d.male))) { const d = born(k, rnd() < 0.5 ? -hs : hs, k === 4 ? st.zc(hs) : rr(-hs, hs), K[2] * rr(1.2, 3)); d.male = !a.some((o) => o.male); say(Who(d) + ' came in from outside the plot'); if (TIER > 3 && !a.length) born(k, d.x, d.z + 1, d.age).male = !d.male; }   // into an empty plot they come as a pair
+        if (TIER > 3 && (k > 6 || K[1] < 0.6)) continue;   // the short-lived keep their own calendar
         for (const d of a) if (!d.male && d.age >= K[2] && d.hun < 1.1 && a.length < K[9] + (self.fat && PREY[k] < 0 ? 3 : 0)) d.preg = rr(6, 50);   // after a mast year there is room for more
       }
       self.fat = 0; if (FR) for (let i = 0; i < 256; i++) FR[i] *= 0.55;   // fear fades
@@ -349,7 +357,8 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     // one step of everything alive; returns how many limbs to draw. yrs: years gone by in this step.
     step(dt, t, cam, night, yrs = 0, season = 1, snow = 0) {
       n = 0;
-      if ((tick += dt) > 30) { tick = 0; if (TIER > 3 && !yrs && L.hare && alive(1).length < 2) { born(1, rnd() < 0.5 ? -hs : hs, rr(-hs, hs), 1); say('A hare came in from outside the plot'); } }   // with the clock stopped nothing is born, so the fox's larder is topped up
+      if ((tick += dt) > 30) { tick = 0; if (TIER > 3) for (let k = 11; k < KIND.length; k++) if (L[KIND[k][0]] > 0 && !alive(k).length && rnd() < 0.5) { const d = born(k, rnd() < 0.5 ? -hs : hs, rr(-hs, hs), KIND[k][2] * 2); born(k, d.x, d.z + 1, d.age).male = !d.male; say(Who(d) + ' came in from outside the plot'); }   // the very small blow in on the wind, or walk in, whenever the patch is empty
+      if (TIER > 3 && !yrs && L.hare && alive(1).length < 2) { born(1, rnd() < 0.5 ? -hs : hs, rr(-hs, hs), 1); say('A hare came in from outside the plot'); } }   // with the clock stopped nothing is born, so the fox's larder is topped up
       const an = [0.35, 0.8, 1, 0][season];
       for (let i = herd.length - 1; i >= 0; i--) { const d = herd[i]; live(d, cam, dt, yrs, night, season, snow); if (d.mode === 9 && d.dead > 80) herd.splice(i, 1); else (d.kind > 4 ? bug : quad)(d, t, an); }
       if (TIER > 3 && env.fire && env.fire.n) env.fire.draw(cap, B, t);
@@ -537,7 +546,7 @@ export const FLW = `
 // a few pixels across, so from afar it costs nothing and never shimmers; walk up to a trunk, a leaf or a stone and more
 // of it appears, the way a microscope's fine focus brings up one layer after another.
 export const MICRO = `
-uniform float uNdl; uniform vec3 uFor;
+uniform float uNdl, uLeaf; uniform vec3 uFor;
 float FP = 1., GL = 0.; vec4 LF = vec4(-1.);
 float vis(float s) { return smoothstep(1.5, 4., s / max(FP, 1e-6)); }
 vec3 vor(vec2 p) {
@@ -715,4 +724,18 @@ export const CROWND = `
       alb = mix(alb, mix(vec3(.62, .36, .03), vec3(.45, .07, .02), cl.z) * (.5 + .6 * c0), uSe.x * (1. - cf));
       alb = mix(alb, vec3(.32, .27, .25) * (.6 + .5 * c0), uSe.y * (1. - cf) * .9); tex = c0;
     }
+`;
+
+// the underside of a leaf: pavement cells with wavy, interlocking walls, domed, green with chloroplasts; over the vein
+// they are long and narrow; a waxy cuticle gives a sheen
+export const LEAFG = `
+  } else if (uMat < 1.5 && uLeaf > .5) {
+    vec2 p = pw.xz;
+    float onv = smoothstep(2.2, 2.8, pw.y - (vn(p * .02) - .5) * 1.2);                                       // up on the vein ridge
+    vec2 q = mix(p / 6.5, vec2(p.x / 16., p.y / 2.6), onv); q += (1. - onv) * .22 * vec2(sin(q.y * 6.3 + 1.7 * sin(q.x * 3.1)), sin(q.x * 6.3 + 1.7 * sin(q.y * 2.9)));   // jigsaw lobes
+    vec3 cv = vor(q); float wall = smoothstep(.03, .09, cv.y), dome = smoothstep(0., .35, cv.y);
+    vec3 ch = vor(p * 1.1 + cv.z * 30.);                                                                      // chloroplasts, seen through the cell
+    alb = mix(vec3(.16, .3, .08), vec3(.34, .55, .16), .3 + .5 * cv.z) * (.82 + .3 * smoothstep(.45, .1, ch.x) * (1. - onv * .6));
+    alb = mix(vec3(.08, .14, .05), alb, wall); alb = mix(alb, alb * vec3(1.15, 1.1, .9), onv * .5);
+    float hh2 = dome * .6 - (1. - wall) * .4; BUMP(n, pw, hh2) ao = .75 + .25 * dome; GL = .05 * dome;
 `;

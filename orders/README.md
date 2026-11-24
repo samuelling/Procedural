@@ -118,8 +118,8 @@ sky. Ants run up some trunks, and about one leaf in thirty has a ladybird on it.
 
 ## Powers of ten, inward (2 MB rung)
 
-Two more worlds, built from the same parts as the forest at other scales, and a way to dive between them: + (or In ×10)
-goes a step further in, − (or Out ×10) back out, along forest ×1 → rotting log ×100 → moss ×1000 → soil ×10,000. The
+Three more worlds, built from the same parts as the forest at other scales, and a way to dive between them: + (or In ×10)
+goes a step further in, − (or Out ×10) back out, along forest ×1 → rotting log ×100 → moss ×1000 → soil ×10,000 → leaf ×100,000. The
 view rushes at the ground, whites out, and comes in on the next world from above.
 
 - **Rotting log ×100** (a unit is a centimetre, 64 cm across). The log is part of the ground, so animals, seedlings,
@@ -133,6 +133,12 @@ view rushes at the ground, whites out, and comes in on the next world from above
   with spores resting on them; pin moulds (a stalk a millimetre or two tall with a black ball of spores) and
   Penicillium brushes whose bristles are chains of blue-green spores. Nematodes thrash through it in sine waves and
   tardigrades (a plump barrel in four segments, eight stubby clawed legs) hunt them.
+- **Leaf ×100,000** (a unit is ten micrometres, 0.64 mm across), the underside of a leaf: epidermal cells drawn per
+  pixel as a jigsaw (wavy Voronoi walls, a slight dome to each cell, chloroplast specks showing through), a vein ridge
+  of long narrow cells, stomata (two kidney-shaped guard cells around a dark pore), plain hairs and glandular hairs with
+  a sticky head, spiny pollen grains, a germinating fungal spore whose thread grows over the surface and into a stoma,
+  and rod bacteria. Spider mites feed on it and the faster orange predatory mites hunt them. A spider mite is half a
+  millimetre long, so a patch this size holds only two to four: they boom, crash and drift back in from outside.
 
 The sizes are right to within a factor of two or so; the shapes are simplified, and the soil is lit as if the litter
 above had been lifted away.
@@ -168,8 +174,10 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
 
-Inward worlds: both seen in renders, the soil also after diving into it from the moss; woodlice, beetles, slugs, the
-centipede, nematodes and tardigrades confirmed in the simulation (births, deaths, arrivals) but not looked at up close.
+Inward worlds: all three seen in renders, the soil also after diving into it from the moss, the leaf from above and
+from a few cell-widths away (jigsaw cells, stomata, hairs, pollen and both mites seen; the bacteria and the hypha's
+entry into the stoma not picked out); woodlice, beetles, slugs, the centipede, nematodes, tardigrades and both mites
+confirmed in the simulation over fourteen years (births, deaths, arrivals) but the log and soil animals not looked at up close.
 
 Valley: seen in renders from the valley overview in summer, autumn and winter, from the plot overview, and from the
 ground while walking. Not checked: how it runs on a phone (about 4,500 more capsules and 25,000 more vertices).

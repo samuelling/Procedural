@@ -36,7 +36,7 @@ function stone(sd, sub, rnd) {
 /* global TIER */
 import { tl } from './fx.js';
 import { valley } from './valley.js';
-import { logLand, microBuild } from './micro.js';
+import { logLand, leafLand, microBuild } from './micro.js';
 export function build(G, seed, q = 1, den = 1, stand) {
   let rnd = rng(seed); const rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
@@ -57,7 +57,8 @@ export function build(G, seed, q = 1, den = 1, stand) {
     const fl = TIER > 3 && stand && stand.world ? stand.world.dam : 0, xd = px + sr + 3, lvl = (x) => max(bed(x) - 0.1, fl > 0 && x < xd ? bed(xd) - 0.1 + fl * 0.9 : -1e9);
     strm = { zc, wid, lvl, dist, xd, px, fl, deep: (x, z) => fl > 0 && dist(x, z) > 0 && lvl(x) - Hgt(x, z) > 0.12 };
   }
-  let lg = null; if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
+  let lg = null, lv = null; if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
+  if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
   const cap = (a, ra, b, rb, s0, s1, id, k) => caps.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, s0, s1, id, k);
   const card = (p, size, u, type, ao, n, pal, sd) => cards.push(p[0], p[1], p[2], size, u[0], u[1], u[2], type + min(1, max(0, ao)) * 0.98, n[0], n[1], n[2], pal + min(0.98, sd));
@@ -77,7 +78,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
     for (let j = 0; j < 3; j++) rock(3, x + gs() * s * 1.4, z + gs() * s * 1.4, rr(0.08, 0.26), 0.6, rr(0.4, 1));
   }
   for (let n = round(L.peb * (low ? 0.5 : 1)); n > 0; n--) rock(3, rr(-hs, hs), rr(-hs, hs), rr(0.04, 0.14), rr(0.5, 0.9), rnd());
-  if (TIER > 3 && G.world) microBuild(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks });   // the worlds further in
+  if (TIER > 3 && G.world) microBuild(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks, vein: lv, stomata: [] });   // the worlds further in
   if (TIER > 2 && strm) for (let n = low ? 30 : 56; n > 0; n--) {                       // stones in and along the stream
     const x = rr(-hs + 1, hs - 1), z = strm.zc(x) + gs() * (strm.wid(x) * 0.7 + 0.4); if (abs(z) < hs - 1) rock((rnd() * 4) | 0, x, z, rr(0.12, 0.5) * (rnd() < 0.15 ? 2.2 : 1), rr(0.5, 0.9), rr(0.3, 1));
   }
