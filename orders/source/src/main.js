@@ -4,7 +4,7 @@ import { build } from './grow.js';
 import { rng } from './noise.js';
 import { mkRenderer } from './gl.js';
 import { mkAudio } from './audio.js';
-import { mkLife, MORE } from './fx.js';
+import { mkLife, MORE, succeed } from './fx.js';
 
 const { sin, cos, tan, asin, min, max, round, exp, hypot, pow, PI } = Math, RAD = PI / 180, $ = (id) => document.getElementById(id);
 const canvas = $('c'), clamp = (x, a, b) => min(b, max(a, x)), mix3 = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -21,6 +21,12 @@ const V = new Float32Array(16), LV = new Float32Array(16), SM = new Float32Array
 const f = { V, K, IV, cam: eye, SM, LV, LK: [1 / 58, 1 / 58], LNF: [1, 190], wd: [0.8, 0.6, 0.1], fog: [0.01, 0.07, 0], t: 0, moss: 0.3, focus: 10, shafts: 1, shadow: 1, wx: [0, 0, 0.3, 0], se: [0, 0, 0, 0], pts: [] };
 // above the 20 kB rung: weather [cloud cover, fog, rain, snow], the season, and what lives here
 const WXS = { clear: [0.3, 1, 0, 0], cloud: [0.76, 1.4, 0, 0], mist: [0.62, 4.5, 0, 0], rain: [1, 2.4, 1, 0], snow: [1, 2.6, 0, 1] }, WXN = Object.keys(WXS), SEA = ['Spring', 'Summer', 'Autumn', 'Winter'];
+// the 2 MB rung keeps time: a clock that can stand still, run in days, in seasons or in decades; a chronicle of what
+// happens; and an animal the camera can be told to follow
+const TIMES = ['still', 'days', 'seasons', 'decades'];
+let stand = null, clock = 0, dayPh = 0.33, yearF = 0.3, year = 1, decT = 0, fol = null, folI = -1;
+const say = (s) => { if (TIER < 4) return; const li = document.createElement('li'), L = $('log'); li.textContent = 'Year ' + year + (clock === 3 ? '' : ', ' + SEA[season].toLowerCase()) + ' · ' + s; L.prepend(li); while (L.children.length > 4) L.lastChild.remove(); };
+const snd = (k) => { if (TIER > 3 && audio && sound) audio.ev(k); };
 let flash = 0, wx = 'clear', season = 1, LIFE = null, fogK = 1, night = 0, rainA = 0, snowA = 0;
 if (TIER > 2) for (const k in MORE) { GENOMES[k].land.stream = MORE[k].stream; GENOMES[k].life = MORE[k].life; if (TIER > 3) GENOMES[k].floor.flower = MORE[k].flower; }
 if (TIER > 3) { Object.assign(GENOMES, extra()); GENOMES.boreal.air.aur = GENOMES.larch.air.aur = 1; }
@@ -68,15 +74,16 @@ function setSun() {
 }
 
 // ---- grow a plot from the current genome
-function grow(keepView) {
+function grow(keepView, aged) {
   G = mut ? mutate(GENOMES[key], rng(mut)) : GENOMES[key];
-  const t0 = performance.now(); B = build(G, seed, Q, den); R.load(B, G);
+  const t0 = performance.now(); B = build(G, seed, Q, den, TIER > 3 && aged ? stand : undefined); R.load(B, G);
+  if (TIER > 3) { stand = B.trees; if (!aged) { year = 1; fol = null; $('log').textContent = ''; $('b-fol').textContent = 'Follow'; } }
   f.fog = [G.air.fog, 0.07, 0]; f.moss = G.floor.moss; f.wd = [0.8, 0.6, G.air.wind * 0.18];
   if (!keepView) {
     day = asin(pow((G.air.sun[0] - 6) / 62, 1 / 1.2)) / PI; $('day').value = round(day * 1000);
     tgt = [B.open[0], 0, B.open[1]]; rad = 9; pitch = 0.03; yaw = (G.air.sun[1] + 180 + 28) * RAD;      // start low among the trunks, looking toward the light
   }
-  if (TIER > 2) { LIFE = mkLife(B, G, rng(seed + 7), coarse); if (!keepView && B.strm) { yaw = (tgt[2] > B.strm.zc(tgt[0]) ? 0 : PI) + 0.3; pitch = 0.17; rad = 11; } }
+  if (TIER > 2) { if (TIER > 3 && aged && LIFE) LIFE.world(B); else LIFE = mkLife(B, G, rng(seed + 7), coarse, say, snd); if (!keepView && B.strm) { yaw = (tgt[2] > B.strm.zc(tgt[0]) ? 0 : PI) + 0.3; pitch = 0.17; rad = 11; } }
   setSun();
   $('l1').textContent = G.nm + (mut ? ' · mutant ' + mut : '') + ' · seed ' + seed;
   $('l2').textContent = JSON.stringify(GENOMES[key]).length.toLocaleString() + ' bytes of genome → ' + B.st.trees + ' trees · ' + (B.st.wood / 1000).toFixed(1) + ' km of wood · '
@@ -115,6 +122,16 @@ function frame(now) {
   idle += dt; if (idle > 6 && !calm) yaw += dt * 0.025;
   const sp = max(2, rad * 0.6) * dt, kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), kf = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
   if (kx || kf) { walk(kx * sp, kf * sp); idle = 0; }
+  let yrs = 0, moved = 0;
+  if (TIER > 3) {
+    if (clock === 1 || clock === 2) {                                      // a day is an eighth of a year: the sun crosses, night falls, seasons turn
+      const YL = clock === 1 ? 480 : 64, y0 = Math.floor(yearF); yrs = dt / YL; dayPh = (dayPh + dt * 8 / YL) % 1; day = dayPh < 0.75 ? -0.12 + dayPh / 0.75 * 1.24 : 1.12; $('day').value = round(day * 1000); moved = 1;
+      yearF += yrs; const se = Math.floor((yearF % 1) * 4); if (se !== season) setSea(se);
+      if (Math.floor(yearF) > y0) { year++; if (succeed(stand, G, B, rng(seed + year * 7), say)) grow(1, 1); }                   // the trees are a year older too
+    } else if (clock === 3 && (decT += dt) > 3) { decT = 0; for (let i = 0; i < 5; i++) { year++; succeed(stand, G, B, rng(seed + year * 7), say); } grow(1, 1); }   // five years at a stride
+    if (fol) { if (fol.mode === 9 && fol.dead > 12) { fol = null; $('b-fol').textContent = 'Follow'; } else { tgt[0] = clamp(fol.x, -B.S / 2, B.S / 2); tgt[2] = clamp(fol.z, -B.S / 2, B.S / 2); idle = 0; } }
+    if (fr % 30 === 0) $('l3').textContent = 'Year ' + year + ' · ' + SEA[season] + ' · ' + Object.entries(LIFE.counts).map((e) => e[1] + ' ' + e[0]).join(' · ') + ' · ' + stand.filter((t) => !t.st && t.H >= 5).length + ' trees';
+  }
   view();
   if (TIER > 2) {                                                          // weather moves toward what was asked for; rain wets, snow settles, both pass slowly
     const w = WXS[wx], go = (i, to, r) => { const d = to - f.wx[i]; f.wx[i] += clamp(d, -r * dt, r * dt); return Math.abs(d) > 1e-3; };
@@ -122,7 +139,8 @@ function frame(now) {
     const d = w[1] - fogK; if (Math.abs(d) > 1e-3) { fogK += clamp(d, -dt * 0.7, dt * 0.7); ch = 1; } f.fog[0] = G.air.fog * fogK;
     rainA += clamp(w[2] - rainA, -dt * 0.5, dt * 0.5); snowA += clamp(w[3] - snowA, -dt * 0.5, dt * 0.5); f.wx[3] = rainA;
     if (TIER > 3) { if (rainA > 0.8 && Math.random() < dt * 0.09) { flash = 1; if (audio) audio.boom(); } if (flash > 0.01) { flash *= Math.exp(-dt * 7) * (Math.random() < 0.3 ? 1.6 : 1); flash = min(flash, 1); ch = 1; } }
-    if (ch) setSun();
+    if (ch || moved) setSun();
+    const wa = 0.64 + 0.7 * sin(time * 0.017), ws = G.air.wind * (1 + 1.6 * rainA + 0.8 * snowA + (wx === 'cloud' ? 0.4 : 0)); f.wd[0] = cos(wa); f.wd[1] = sin(wa); f.wd[2] = ws * 0.18;   // the wind backs and veers, and rises with the weather
     f.pts.length = 0;
     if (rainA > 0.01) f.pts.push([1, 0.011, rainA, coarse ? 2500 : 6000]);
     if (snowA > 0.01) f.pts.push([2, 0.03, snowA, coarse ? 2500 : 5000]);
@@ -131,8 +149,8 @@ function frame(now) {
       if (season === 2) f.pts.push([4, 0.055, 1, coarse ? 250 : 600]);                       // leaves coming down
       if (season < 2 && night < 0.5 && rainA < 0.1) f.pts.push([5, 0.018, 0.6 * (1 - night * 2), 500]);   // seeds and midges in the light
     }
-    R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night));
-    if (audio && fr % 12 === 0) audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night);
+    R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night, yrs, season, f.wx[1]));
+    if (audio && fr % 12 === 0) { audio.set(ws, 1 - night); audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night, season); }
   }
   f.focus = rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
   R.draw(f);
@@ -174,10 +192,19 @@ const act = {
 for (const b of document.querySelectorAll('[data-g]')) b.addEventListener('click', () => { key = b.dataset.g; mut = 0; grow(); });
 for (const k in act) $('b-' + k).addEventListener('click', act[k]);
 const setWx = (v) => { wx = v; $('b-wx').textContent = 'Weather: ' + v; }, setSea = (v) => {
+  if (v === 0 && season !== 0 && LIFE) LIFE.spring();
   season = v; $('b-sea').textContent = SEA[v]; f.se[0] = v === 2 ? 1 : 0; f.se[1] = v === 3 ? 1 : v === 2 ? 0.35 : 0; f.se[3] = v === 0 ? 1 : 0; dirty = 1;
 };
 if (TIER > 2) $('b-wx').addEventListener('click', () => setWx(WXN[(WXN.indexOf(wx) + 1) % WXN.length]));
-if (TIER > 3) { $('b-sea').addEventListener('click', () => setSea((season + 1) % 4)); $('day').min = -110; $('day').max = 1110; }
+if (TIER > 3) {
+  $('b-sea').addEventListener('click', () => { const v = (season + 1) % 4; if (!v) year++; yearF = Math.floor(yearF) + (v ? 0 : 1) + v / 4 + 0.01; setSea(v); });
+  $('day').min = -120; $('day').max = 1120;
+  $('b-time').addEventListener('click', () => { clock = (clock + 1) % 4; $('b-time').textContent = 'Time: ' + TIMES[clock]; if (clock === 3) { setSea(1); yearF = Math.floor(yearF) + 0.3; } if (!clock) { day = 0.3; $('day').value = 300; setSun(); } });
+  $('b-fol').addEventListener('click', () => {                             // step through the animals that have names, then let go
+    const a = LIFE.herd.filter((d) => d.mode !== 9 && d.name); folI = (folI + 1) % (a.length + 1); fol = a[folI] || null;
+    $('b-fol').textContent = fol ? 'Following ' + LIFE.who(fol) : 'Follow'; if (fol) { rad = 9; pitch = 0.16; }
+  });
+}
 const denLabel = () => { $('den-l').textContent = 'Trees ×' + den.toFixed(2).replace(/0$/, ''); };
 $('den').value = round(den * 100); denLabel();
 $('den').addEventListener('input', (e) => { den = clamp(e.target.value / 100, 0.25, 2); denLabel(); });   // the label follows the thumb; the forest regrows on release
@@ -200,5 +227,5 @@ $('hint').textContent = coarse ? 'Drag to look around · pinch to move in and ou
   : 'Drag to look around · scroll to move in and out · right-drag or WASD to walk';
 grow();
 // for tests and screenshots
-window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
+window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { for (let i = 0; i < o.years; i++) { year++; succeed(stand, G, B, rng(seed + year * 7), say); } grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
 requestAnimationFrame(frame);

@@ -9,10 +9,10 @@ unpacker. No stored images, models or sound files.
 | [`2kb/`](2kb/) | 2,000 bytes | One fragment shader: ten rows of trees computed per pixel |
 | [`20kb/`](20kb/) | 20,000 bytes | Sylva: a genome and a grammar growing a 3D plot |
 | [`200kb/`](200kb/) | 200,000 bytes | A living scene: a stream and pool, clouds with moving shadows, rain, snow and mist, deer, a flock of birds |
-| [`2mb/`](2mb/) | 2,000,000 bytes | All of that plus night, aurora, four seasons, flowers, hares, a fox, butterflies, thunderstorms, and four more forests |
+| [`2mb/`](2mb/) | 2,000,000 bytes | A forest that keeps time: animals are born, hunt, age and die; trees grow, die, fall and are replaced; plus night, seasons, flowers, insects, storms, and four more forests |
 
 `index.html` reports the real byte count of every rung against its allowance. The three small rungs are full. The two
-large ones are not: the 200 kB rung uses about 26 kB and the 2 MB rung about 27 kB, because that is how many rules have
+large ones are not: the 200 kB rung uses about 28 kB and the 2 MB rung about 32 kB, because that is how many rules have
 been written. The 2 MB build would fit in the 200 kB allowance; the split follows the order things were asked for.
 
 ## How the pages fit
@@ -45,10 +45,23 @@ snow), the water shader, the formula-placed particles (rain, snow, fireflies, le
 animals. Animals are drawn with the same tapered capsules as the trees: a deer is twenty limbs whose feet find the
 ground. `src/genome.js` ends with the extra species and forests.
 
+## Lives and succession (2 MB rung)
+
+Nothing in the top rung is scripted. Each animal carries hunger, thirst, tiredness, an age and a lifespan, and picks
+what to do from whichever presses hardest; a hunt, a birth or a death in the snow happens when the numbers bring it
+about. Each tree is a record (species, place, age, height, its own seed) and each species has a lifespan, a growth rate
+and a shade tolerance; one call to `succeed` is one year of growth, death, fall, rot and seeding, after which the plot
+is regrown from the records. `node tools/life_test.mjs [biome]` runs 14 years of animals and 300 years of trees and
+prints what happened. In the aspen grove, spruce climbs from 7 trees to about 40 over two centuries.
+
+The clock button steps through still, days (a year is 8 minutes), seasons (a year a minute) and decades (five years
+every three seconds, trees only).
+
 ## What has and has not been checked
 
 Checked: every forest of every 3D rung grows with no non-finite geometry at both detail levels and after mutation, and
-400 steps of its animals stay finite; each rung renders without console errors in headless Chrome with software WebGL,
+400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
+succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
 
 Not checked: frame rate on real hardware (the upper rungs evaluate cloud shadow for every pixel, which costs

@@ -6,8 +6,8 @@
 /* global TIER */
 import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW } from './fx.js';
 // below the 200 kB rung there is no weather: clouds cast no shadow and nothing changes a surface's colour
-const FUR = `if (kd > 3) alb = (kd == 4 ? vec3(.3, .19, .1) : kd == 5 ? vec3(.46, .38, .27) : kd == 6 ? vec3(.06, .055, .06) : kd == 7 ? vec3(.5, .2, .05) : kd == 10 ? .5 + .5 * cos(sd * 30. + vec3(0., 2., 4.)) : vec3(.72, .7, .62)) * (.75 + .5 * vn3(pw * 40.)); else`;   // fur, feather, antler, wing
-const WX = TIER > 2 ? WX3 : `float cshd(vec3 p) { return 1.; } vec3 wxa(vec3 a, vec3 p, vec3 n) { return a; }`;
+const FUR = `if (kd > 3) alb = (kd == 4 ? vec3(.3, .19, .1) : kd == 5 ? vec3(.46, .38, .27) : kd == 6 ? vec3(.06, .055, .06) : kd == 7 ? vec3(.5, .2, .05) : kd == 10 ? .5 + .5 * cos(sd * 30. + vec3(0., 2., 4.)) : kd == 11 ? vec3(.33, .28, .24) : kd == 12 ? vec3(.1, .3, .07) : vec3(.72, .7, .62)) * (.75 + .5 * vn3(pw * 40.)); else`;   // fur, feather, antler, wing
+const WX = TIER > 2 ? WX3 : `float gst(vec3 p) { return 1.; } float cshd(vec3 p) { return 1.; } vec3 wxa(vec3 a, vec3 p, vec3 n) { return a; }`;
 const PRE = `#version 300 es
 precision highp float; precision highp sampler2DShadow;
 uniform mat4 uV, uSM; uniform mat3 uIV; uniform vec2 uK, uR, uNF; uniform float uOr, uT, uMoss;
@@ -24,7 +24,7 @@ float fb3(vec3 p) { return .55 * vn3(p) + .3 * vn3(p * 2.1 + 3.) + .15 * vn3(p *
 vec3 sky(vec3 d) { float s = max(dot(d, uSun), 0.); return mix(uHorC * mix(.45, 1., smoothstep(-.7, 0., d.y)), uSkyC, pow(max(d.y, 0.), .55)) + uSunC * (pow(s, 350.) * 5. + pow(s, 6.) * .1); }
 ` + WX + `
 // wind: everything leans by its height, in slow waves that cross the plot
-vec3 sway(vec3 p) { float h = max(p.y + 2., 0.) / 24., ph = p.x * .06 + p.z * .05; return vec3(uWd.x, 0., uWd.y) * uWd.z * h * sqrt(h) * (sin(uT * .8 + ph) + .5 * sin(uT * 1.9 + ph * 1.7) + .4); }
+vec3 sway(vec3 p) { float h = max(p.y + 2., 0.) / 24., ph = p.x * .06 + p.z * .05; return vec3(uWd.x, 0., uWd.y) * uWd.z * h * sqrt(h) * (sin(uT * .8 + ph) + .5 * sin(uT * 1.9 + ph * 1.7) + .4) * gst(p); }
 vec4 proj(vec3 v) { float zd = -v.z, n = uNF.x, f = uNF.y; return uOr > .5 ? vec4(uK * v.xy, 2. * (zd - n) / (f - n) - 1., 1.) : vec4(uK * v.xy, ((f + n) * zd - 2. * f * n) / (f - n), zd); }
 float dep(float zs) { float n = uNF.x, f = uNF.y; return uOr > .5 ? (zs - n) / (f - n) : .5 + .5 * ((f + n) / (f - n) - 2. * f * n / ((f - n) * zs)); }
 float shd(vec3 p, vec3 n) {
@@ -265,7 +265,7 @@ export function mkRenderer(canvas, low) {
   const vQ = gl.createVertexArray(); let W = null;
   // above the 20 kB rung: water, things in the air, and a buffer of limbs that is rewritten every frame
   const PW = TIER > 2 && prog(PRE + WATV, PRE + WATF), PPT = TIER > 2 && prog(PRE + PTV, PRE + PTF, ['uPt']), lv = TIER > 2 && gl.createVertexArray(), lb = TIER > 2 && gl.createBuffer(); let ln = 0;
-  if (TIER > 2) { gl.bindVertexArray(lv); gl.bindBuffer(gl.ARRAY_BUFFER, lb); gl.bufferData(gl.ARRAY_BUFFER, 420 * 48, gl.DYNAMIC_DRAW); inst(0); gl.bindVertexArray(null); }
+  if (TIER > 2) { gl.bindVertexArray(lv); gl.bindBuffer(gl.ARRAY_BUFFER, lb); gl.bufferData(gl.ARRAY_BUFFER, 900 * 48, gl.DYNAMIC_DRAW); inst(0); gl.bindVertexArray(null); }
   const free = () => { if (!W) return; for (const b of W.bufs) gl.deleteBuffer(b); for (const v of W.vaos) gl.deleteVertexArray(v); };
   const com = (P, f, view, K, R, or, nf) => {
     gl.useProgram(P.p); gl.uniformMatrix4fv(P.uV, false, view); gl.uniformMatrix4fv(P.uSM, false, f.SM); gl.uniformMatrix3fv(P.uIV, false, f.IV);

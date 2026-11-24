@@ -7,6 +7,7 @@ const { sin, cos, min, max, hypot, atan2, abs, PI, floor } = Math, TAU = PI * 2;
 // uSe: autumn, leaf fall, night, spare.
 export const WX3 = `
 uniform vec4 uWx, uSe;
+float gst(vec3 p) { return .5 + 1.2 * vn(p.xz * .035 - uT * .22 * uWd.xy); }               // gusts cross the plot as fronts
 float cn(vec2 p) { return .55 * vn(p) + .3 * vn(p * 2.3 + 7.) + .15 * vn(p * 5.1 + 3.); }
 // clouds are a sheet of noise 900 m up that drifts with the wind; cover decides how much of it is cloud
 float cdn(vec2 q) { return smoothstep(1.02 - uWx.z, 1.34 - uWx.z, cn(q * .0011 + uT * .004 * uWd.xy) + .22 * cn(q * .0043 - uT * .005) + .2); }
@@ -92,82 +93,143 @@ void main() {
 }`;
 
 // ---- life. Animals are drawn with the same tapered capsules as the trees: twelve numbers per limb.
-// A deer is a skeleton of twenty: its feet find the ground, and it walks, grazes, watches you and runs.
-const LIMB = 12;
-export function mkLife(B, G, rnd, low) {
-  const hs = B.S / 2 - 3, out = new Float32Array(LIMB * 420), st = B.strm;
-  let n = 0;
-  const cap = (a, ra, b, rb, kind, sd) => { if (n >= 420) return; out.set([a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, 0, 1, sd, kind], n++ * LIMB); };
-  const add = (a, b, k) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k], rr = (a, b) => a + (b - a) * rnd();
+// Each one carries its own needs (hunger, thirst, tiredness), an age and a lifespan, and chooses what to do from them.
+// Nothing here is scripted: a hunt, a birth or a death in the snow happens when the numbers bring it about.
+const LIMB = 12, MAXL = 900;
+const NM1 = 'Al Bri Ca Da El Fa Ha Is Ka Li Mo Ne Or Ra Sa Ta Ur Va Wy Yo'.split(' '), NM2 = 'ba da ra na la ric wen mund ka so li th gar ne ya ro'.split(' ');
+// a kind of animal: name, lifespan in years, age of maturity, walking and running speed, leg length, coat, the distance at
+// which it notices you, the distance at which it runs, how many the plot can hold, adult size, seconds between meals
+const KIND = [['deer', 11, 1.6, 0.95, 4.4, 1, 4, 7, 4, 9, 1, 45], ['hare', 3.5, 0.5, 1.6, 5.6, 0.55, 5, 5, 3, 12, 0.3, 40], ['fox', 6, 1, 1.4, 6.3, 0.62, 7, 0, 2.5, 3, 0.42, 75]];
+const YOUNG = ['fawn', 'leveret', 'kit'], SEX = [['doe', 'stag'], ['hare', 'hare'], ['vixen', 'fox']];
+export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}) {
+  let B = B0, n = 0, st = B.strm, tick = 0;
+  const hs = B.S / 2 - 3, out = new Float32Array(LIMB * MAXL);
+  const cap = (a, ra, b, rb, kind, sd) => { if (n >= MAXL) return; out.set([a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, 0, 1, sd, kind], n++ * LIMB); };
+  const add = (a, b, k) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k], rr = (a, b) => a + (b - a) * rnd(), cl = (v) => max(-hs, min(hs, v));
   const dry = (x, z) => !st || st.dist(x, z) > 0.3;
   const spot = () => { for (let k = 0; k < 40; k++) { const x = rr(-hs, hs), z = rr(-hs, hs); if (dry(x, z)) return [x, z]; } return [0, 0]; };
-  const mk = (kind, sc, i) => { const p = spot(); return { kind, sc, x: p[0], z: p[1], a: rnd() * TAU, ph: rnd() * 9, tg: spot(), mode: 0, t: rr(2, 9), g: 0, v: 0, sd: rnd(), i }; };
-  const deer = (G.life && G.life.deer !== undefined ? G.life.deer : 3), hares = TIER > 3 ? (G.life && G.life.hare) || 0 : 0, foxes = TIER > 3 ? (G.life && G.life.fox) || 0 : 0;
-  const herd = [];
-  for (let i = 0; i < deer; i++) herd.push(mk(0, i === 0 ? 1.08 : i > 2 ? 0.62 : 0.94, i));
-  for (let i = 0; i < hares; i++) herd.push(mk(1, 0.3, i));
-  for (let i = 0; i < foxes; i++) herd.push(mk(2, 0.42, i));
-  const nb = low ? 10 : (G.life && G.life.birds !== undefined ? G.life.birds : 20), birds = [];
+  const herd = [], L = G.life || {};
+  const born = (kind, x, z, age, mom) => {
+    const K = KIND[kind], d = { kind, x, z, a: rnd() * TAU, ph: rnd() * 9, age, life: K[1] * rr(0.75, 1.15), male: rnd() < 0.5, name: kind === 1 ? '' : NM1[(rnd() * 20) | 0] + NM2[(rnd() * 16) | 0],
+      hun: rnd() * 0.4, thi: rnd() * 0.5, tir: rnd() * 0.3, mode: 0, want: 0, t: rr(1, 6), tg: [x, z], g: 0, lie: 0, v: 0, sd: rnd(), mom, preg: 0, dead: 0, sc: 1, prey: null };
+    herd.push(d); return d;
+  };
+  const who = (d) => (d.name ? d.name + ' the ' : 'a ') + (d.age < KIND[d.kind][2] * 0.6 ? YOUNG[d.kind] : SEX[d.kind][+d.male]);
+  [L.deer !== undefined ? L.deer : 3, TIER > 3 ? L.hare || 0 : 0, TIER > 3 ? L.fox || 0 : 0].forEach((c, kind) => { for (let i = 0; i < c; i++) { const p = spot(), d = born(kind, p[0], p[1], KIND[kind][1] * rr(0.18, 0.7)); if (i < 2) d.male = !i; } });
+  const nb = low ? 10 : (L.birds !== undefined ? L.birds : 20), birds = [];
   for (let i = 0; i < nb; i++) birds.push({ p: [rr(-20, 20), rr(14, 24), rr(-20, 20)], v: [rr(-1, 1), 0, rr(-1, 1)], ph: rnd() * 9, sd: rnd() });
-  const flies = [];                                                        // butterflies by day, over the open ground
-  if (TIER > 3) for (let i = 0; i < (low ? 6 : 14); i++) { const p = spot(); flies.push({ x: p[0], z: p[1], ph: rnd() * 99, sd: rnd() }); }
+  const flies = [], drag = [], frogs = [];                                 // butterflies over open ground; dragonflies and frogs at the water
+  if (TIER > 3) {
+    for (let i = 0; i < (low ? 6 : 14); i++) { const p = spot(); flies.push({ x: p[0], z: p[1], ph: rnd() * 99, sd: rnd() }); }
+    if (st) for (let i = 0; i < (low ? 4 : 9); i++) { const x = rr(-hs, hs); drag.push({ x, o: rr(-1, 1), ph: rnd() * 99, sd: rnd(), h: rr(0.3, 1.1) }); frogs.push({ x: rr(-hs, hs), e: rnd() < 0.5 ? -1 : 1, t: rr(1, 9), j: 0 }); }
+  }
+  const alive = (k) => herd.filter((d) => d.kind === k && d.mode !== 9);
+  const die = (d, why) => { if (d.mode === 9) return; d.mode = 9; d.dead = 0; d.v = 0; if (why && (d.name || why !== 'died of old age')) say(who(d).replace(/^a /, 'A ') + ' ' + why); };
+  const bank = (d) => { const x = cl(d.x + rr(-9, 9)); return [x, st.zc(x) + (d.z > st.zc(x) ? 1 : -1) * (st.wid(x) + 0.2)]; };
 
-  // a four-legged animal from joints: body, neck, head, ears, tail, four two-part legs, and antlers on the stag
-  const quad = (d, cam, dt, t) => {
-    const s = d.sc, k = d.kind, dc = hypot(cam[0] - d.x, cam[2] - d.z);
-    // what it is doing: 0 walking somewhere, 1 grazing or drinking, 2 watching you, 3 running from you
-    const shy = k === 1 ? 5 : 7, flee = k === 1 ? 3 : 4;
-    if (dc < flee) { d.mode = 3; d.t = 2.5; const a = atan2(d.z - cam[2], d.x - cam[0]); d.tg = [max(-hs, min(hs, d.x + cos(a) * 16)), max(-hs, min(hs, d.z + sin(a) * 16))]; }
-    else if (dc < shy && d.mode < 2) { d.mode = 2; d.t = 2 + rnd() * 2; }
+  // what it decides to do next, from what it needs most
+  const choose = (d, night, season) => {
+    const K = KIND[d.kind], young = d.age < K[2] * 0.6; d.want = 0; d.mode = 0; d.prey = null;
+    if (young && d.mom && d.mom.mode !== 9 && hypot(d.mom.x - d.x, d.mom.z - d.z) > 3.5) { d.tg = [d.mom.x + rr(-1.5, 1.5), d.mom.z + rr(-1.5, 1.5)]; d.t = 4; return; }   // the young keep to their mother
+    if (d.thi > 0.7 && st) { d.tg = bank(d); d.want = 4; d.t = 30; return; }
+    if (d.hun > 0.5) {
+      if (d.kind < 2) { d.mode = 1; d.t = rr(6, 13); return; }
+      const prey = alive(1).sort((a, b) => hypot(a.x - d.x, a.z - d.z) - hypot(b.x - d.x, b.z - d.z))[0], dead = herd.find((o) => o.mode === 9 && o.dead < 25);
+      if (dead) { d.tg = [dead.x, dead.z]; d.want = 1; d.t = 30; return; }       // a fox takes carrion first, then hunts
+      if (prey) { d.mode = 6; d.prey = prey; d.t = 40; return; }
+    }
+    if (d.tir > 0.7 || (night > 0.6 && rnd() < 0.7)) { d.mode = 5; d.t = rr(10, 26); return; }
+    if (d.kind === 0 && d.male && !young && season === 2) {                // autumn: the stag goes looking for the does, and says so
+      const f = alive(0).filter((o) => !o.male)[0]; if (f) { d.tg = [f.x + rr(-3, 3), f.z + rr(-3, 3)]; d.t = 15; if (rnd() < 0.5) { snd('roar'); if (rnd() < 0.3) say(who(d) + ' is roaring'); } return; }
+    }
+    d.tg = spot(); d.t = rr(6, 16);
+  };
+  const live = (d, cam, dt, yrs, night, season, snow) => {
+    const K = KIND[d.kind], k = d.kind, old = d.age > d.life * 0.8;
+    d.age += yrs; d.sc = K[10] * (k === 0 ? (d.male ? 1.08 : 0.94) : 1) * (0.42 + 0.58 * min(1, d.age / K[2]));
+    if (d.mode === 9) { d.dead += dt; d.lie += (1 - d.lie) * min(1, dt * 2); d.g += (1 - d.g) * min(1, dt * 2); return; }
+    d.hun += dt / K[11]; d.thi += dt / 110; d.tir += dt / (night > 0.5 ? 25 : 150);
+    if (d.age > d.life) return die(d, 'died of old age'); if (d.hun > 1.7) return die(d, snow > 0.5 ? 'starved in the snow' : 'starved');
+    if (d.preg > 0 && (d.preg -= dt) <= 0) {                               // birth
+      const c = k === 0 ? (rnd() < 0.15 ? 2 : 1) : k === 1 ? 2 + ((rnd() * 2) | 0) : 2, kids = [];
+      for (let i = 0; i < c && alive(k).length < K[9]; i++) kids.push(born(k, d.x + rr(-0.6, 0.6), d.z + rr(-0.6, 0.6), 0.01, d));
+      if (kids.length) say(k === 1 ? 'A litter of ' + kids.length + ' leverets was born' : who(d) + (k ? ' whelped ' : ' dropped ') + kids.map(who).join(' and '));
+    }
+    // what frightens it: you, and for a hare a fox
+    let tx = cam[0], tz = cam[2], td = hypot(tx - d.x, tz - d.z), fr = K[8];
+    if (k === 1) for (const o of herd) if (o.kind === 2 && o.mode !== 9) { const od = hypot(o.x - d.x, o.z - d.z); if (od < 9 && od < td * 2) { tx = o.x; tz = o.z; td = od; fr = o.mode === 7 ? 12 : 6; } }
+    if (td < fr) { if (d.mode !== 3 || d.t < 1.9) { const a = atan2(d.z - tz, d.x - tx) + (k === 1 ? rr(-0.9, 0.9) : 0); d.tg = [cl(d.x + cos(a) * 14), cl(d.z + sin(a) * 14)]; } d.mode = 3; d.t = 2.5; d.prey = null; }
+    else if (td < K[7] && d.mode < 2 && tx === cam[0]) { d.mode = 2; d.t = 2 + rnd() * 2; }
     d.t -= dt;
-    if (d.t < 0) { if (d.mode === 0) { d.mode = 1; d.t = rr(4, 11); } else { d.mode = 0; d.t = rr(6, 16); d.tg = st && rnd() < 0.4 && k === 0 ? (() => { const x = rr(-hs, hs); return [x, st.zc(x) + (rnd() < 0.5 ? -1 : 1) * (st.wid(x) + 0.25)]; })() : spot(); } }
-    const want = d.mode === 3 ? (k === 1 ? 5.5 : 4.2) : d.mode === 0 ? (k === 0 ? 0.95 : k === 1 ? 1.6 : 1.3) : 0;
+    if (d.mode === 6 || d.mode === 7) {                                    // the fox: creep close, then run it down, or give up
+      const p = d.prey, pd = p && p.mode !== 9 ? hypot(p.x - d.x, p.z - d.z) : -1;
+      if (pd < 0 || d.t < 0) { if (d.mode === 7) d.tir += 0.35; choose(d, night, season); }
+      else { d.tg = [p.x, p.z]; if (d.mode === 6 && pd < 7) { d.mode = 7; d.t = 8; } if (pd < 0.7) { die(p); say(who(d) + ' caught a hare'); snd('squeal'); d.mode = 1; d.t = 12; d.hun = min(d.hun, 0.9); } }
+    } else if (d.t < 0) choose(d, night, season);
+    else if (d.mode === 0 && hypot(d.tg[0] - d.x, d.tg[1] - d.z) < 0.9) { if (d.want) { d.mode = d.want; d.t = d.want === 4 ? 6 : 11; d.want = 0; } else choose(d, night, season); }
+    if (d.mode === 1) d.hun = max(0, d.hun - dt / (k === 2 ? 6 : 11) * (snow > 0.5 && k < 2 ? 0.22 : 1));   // under snow there is little to eat
+    if (d.mode === 4) d.thi = max(0, d.thi - dt / 4); if (d.mode === 5) d.tir = max(0, d.tir - dt / 12);
+    const want = (d.mode === 3 || d.mode === 7 ? K[4] : d.mode === 0 ? K[3] : d.mode === 6 ? K[3] * 0.55 : 0) * (old ? 0.72 : 1) * (0.6 + 0.4 * min(1, d.age / K[2]));
     d.v += (want - d.v) * min(1, dt * 3);
-    let ta = atan2(d.tg[1] - d.z, d.tg[0] - d.x);
-    if (d.mode === 2) ta = atan2(cam[2] - d.z, cam[0] - d.x);              // turn to face what startled it
-    else if (hypot(d.tg[0] - d.x, d.tg[1] - d.z) < 1 && d.mode !== 1) { d.mode = 1; d.t = rr(4, 10); }
-    for (const o of B.block) { const ox = o.x - d.x, oz = o.z - d.z, od = hypot(ox, oz); if (od < o.r + 1.3 * s + 0.5 && od > 0.01) { const side = cos(d.a) * oz - sin(d.a) * ox; ta += (side > 0 ? -1 : 1) * 1.1 * (1 - od / (o.r + 1.3 * s + 0.5)); } }   // steer round trunks and stones
-    let da = ((ta - d.a + PI * 3) % TAU) - PI; d.a += max(-1, min(1, da)) * dt * (d.mode === 3 ? 4 : 1.6);
-    const fx = cos(d.a), fz = sin(d.a); d.x += fx * d.v * dt; d.z += fz * d.v * dt;
-    d.x = max(-hs - 2, min(hs + 2, d.x)); d.z = max(-hs - 2, min(hs + 2, d.z));
+    let ta = atan2(d.tg[1] - d.z, d.tg[0] - d.x); if (d.mode === 2) ta = atan2(tz - d.z, tx - d.x);
+    const s = d.sc;
+    for (const o of B.block) { const ox = o.x - d.x, oz = o.z - d.z, od = hypot(ox, oz), r = o.r + 1.3 * s + 0.5; if (od < r && od > 0.01) ta += (cos(d.a) * oz - sin(d.a) * ox > 0 ? -1 : 1) * 1.1 * (1 - od / r); }   // steer round trunks and stones
+    const da = ((ta - d.a + PI * 3) % TAU) - PI; d.a += max(-1, min(1, da)) * dt * (d.v > 2 ? 4 : 1.6);
+    d.x = max(-hs - 2, min(hs + 2, d.x + cos(d.a) * d.v * dt)); d.z = max(-hs - 2, min(hs + 2, d.z + sin(d.a) * d.v * dt));
     d.ph += d.v * dt / (0.55 * s) * (k === 1 ? 0.6 : 1);
-    d.g += ((d.mode === 1 ? 1 : 0) - d.g) * min(1, dt * 2);                 // head down to graze
-    const F = [fx, 0, fz], R = [-fz, 0, fx], U = [0, 1, 0], hop = k === 1 ? max(0, sin(d.ph * 2)) * 0.25 * min(1, d.v) : 0;
-    const gy = (p) => B.Hgt(p[0], p[2]), base = [d.x, 0, d.z], bob = 0.02 * s * sin(d.ph * 2) * min(1, d.v);
-    const L = k === 0 ? 1 : k === 1 ? 0.55 : 0.62, hb = L * s, coat = k === 0 ? 4 : k === 1 ? 5 : 7;   // leg length sets how high the body rides
+    d.g += ((d.mode === 1 || d.mode === 4 ? 1 : 0) - d.g) * min(1, dt * 2); d.lie += ((d.mode === 5 ? 1 : 0) - d.lie) * min(1, dt * 1.5);
+  };
+  // a four-legged animal from joints: body, neck, head, ears, tail, four two-part legs, and antlers on the stag
+  const quad = (d, t, an) => {
+    const s = d.sc, k = d.kind, K = KIND[k], fx = cos(d.a), fz = sin(d.a), F = [fx, 0, fz], R = [-fz, 0, fx], U = [0, 1, 0], mv = min(1, d.v * 1.2), lie = d.lie;
+    const bone = d.mode === 9 && d.dead > 25, coat = bone ? 9 : d.age > d.life * 0.8 && k !== 1 ? 11 : K[6], hop = k === 1 ? max(0, sin(d.ph * 2)) * 0.25 * min(1, d.v) : 0;
+    const gy = (p) => B.Hgt(p[0], p[2]), base = [d.x, 0, d.z], bob = 0.02 * s * sin(d.ph * 2) * mv, hb = K[5] * s * (1 - 0.68 * lie);
     const hip = add(add(base, F, -0.48 * s), U, gy(add(base, F, -0.48 * s)) + hb * 0.97 + bob + hop * (1 + 0.5 * sin(d.ph * 2))), sh = add(add(base, F, 0.48 * s), U, gy(add(base, F, 0.48 * s)) + hb + bob + hop);
-    cap(hip, 0.2 * s * (k === 1 ? 1.5 : 1), sh, 0.21 * s * (k === 1 ? 1.2 : 1), coat, d.sd);
-    const g = d.g, nk = add(add(sh, F, (0.3 + 0.28 * g) * s * (k === 0 ? 1 : 0.7)), U, (0.52 - 1.05 * g) * s * (k === 0 ? 1 : 0.45)), hd = add(add(nk, F, 0.3 * s), U, (-0.07 - 0.12 * g) * s);
+    cap(hip, 0.2 * s * (k === 1 ? 1.5 : 1) * (bone ? 0.5 : 1), sh, 0.21 * s * (k === 1 ? 1.2 : 1) * (bone ? 0.5 : 1), coat, d.sd);
+    const g = d.g, nk = add(add(sh, F, (0.3 + 0.28 * g) * s * (k === 0 ? 1 : 0.7)), U, (0.52 - 1.05 * g * (1 - 0.6 * lie)) * s * (k === 0 ? 1 : 0.45)), hd = add(add(nk, F, 0.3 * s), U, (-0.07 - 0.12 * g) * s);
     cap(add(sh, U, 0.05 * s), 0.13 * s, nk, 0.085 * s, coat, d.sd); cap(nk, 0.095 * s, hd, 0.045 * s, coat, d.sd);
     for (const e of [-1, 1]) {
       const ear = k === 1 ? add(add(nk, R, e * 0.05 * s), U, 0.42 * s) : add(add(add(nk, R, e * 0.15 * s), U, 0.12 * s), F, -0.05 * s);
-      cap(add(nk, R, e * 0.04 * s), 0.035 * s, ear, 0.018 * s, coat, d.sd);
-      if (k === 0 && d.i === 0) {                                          // the stag: a beam, a brow tine, a fork
-        const a0 = add(add(nk, R, e * 0.06 * s), U, 0.07 * s), a1 = add(add(add(a0, R, e * 0.13 * s), U, 0.21 * s), F, -0.08 * s), a2 = add(add(a1, R, e * 0.04 * s), U, 0.18 * s);
-        cap(a0, 0.022 * s, a1, 0.016 * s, 9, 0); cap(a1, 0.016 * s, a2, 0.006 * s, 9, 0); cap(a1, 0.014 * s, add(add(a1, F, 0.12 * s), U, 0.1 * s), 0.005 * s, 9, 0); cap(a0, 0.016 * s, add(add(a0, F, 0.11 * s), U, 0.06 * s), 0.005 * s, 9, 0);
+      if (!bone) cap(add(nk, R, e * 0.04 * s), 0.035 * s, ear, 0.018 * s, coat, d.sd);
+      if (k === 0 && d.male && d.age >= K[2] && an > 0.05) {               // the stag: a beam, a brow tine, a fork; grown through the summer, cast in winter
+        const q = s * an, a0 = add(add(nk, R, e * 0.06 * s), U, 0.07 * s), a1 = add(add(add(a0, R, e * 0.13 * q), U, 0.21 * q), F, -0.08 * q), a2 = add(add(a1, R, e * 0.04 * q), U, 0.18 * q);
+        cap(a0, 0.022 * s, a1, 0.016 * s, 9, 0); cap(a1, 0.016 * s, a2, 0.006 * s, 9, 0); cap(a1, 0.014 * s, add(add(a1, F, 0.12 * q), U, 0.1 * q), 0.005 * s, 9, 0); cap(a0, 0.016 * s, add(add(a0, F, 0.11 * q), U, 0.06 * q), 0.005 * s, 9, 0);
       }
-      // legs: each foot swings forward off the ground and stands while the body passes over it
+      // legs: each foot swings forward off the ground and stands while the body passes over it; lying down, they fold under
       [[hip, 0, -1], [sh, PI, 1]].forEach(([j0, off, fore]) => {
-        const ph = d.ph + off + (e > 0 ? PI : 0) * (k === 1 ? 0 : 1) + (k === 1 && fore > 0 ? 0.6 : 0), sw = sin(ph), mv = min(1, d.v * 1.2);
-        const J = add(add(j0, R, e * 0.11 * s), U, -0.1 * s), ft = add(add(base, F, fore * 0.48 * s + 0.3 * s * sw * mv), R, e * 0.11 * s);
+        const ph = d.ph + off + (e > 0 ? PI : 0) * (k === 1 ? 0 : 1) + (k === 1 && fore > 0 ? 0.6 : 0), sw = sin(ph);
+        const J = add(add(j0, R, e * 0.11 * s), U, -0.1 * s), ft = add(add(base, F, fore * 0.48 * s + 0.3 * s * sw * mv + lie * 0.28 * s), R, e * 0.12 * s);
         ft[1] = gy(ft) + (max(0, cos(ph)) * 0.14 * s * mv + hop * 0.8) + 0.03 * s;
-        const kn = add(add([(J[0] + ft[0]) / 2, (J[1] + ft[1]) / 2, (J[2] + ft[2]) / 2], F, fore * 0.07 * s * (1 + max(0, cos(ph)) * mv)), U, 0.02 * s);
-        cap(J, 0.075 * s, kn, 0.042 * s, coat, d.sd); cap(kn, 0.04 * s, ft, 0.026 * s, k === 0 ? 5 : coat, d.sd);
+        const kn = add(add([(J[0] + ft[0]) / 2, (J[1] + ft[1]) / 2, (J[2] + ft[2]) / 2], F, fore * 0.07 * s * (1 + max(0, cos(ph)) * mv)), U, 0.02 * s + lie * 0.1 * s);
+        cap(J, 0.075 * s, kn, 0.042 * s, coat, d.sd); cap(kn, 0.04 * s, ft, 0.026 * s, k === 0 && !bone ? 5 : coat, d.sd);
       });
     }
+    if (bone) return;
     const tl = k === 2 ? add(add(hip, F, -0.5 * s), U, -0.12 * s + 0.05 * s * sin(t * 2 + d.sd * 9)) : add(add(hip, F, -0.16 * s), U, (k === 1 ? 0.05 : -0.04) * s);
     cap(hip, (k === 2 ? 0.1 : 0.06) * s, tl, (k === 2 ? 0.07 : 0.035) * s, k === 2 ? 7 : 8, d.sd);
   };
 
   return {
-    out, herd, birds,
-    counts: { deer, birds: nb, hares, foxes, flies: flies.length },
-    // one step of everything alive; returns how many limbs to draw
-    step(dt, t, cam, night) {
+    out, herd, birds, who,
+    get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; } return c; },
+    world(b) { B = b; st = b.strm; },                                      // the forest was regrown around them
+    // spring: those old enough conceive, and where a kind has died out, strangers walk in from outside
+    spring() {
+      for (let k = 0; k < 3; k++) {
+        const a = alive(k), K = KIND[k]; if (TIER < 4 && k) continue; if (k && !(L[K[0]] > 0)) continue;
+        if (a.length < 2 || !a.some((d) => d.male) || !a.some((d) => !d.male)) { const d = born(k, rnd() < 0.5 ? -hs : hs, rr(-hs, hs), K[2] * rr(1.2, 3)); d.male = !a.some((o) => o.male); say(who(d).replace(/^a /, 'A ') + ' came in from outside the plot'); }
+        for (const d of a) if (!d.male && d.age >= K[2] && d.hun < 1.1 && a.length < K[9]) d.preg = rr(6, 50);
+      }
+    },
+    // one step of everything alive; returns how many limbs to draw. yrs: years gone by in this step.
+    step(dt, t, cam, night, yrs = 0, season = 1, snow = 0) {
       n = 0;
-      for (const d of herd) quad(d, cam, dt, t);
-      // birds: each steers toward the flock's middle, matches its neighbours, keeps its distance, and follows a point that circles the plot
-      const wp = [sin(t * 0.11) * 22, 19 + 5 * sin(t * 0.07), cos(t * 0.083) * 22], c = [0, 0, 0];
+      if ((tick += dt) > 30) { tick = 0; if (TIER > 3 && !yrs && L.hare && alive(1).length < 2) { born(1, rnd() < 0.5 ? -hs : hs, rr(-hs, hs), 1); say('A hare came in from outside the plot'); } }   // with the clock stopped nothing is born, so the fox's larder is topped up
+      const an = [0.35, 0.8, 1, 0][season];
+      for (let i = herd.length - 1; i >= 0; i--) { const d = herd[i]; live(d, cam, dt, yrs, night, season, snow); if (d.mode === 9 && d.dead > 80) herd.splice(i, 1); else quad(d, t, an); }
+      // birds: each steers toward the flock's middle, matches its neighbours, keeps its distance, and follows a point that
+      // circles the plot; when something lies dead they come down and wheel over it
+      const dead = herd.find((d) => d.mode === 9 && d.dead < 60), wp = dead ? [dead.x + sin(t * 0.5) * 7, B.Hgt(dead.x, dead.z) + 7, dead.z + cos(t * 0.5) * 7] : [sin(t * 0.11) * 22, 19 + 5 * sin(t * 0.07), cos(t * 0.083) * 22], c = [0, 0, 0];
       for (const b of birds) { c[0] += b.p[0] / nb; c[1] += b.p[1] / nb; c[2] += b.p[2] / nb; }
       for (const b of birds) {
         const ac = [(wp[0] - b.p[0]) * 0.22 + (c[0] - b.p[0]) * 0.1, (wp[1] - b.p[1]) * 0.3 + (c[1] - b.p[1]) * 0.1, (wp[2] - b.p[2]) * 0.22 + (c[2] - b.p[2]) * 0.1];
@@ -180,16 +242,56 @@ export function mkLife(B, G, rnd, low) {
         cap(add(b.p, D, -0.13), 0.035, add(b.p, D, 0.1), 0.05, 6, b.sd); cap(add(b.p, D, 0.1), 0.04, add(b.p, D, 0.2), 0.012, 6, b.sd);
         for (const e of [-1, 1]) { const el = add(add(b.p, R, e * 0.2 * cos(fl)), U, 0.2 * sin(fl)), tp = add(add(add(el, R, e * 0.24 * cos(fl * 1.4)), U, 0.24 * sin(fl * 1.4)), D, -0.07); cap(b.p, 0.04, el, 0.032, 6, b.sd); cap(el, 0.032, tp, 0.008, 6, b.sd); }
       }
-      for (const b of flies) {                                             // butterflies: two wings that clap, wandering low over the ground
-        if (night > 0.4) break;
+      if (night < 0.4 && season < 3) for (const b of flies) {              // butterflies: two wings that clap, wandering low over the ground
         b.ph += dt; const a = b.ph * 0.4 + sin(b.ph * 0.9 + b.sd * 9) * 2; b.x += cos(a) * dt * 0.8; b.z += sin(a) * dt * 0.8;
         if (abs(b.x) > hs || abs(b.z) > hs) { b.x *= 0.97; b.z *= 0.97; }
         const p = [b.x, B.Hgt(b.x, b.z) + 0.6 + 0.35 * sin(b.ph * 1.7 + b.sd * 5) + 0.1 * sin(b.ph * 9), b.z], F = [cos(a), 0, sin(a)], R = [-F[2], 0, F[0]], fl = abs(sin(b.ph * 11)) * 1.2 + 0.15;
         for (const e of [-1, 1]) { const w = add(add(p, R, e * 0.07 * cos(fl)), [0, 1, 0], 0.07 * sin(fl)); cap(p, 0.012, add(w, F, 0.03), 0.045, 10, b.sd); cap(p, 0.01, add(w, F, -0.04), 0.032, 10, b.sd); }
       }
+      if (season < 3 && night < 0.6) for (const b of drag) {               // dragonflies: hang still over the water, then dart
+        b.ph += dt; const hov = floor(b.ph * 0.7), fr = b.ph * 0.7 - hov, h1 = (i) => ((sin((i + b.sd * 99) * 127.1) * 43758.5) % 1 + 1) % 1, e = min(1, fr * 5);
+        const X = (i) => cl(b.x + (h1(i) - 0.5) * 9), O = (i) => (h1(i + 0.5) - 0.5) * 2, x = X(hov) + (X(hov + 1) - X(hov)) * (e < 1 ? 0 : 0) + (X(hov) - X(hov - 1)) * (e - 1), o = O(hov - 1) + (O(hov) - O(hov - 1)) * e;
+        const z = st.zc(x) + o * (st.wid(x) + 0.5), p = [x, st.lvl(x) + b.h + 0.05 * sin(b.ph * 30), z], a = h1(hov) * TAU, F = [cos(a), 0, sin(a)], R = [-F[2], 0, F[0]];
+        cap(add(p, F, 0.035), 0.008, add(p, F, -0.06), 0.004, b.sd < 0.5 ? 12 : 10, b.sd);
+        for (const s of [-1, 1]) cap(p, 0.003, add(add(p, R, s * 0.06), [0, 1, 0], 0.012 * sin(b.ph * 60)), 0.011, 8, b.sd);
+      }
+      for (const b of frogs) {                                             // frogs sit at the water's edge and now and then jump
+        b.t -= dt; if (b.t < 0) { b.t = rr(3, 14); b.j = 1; b.x = cl(b.x + rr(-0.7, 0.7)); if (night > 0.3 && rnd() < 0.4) snd('frog'); }
+        b.j = max(0, b.j - dt * 2.2); const x = b.x, z = st.zc(x) + b.e * (st.wid(x) + 0.12), y = B.Hgt(x, z) + 0.03 + sin((1 - b.j) * PI) * 0.16 * (b.j > 0 ? 1 : 0);
+        if (season < 3) { cap([x, y, z], 0.035, [x + 0.05, y + 0.02, z], 0.028, 12, 0.2); cap([x + 0.05, y + 0.03, z], 0.026, [x + 0.085, y + 0.035, z], 0.016, 12, 0.2); }
+      }
       return n;
     },
   };
+}
+
+// ---- the forest's own time (2 MB rung). Each species has a lifespan, a growth rate and a tolerance of shade.
+// One call is one year: every tree grows toward its height, slowed by taller neighbours unless it tolerates shade;
+// trees die of age, of suppression or by chance, stand as snags, fall, lie as logs and rot; seed lands and takes where
+// there is light enough for its kind. Fast, short-lived, light-hungry trees give way to slow, long-lived, shade-bearing ones.
+const TL = { oak: [300, 0.03, 0.5], birch: [80, 0.07, 0.2], pine: [220, 0.04, 0.3], spruce: [250, 0.035, 0.7], giant: [500, 0.025, 0.45], hemlock: [400, 0.025, 0.9], maple: [160, 0.045, 0.7], aspen: [70, 0.08, 0.15], beech: [300, 0.03, 0.9], alder: [70, 0.07, 0.3], willow: [55, 0.08, 0.2], larch: [250, 0.04, 0.2] };
+export const tl = (sp) => TL[sp.id] || [150, 0.04, 0.5];
+export function succeed(stand, G, B, rnd, say) {
+  const hs = B.S / 2 - 2, rr = (a, b) => a + (b - a) * rnd(), gs = () => Math.sqrt(-2 * Math.log(1 - rnd())) * cos(TAU * rnd());
+  const shade = (x, z, H, me) => { let s = 0; for (const o of stand) if (o !== me && !o.st && o.H > H * 1.2 + 1) { const r = G.trees[o.si].cr * min(1, o.H / 12) * 1.25, d = hypot(o.x - x, o.z - z); if (d < r) s += 1 - d / r; } return min(1, s); };
+  let ev = 0;
+  for (let i = stand.length - 1; i >= 0; i--) {
+    const t = stand[i], sp = G.trees[t.si], T = tl(sp);
+    if (!t.st) {
+      t.age++; const s = shade(t.x, t.z, t.H, t), h0 = t.H; t.H += (t.hm - t.H) * T[1] * (1 - s * (1 - T[2])); if (h0 < 5 && t.H >= 5) ev++;
+      if (rnd() < 0.003 + (t.age > T[0] ? 0.09 : 0) + s * (1 - T[2]) * (t.H < 8 ? 0.12 : 0.02)) { t.st = 1; t.t = 0; ev++; if (t.H > 13) say('A' + (/^[AO]/.test(sp.nm) ? 'n ' : ' ') + sp.nm.toLowerCase() + ' died' + (t.age > T[0] ? ' of age' : s > 0.5 ? ' in the shade' : '') + ' and stands dead'); }
+    } else if (t.st === 1) { if (++t.t > (t.H < 5 ? 2 : 4 + t.sd % 9)) { ev++; if (t.H < 5) stand.splice(i, 1); else { t.st = 2; t.t = 0; t.a = rnd() * TAU; if (t.H > 13) say('A dead ' + sp.nm.toLowerCase() + ' fell'); } } }
+    else if (++t.t > 10 + t.H) { stand.splice(i, 1); ev++; }
+  }
+  G.trees.forEach((sp, si) => {                                            // seed: near the parent mostly, far for the light-seeded
+    const T = tl(sp), par = stand.filter((t) => t.si === si && !t.st && t.age > 12 && t.H > 6); if (!par.length || stand.length > 170) return;
+    for (let k = Math.ceil(min(5, par.length * (0.25 + 0.5 * (1 - T[2])))); k > 0; k--) {
+      const p = par[(rnd() * par.length) | 0], far = rnd() < 0.5 * (1 - T[2]), x = far ? rr(-hs, hs) : p.x + gs() * 7, z = far ? rr(-hs, hs) : p.z + gs() * 7;
+      if (Math.abs(x) > hs || Math.abs(z) > hs || (B.strm && B.strm.dist(x, z) < 1) || stand.some((o) => !o.st && hypot(o.x - x, o.z - z) < (o.H < 5 ? 1.2 : 2.2))) continue;
+      if (rnd() < (1 - shade(x, z, 0.5)) * (1 - T[2]) + T[2] * 0.35) stand.push({ si, x, z, H: 0.7, hm: rr(sp.H[0], sp.H[1]), age: 1, sd: (rnd() * 1e9) | 0, st: 0 });
+    }
+  });
+  return ev;
 }
 
 // How each biome's genome grows above the 20 kB rung: a stream [half width, meander, where the pool is, pool size] and who lives there.

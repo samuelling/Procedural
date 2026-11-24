@@ -34,8 +34,9 @@ function stone(sd, sub, rnd) {
 
 // den scales every species' stem count; above 1 the trees are also allowed to stand closer
 /* global TIER */
-export function build(G, seed, q = 1, den = 1) {
-  const rnd = rng(seed), rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
+import { tl } from './fx.js';
+export function build(G, seed, q = 1, den = 1, stand) {
+  let rnd = rng(seed); const rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
   // the two fields everything else reads: height of the ground, and how wet it is (hollows are wetter)
   let Hgt = (x, z) => L.amp * 2 * (fbm(x * L.f + ox, 0, z * L.f + oz, 4) - 0.5) + L.tilt * x + L.amp * 0.3 * (fbm(x * L.f * 3.3 + oz, 9, z * L.f * 3.3 + ox, 2) - 0.5);
@@ -76,7 +77,7 @@ export function build(G, seed, q = 1, den = 1) {
   }
 
   // ---- trees
-  const tree = (sp, si, x, z, Ht, sap) => {
+  const tree = (sp, si, x, z, Ht, sap, dd) => {                             // dd: dead, standing: no leaves, no twigs, grey wood
     const y0 = Hgt(x, z) - 0.2, segs = [], A = sp.ax, lf = sp.leaf, sc = sap ? 0.45 : 1, maxSeg = (sap ? 90 : 1500) * (low ? 0.6 : 1);
     const cb = rr(sp.clear[0], sp.clear[1]) * (sap ? 0.4 : 1), sid = si + rnd() * 0.98;
     const leafAt = (p, d, ao) => {
@@ -100,7 +101,7 @@ export function build(G, seed, q = 1, den = 1) {
         t.p = p; t.d = d; t.par = i; t.fresh = 0; t.s += sl; t.len -= sl;
         if (!t.dead && (t.o >= lf.o || (t.o === lf.o - 1 && pos > 0.62))) {         // foliage, and the load it puts on the wood below
           let n = sl * lf.per * (sap ? 0.7 : 1); n = floor(n) + (rnd() < n % 1 ? 1 : 0);
-          for (; n > 0; n--) { leafAt(rnd() < 0.5 ? mid : p, d, 0.4 + 0.6 * sqrt(pos)); segs[i].load++; }
+          for (; n > 0; n--) { if (!dd) leafAt(rnd() < 0.5 ? mid : p, d, 0.4 + 0.6 * sqrt(pos)); segs[i].load++; }
         }
         const C = A[t.o + 1];
         if (C && !t.dead) {
@@ -119,7 +120,7 @@ export function build(G, seed, q = 1, den = 1) {
             }
           }
         }
-        if (t.len > 1e-3) next.push(t); else if (!t.dead) { leafAt(p, d, 1); leafAt(p, d, 1); segs[i].load += 2; }
+        if (t.len > 1e-3) next.push(t); else if (!t.dead) { if (!dd) { leafAt(p, d, 1); leafAt(p, d, 1); } segs[i].load += 2; }
       }
       tips = next;
     }
@@ -128,7 +129,8 @@ export function build(G, seed, q = 1, den = 1) {
     const R = (i) => sp.rt * pow(segs[i].load, 1 / sp.dv), fl = (s) => 1 + sp.fl * exp(-s / 0.5);
     segs.forEach((g, i) => {
       const r0 = R(i) * (g.o ? 1 : fl(g.s0)), r1 = (g.cont >= 0 ? R(g.cont) : sp.rt * 0.7) * (g.o ? 1 : fl(g.s1));
-      cap(g.a, r0, g.b, min(r0, r1), g.s0, g.s1, sid, 0); st.wood += g.s1 - g.s0;
+      if (dd && g.o > 1) return;
+      cap(g.a, r0, g.b, min(r0, r1), g.s0, g.s1, sid, dd ? 1 : 0); st.wood += g.s1 - g.s0;
     });
     const Rb = R(0) * (1 + sp.fl);
     for (let k = 3 + floor(rnd() * 4), a0 = rnd() * TAU; k > 0 && !sap; k--) {      // surface roots
@@ -139,17 +141,31 @@ export function build(G, seed, q = 1, den = 1) {
     blockers.push({ x, z, r: Rb }); if (!sap) damp.push([x + gs() * 0.6, z + gs() * 0.6]);
   };
   const gap = 0.42 / sqrt(max(den, 1));
-  G.trees.forEach((sp, si) => {
+  // above 200 kB every tree is a record that outlives this build: species, place, age, height, its own seed, and
+  // whether it is alive (0), dead and standing (1) or fallen (2). The forest can then be regrown a year or a century on.
+  const trees = [];
+  const grow1 = TIER > 3 && ((t) => {
+    const sp = G.trees[t.si], keep = rnd; rnd = rng(t.sd);
+    if (t.st === 2) {
+      const len = t.H * 0.75, r = 0.05 + 0.011 * t.H; let p = [t.x, Hgt(t.x, t.z) + r * 0.6, t.z];
+      for (let k = 1; k <= 5; k++) { const l = len * k / 5, X = t.x + cos(t.a) * l, Z = t.z + sin(t.a) * l, c = [X, Hgt(X, Z) + r * 0.6, Z]; cap(p, r * (1 - 0.12 * (k - 1)), c, r * (1 - 0.12 * k), l - len / 5, l, t.si + 0.5, 1); p = c; blockers.push({ x: X, z: Z, r: r * 0.8 }); damp.push([X, Z]); }
+    } else { tree(sp, t.si, t.x, t.z, t.H, t.H < 5, t.st === 1); placed.push({ x: t.x, z: t.z, cr: t.H < 5 ? 0.7 : sp.cr * min(1, t.H / sp.H[0]) }); if (!t.st && t.H >= 5) st.trees++; }
+    rnd = keep; trees.push(t);
+  });
+  if (TIER > 3 && stand) { for (const t of stand) grow1(t); rnd = rng(seed ^ 0x5eed); }
+  else G.trees.forEach((sp, si) => {
     const plant = (n, sap) => {
       for (let tries = 0; n > 0 && tries < 3000; tries++) {
         const x = rr(-hs + 2, hs - 2), z = rr(-hs + 2, hs - 2), cr = sap ? 0.7 : sp.cr;
         if (rnd() > 1 - abs(wet(x, z) - sp.wet) * 1.6 || (TIER > 2 && strm && strm.dist(x, z) < 1)) continue;                    // each species keeps to the moisture it likes
         if (placed.some((o) => hypot(o.x - x, o.z - z) < (o.cr + cr) * gap)) continue;
+        if (TIER > 3) { const T = tl(sp), hm = rr(sp.H[0], sp.H[1]), age = sap ? rr(3, 9) : T[0] * rr(0.2, 0.75); grow1({ si, x, z, hm, age, H: sap ? min(4.6, max(1.2, hm * (1 - exp(-age * T[1])))) : max(5.2, hm * (1 - exp(-age * T[1]))), sd: (rnd() * 1e9) | 0, st: 0 }); n--; continue; }
         tree(sp, si, x, z, sap ? rr(1.4, 4) : rr(sp.H[0], sp.H[1]), sap); placed.push({ x, z, cr }); if (!sap) st.trees++; n--;
       }
     };
     plant(round(sp.n * den * (low ? 0.65 : 1)), 0); plant(round((sp.sap || 0) * den * (low ? 0.5 : 1)), 1);
   });
+  if (TIER > 3 && !stand) rnd = rng(seed ^ 0x5eed);                          // whatever is strewn after the trees is the same however they stand
 
   // a clearing to stand in: the spot near the middle that is furthest from any trunk
   let open = [0, 0], od = 0;
@@ -229,5 +245,5 @@ export function build(G, seed, q = 1, den = 1) {
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
   const sr = rng(seed ^ 0x77);
   return { caps: new Float32Array(caps), cards: new Float32Array(cards), rocks: rocks.map((r) => new Float32Array(r)), stones: [stone(1, 3, sr), stone(9, 3, sr), stone(17, 3, sr), stone(23, 1, sr)],
-    land: { v: new Float32Array(V), i: new Uint16Array(I), nTop }, Hgt, S, pal, st, open, water, strm, block: blockers };
+    land: { v: new Float32Array(V), i: new Uint16Array(I), nTop }, Hgt, S, pal, st, open, water, strm, block: blockers, trees };
 }

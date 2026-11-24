@@ -1,0 +1,30 @@
+// node tools/life_test.mjs [biome] : lets the 2 MB rung's animals live for some years and its trees for some centuries,
+// prints what happened, and fails if anything goes non-finite or a population runs away.
+import { rng } from '../src/noise.js';
+globalThis.TIER = 4;
+const { GENOMES, extra } = await import('../src/genome.js'), { build } = await import('../src/grow.js'), { MORE, mkLife, succeed } = await import('../src/fx.js');
+const G0 = structuredClone(GENOMES); Object.assign(G0, extra());
+for (const k in MORE) { G0[k].land.stream = MORE[k].stream; G0[k].life = MORE[k].life; G0[k].floor.flower = MORE[k].flower; }
+const key = process.argv[2] || 'mixed', G = G0[key]; let B = build(G, 4821, 1, 1), bad = 0;
+const log = [], L = mkLife(B, G, rng(11), false, (s) => log.push(s));
+let yearF = 0.3, season = 1, year = 1; const YL = 64, dt = 0.1, pop = [];
+for (let i = 0; i < 14 * YL / dt; i++) {
+  const y0 = Math.floor(yearF); yearF += dt / YL; const se = Math.floor((yearF % 1) * 4), ph = (i * dt * 8 / YL) % 1;
+  if (se !== season) { if (se === 0) L.spring(); season = se; }
+  if (Math.floor(yearF) > y0) { year++; pop.push(Object.values(L.counts).join('/')); }
+  const n = L.step(dt, i * dt, [900, 2, 900], ph > 0.75 ? 1 : 0, dt / YL, season, season === 3 ? 0.95 : 0);
+  if (i % 50 === 0) for (let j = 0; j < n * 12; j++) if (!Number.isFinite(L.out[j])) bad++;
+  if (n >= 900) bad++;
+}
+console.log(key, '· deer/birds/hares/foxes at each new year:', pop.join('  '));
+console.log(log.length + ' things happened in 14 years, e.g.\n  ' + log.filter((_, i) => i % Math.ceil(log.length / 14) === 0).join('\n  '));
+const kinds = {}; for (const s of log) { const k = /caught|born|dropped|whelped|old age|starved|came in|roaring/.exec(s); kinds[k ? k[0] : 'other'] = (kinds[k ? k[0] : 'other'] || 0) + 1; } console.log(kinds);
+// the forest: three centuries
+const stand = B.trees, flog = [], census = () => G.trees.map((sp, si) => sp.nm + ' ' + stand.filter((t) => t.si === si && !t.st && t.H >= 5).length + '+' + stand.filter((t) => t.si === si && !t.st && t.H < 5).length).join(', ') + ' · snags ' + stand.filter((t) => t.st === 1).length + ', logs ' + stand.filter((t) => t.st === 2).length;
+console.log('year 0:   ' + census());
+for (let y = 1; y <= 300; y++) {
+  succeed(stand, G, B, rng(4821 + y * 7), (s) => flog.push(s));
+  if (y % 60 === 0) { console.log('year ' + y + ': ' + census()); const t0 = Date.now(); B = build(G, 4821, 1, 1, stand); for (const a of [B.caps, B.cards]) for (const v of a) if (!Number.isFinite(v)) bad++; console.log('          regrown in ' + (Date.now() - t0) + ' ms: ' + B.caps.length / 12 + ' capsules, ' + B.cards.length / 12 + ' cards'); }
+}
+console.log(flog.length + ' deaths and falls among the large trees, e.g. ' + flog.slice(0, 3).join(' | '));
+console.log(bad ? bad + ' BAD VALUES' : 'all finite'); process.exit(bad ? 1 : 0);

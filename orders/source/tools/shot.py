@@ -21,6 +21,8 @@ with sync_playwright() as p:
     for k, extra in enumerate(sys.argv[6:]):       # extra args: js to evaluate, then another screenshot each
         pg.screenshot(path=out.replace(".png", f"_{k}.png")); pg.evaluate(extra); time.sleep(wait)
     pg.screenshot(path=out)
+    try: print('info', pg.evaluate("window.sylva ? JSON.stringify(window.sylva.info()) : ''")[:700])
+    except Exception as e: print('info failed', str(e)[:200])
     for l in logs[:12]:
         if "GPU stall" not in l: print(l)
     b.close()
