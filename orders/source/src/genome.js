@@ -107,7 +107,20 @@ export const extra = () => {
   const haircap = sp({ ...spruce(0), spo: 0.45, id: 'haircap', nm: 'Haircap moss', H: [8, 17], cr: 1.5, clear: [0, 0.06], wet: 0.6, leaf: { t: 1, sz: 0.75, per: 5, o: 1, a: [0.1, 0.3, 0.04], b: [0.32, 0.58, 0.1], dr: 0.2 }, bark: { t: 3, sc: 1, a: [0.3, 0.34, 0.12], b: [0.14, 0.2, 0.06] } });
   const fork = sp({ ...aspen(0), id: 'fork', nm: 'Fork moss', H: [6, 11], cr: 1.4, clear: [0.05, 0.2], wet: 0.5, leaf: { t: 0, sz: 0.5, per: 6, o: 2, a: [0.12, 0.34, 0.04], b: [0.4, 0.62, 0.1], dr: 0.1 }, bark: { t: 3, sc: 1, a: [0.28, 0.36, 0.1], b: [0.12, 0.2, 0.05] } });
   const redwood = sp({ ...giant(0), id: 'redwood', nm: 'Coast redwood', H: [38, 56], cr: 5, bark: { t: 0, sc: 1.6, a: [0.42, 0.2, 0.12], b: [0.2, 0.09, 0.05] } });
+  // further in: a hundred times smaller (a unit is a centimetre), and ten thousand times smaller (a tenth of a millimetre)
+  const oakling = sp({ ...oak(0), id: 'oakling', nm: 'Oak seedling', sap: 0, H: [7, 18], cr: 5, clear: [0.25, 0.4], wet: 0.5, leaf: { ...oak(0).leaf, sz: 5.5, per: 3 } });
+  const tinycap = sp({ ...haircap(0), id: 'tinycap', nm: 'Haircap moss', H: [1, 2.4], cr: 0.3, spo: 0, leaf: { ...haircap(0).leaf, sz: 0.12 } });
   return {
+    log: { nm: 'Rotting log', world: 'log', span: '64 cm', size: 64, blurb: 'A unit here is a centimetre: a hundred times smaller.',
+      land: { amp: 1.6, f: 0.05, tilt: 0.01, rock: [16, 1.4], peb: 160, log: 0, stump: 0, ra: [0.55, 0.52, 0.46], rb: [0.3, 0.28, 0.25] },
+      air: { sun: [40, 140], fog: 0.006, haze: [0.8, 0.82, 0.76], sky: [0.3, 0.5, 0.75], wind: 0.2 },
+      floor: { moss: 0.55, lit: [0.32, 0.18, 0.08], la: 1, fern: [4, 26], grass: [60, 7], shroom: 0, fa: [0.08, 0.3, 0.06], fb: [0.28, 0.5, 0.1], ga: [0.14, 0.32, 0.07], gb: [0.38, 0.52, 0.14], flower: 0 },
+      trees: [oakling(5), tinycap(120)], life: { deer: 0, birds: 0, woodlouse: 9, beetle: 2, slug: 2, centipede: 1 } },
+    soil: { nm: 'Soil', world: 'soil', span: '6.4 mm', size: 64, blurb: 'A unit here is a tenth of a millimetre: ten thousand times smaller.',
+      land: { amp: 5, f: 0.07, tilt: 0.02, rock: [150, 3.2], peb: 700, log: 0, stump: 0, ra: [0.86, 0.8, 0.7], rb: [0.5, 0.42, 0.33] },
+      air: { sun: [34, 200], fog: 0.012, haze: [0.5, 0.42, 0.32], sky: [0.45, 0.38, 0.3], wind: 0 },
+      floor: { moss: 0, lit: [0.18, 0.12, 0.07], la: 0.25, fern: [0, 1], grass: [0, 1], shroom: 0, fa: [0.08, 0.3, 0.06], fb: [0.28, 0.5, 0.1], ga: [0.14, 0.32, 0.07], gb: [0.38, 0.52, 0.14], flower: 0 },
+      trees: [], life: { deer: 0, birds: 0, nematode: 7, tardigrade: 2 } },
     redwood: { nm: 'Redwood grove', size: 64,
       land: { amp: 2.5, f: 0.02, tilt: 0.03, rock: [10, 0.8], peb: 80, log: 9, stump: 4, ra: [0.4, 0.4, 0.38], rb: [0.18, 0.18, 0.17], stream: [1.4, 6, 0.2, 4] },
       air: { sun: [50, 100], fog: 0.017, haze: [0.8, 0.84, 0.82], sky: [0.25, 0.45, 0.75], wind: 0.3 },

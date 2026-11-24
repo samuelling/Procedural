@@ -119,11 +119,15 @@ const NM1 = 'Al Bri Ca Da El Fa Ha Is Ka Li Mo Ne Or Ra Sa Ta Ur Va Wy Yo'.split
 const KIND = [['deer', 11, 1.6, 0.95, 4.4, 1, 4, 7, 4, 9, 1, 45], ['hare', 3.5, 0.5, 1.6, 5.6, 0.55, 5, 5, 3, 12, 0.3, 40], ['fox', 6, 1, 1.4, 6.3, 0.62, 7, 0, 2.5, 3, 0.42, 75],
   ['wolf', 9, 1.6, 1.6, 6.9, 0.82, 14, 0, 5, 5, 0.66, 150], ['beaver', 8, 1.5, 0.55, 1.5, 0.24, 15, 4, 2, 4, 0.4, 60],
   // a thousand times smaller, where a unit is a millimetre: springtails that graze and leap, and the mites that hunt them
-  ['springtail', 2, 0.3, 0.9, 5.5, 0.3, 19, 6, 3.5, 16, 1, 40], ['mite', 3, 0.5, 0.7, 2.4, 0.3, 20, 0, 2, 4, 0.8, 90]];
+  ['springtail', 2, 0.3, 0.9, 5.5, 0.3, 19, 6, 3.5, 16, 1, 40], ['mite', 3, 0.5, 0.7, 2.4, 0.3, 20, 0, 2, 4, 0.8, 90],
+  // a hundred times smaller, a unit a centimetre: woodlice that graze the rotting wood, a ground beetle, slugs, and a centipede that hunts the woodlice
+  ['woodlouse', 2, 0.5, 1.1, 3.2, 0.3, 14, 8, 5, 14, 1.3, 50], ['beetle', 2, 0.6, 2.4, 6, 0.3, 13, 10, 6, 4, 1.6, 70], ['slug', 1.5, 0.5, 0.35, 0.6, 0.3, 7, 6, 2.5, 4, 1, 60], ['centipede', 3, 0.8, 2.6, 7, 0.3, 15, 0, 4, 2, 1.1, 80],
+  // ten thousand times smaller, a unit a tenth of a millimetre: nematodes thrashing through the water films, and the tardigrades that eat them
+  ['nematode', 0.4, 0.1, 0.7, 1.6, 0.3, 8, 3, 2, 12, 1, 30], ['tardigrade', 1, 0.3, 0.25, 0.45, 0.3, 11, 4, 2, 4, 1, 60]];
 // its build: body radius, how far the neck reaches forward and up, head length, ear, tail length and thickness, half the body's length
 const SHP = [[0.2, 0.3, 0.52, 0.3, 0.17, 0.16, 0.05, 0.48], [0.3, 0.2, 0.22, 0.26, 0.42, 0.1, 0.1, 0.42], [0.19, 0.26, 0.22, 0.3, 0.2, 0.6, 0.1, 0.5], [0.22, 0.3, 0.3, 0.36, 0.14, 0.5, 0.07, 0.52], [0.4, 0.2, 0.05, 0.3, 0.05, 0.55, 0.14, 0.42]];
-const YOUNG = ['fawn', 'leveret', 'kit', 'pup', 'kit', 'springtail', 'mite'], SEX = [['doe', 'stag'], ['hare', 'hare'], ['vixen', 'fox'], ['she-wolf', 'wolf'], ['beaver', 'beaver'], ['springtail', 'springtail'], ['mite', 'mite']];
-const PREY = [-1, -1, 1, 0, -1, -1, 5], FOE = [3, 2, -1, -1, -1, 6, -1];             // what each kind hunts, and what it runs from
+const YOUNG = ['fawn', 'leveret', 'kit', 'pup', 'kit', 'springtail', 'mite', 'mancalid', 'larva', 'slug', 'centipede', 'juvenile', 'juvenile'], SEX = [['doe', 'stag'], ['hare', 'hare'], ['vixen', 'fox'], ['she-wolf', 'wolf'], ['beaver', 'beaver'], ['springtail', 'springtail'], ['mite', 'mite'], ['woodlouse', 'woodlouse'], ['beetle', 'beetle'], ['slug', 'slug'], ['centipede', 'centipede'], ['nematode', 'nematode'], ['tardigrade', 'tardigrade']];
+const PREY = [-1, -1, 1, 0, -1, -1, 5, -1, -1, -1, 7, -1, 11], FOE = [3, 2, -1, -1, -1, 6, -1, 10, -1, -1, -1, 12, -1];             // what each kind hunts, and what it runs from
 export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}) {
   let B = B0, n = 0, st = B.strm, tick = 0;
   const hs = B.S / 2 - 3, out = new Float32Array(LIMB * MAXL), self = { dirty: 0, noise: 1 };
@@ -139,7 +143,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     herd.push(d); return d;
   };
   const who = (d) => (d.name ? d.name + ' the ' : 'a ') + (d.age < KIND[d.kind][2] * 0.6 ? YOUNG[d.kind] : SEX[d.kind][+d.male]), Who = (d) => who(d).replace(/^a /, 'A ');
-  [L.deer !== undefined ? L.deer : 3, TIER > 3 ? L.hare || 0 : 0, TIER > 3 ? L.fox || 0 : 0, 0, TIER > 3 && st ? L.beaver || 0 : 0, TIER > 3 ? L.springtail || 0 : 0, TIER > 3 ? L.mite || 0 : 0].forEach((c, kind) => {
+  [L.deer !== undefined ? L.deer : 3, TIER > 3 ? L.hare || 0 : 0, TIER > 3 ? L.fox || 0 : 0, 0, TIER > 3 && st ? L.beaver || 0 : 0, TIER > 3 ? L.springtail || 0 : 0, TIER > 3 ? L.mite || 0 : 0, ...(TIER > 3 ? ['woodlouse', 'beetle', 'slug', 'centipede', 'nematode', 'tardigrade'].map((k) => L[k] || 0) : [])].forEach((c, kind) => {
     for (let i = 0; i < c; i++) { const p = kind === 4 ? [0, st.zc(0)] : spot(), d = born(kind, p[0], p[1], KIND[kind][1] * rr(0.18, 0.7)); if (i < 2) d.male = !i; }
   });
   const nb = low ? 10 : (L.birds !== undefined ? L.birds : 20), birds = [];
@@ -195,7 +199,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     if (d.preg > 0 && (d.preg -= dt) <= 0) {                               // birth
       const c = k === 0 ? (rnd() < 0.15 ? 2 : 1) : k === 1 || k === 5 ? 2 + ((rnd() * 2) | 0) : 2, kids = [], dad = alive(k).find((o) => o.male && o.age >= K[2]);
       for (let i = 0; i < c && alive(k).length < K[9]; i++) kids.push(born(k, d.x + rr(-0.6, 0.6), d.z + rr(-0.6, 0.6), 0.01, d, dad));
-      if (kids.length) say(k === 1 ? 'A litter of ' + kids.length + ' leverets was born' : k === 5 ? kids.length + ' springtails hatched' : Who(d) + (k === 0 ? ' dropped ' : k === 6 ? ' hatched ' : ' whelped ') + kids.map(who).join(' and '));
+      if (kids.length) say(k === 1 ? 'A litter of ' + kids.length + ' leverets was born' : k === 5 ? kids.length + ' springtails hatched' : Who(d) + (k === 0 ? ' dropped ' : k === 6 || k > 7 ? ' laid eggs that hatched: ' : k === 7 ? ' released from her brood pouch ' : ' whelped ') + kids.map(who).join(' and '));
     }
     // what frightens it: you, whatever hunts its kind, and fire. The bold let danger come closer.
     let tx = cam[0], tz = cam[2], td = hypot(tx - d.x, tz - d.z), fr = K[8] / d.gn[1] * (TIER > 3 ? self.noise : 1);   // sneak and they let you close; run, or snap a twig, and they bolt
@@ -271,11 +275,39 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
     else { c(add(hip, F, -rb * 0.8), S[6] * s, add(add(add(hip, F, -rb * 0.8 - T), U, (k === 1 ? 0.06 : -0.05) * s), R, wag * (k ? 0 : 1)), S[6] * s * (k === 1 ? 1 : 0.6), 8); if (k === 0) c(add(add(hip, F, -rb * 0.5), U, -0.02 * s), rb * 0.72, add(hip, F, -rb * 0.75), rb * 0.5, 8); }   // scut or flag, and the deer's pale rump
   };
 
+  // the worlds further in. P(forward, right, up) is a point on the animal; c draws a capsule in its own units.
+  const crawl = TIER > 3 && ((d, t, P, c, mv, bone) => {
+    const k = d.kind, ph = d.ph * 2, leg = (f0, e, L, th, i) => { const p = ph + (i + (e > 0 ? 1 : 0)) * PI, sw = sin(p) * 0.08 * mv, kn = P(f0 + sw * 0.5, e * L * 0.55, 0.16), fp = P(f0 + sw, e * L, 0); fp[1] = B.Hgt(fp[0], fp[2]) + max(0, cos(p)) * 0.06 * mv * d.sc; c(P(f0, e * 0.12, 0.05), th, kn, th * 0.8); c(kn, th * 0.8, fp, th * 0.5); };
+    if (k === 7) {                                                         // woodlouse: seven grey plates, seven pairs of short legs, feelers
+      for (let i = 0; i < 7; i++) { const f = 0.42 - i * 0.13, w = 0.26 * (1 - abs(i - 2.5) / 7); c(P(f, -w, 0.1), 0.09, P(f, w, 0.1), 0.09); }
+      c(P(0.52, 0, 0.06), 0.08, P(0.58, 0, 0.05), 0.07); if (bone) return;
+      for (const e of [-1, 1]) { const w = 0.08 * sin(t * 4 + d.sd * 20 + e); c(P(0.58, e * 0.05, 0.05), 0.018, P(0.85, e * (0.25 + w), 0.12), 0.01); for (let i = 0; i < 7; i++) leg(0.36 - i * 0.11, e, 0.34, 0.02, i); }
+    } else if (k === 8) {                                                  // ground beetle: head, pronotum, the shining wing cases, six long legs
+      c(P(-0.45, 0, 0.12), 0.2, P(0.02, 0, 0.14), 0.24); c(P(0.12, 0, 0.13), 0.15, P(0.28, 0, 0.12), 0.14); c(P(0.36, 0, 0.1), 0.09, P(0.46, 0, 0.08), 0.08);
+      c(P(-0.4, 0, 0.27), 0.01, P(0.08, 0, 0.36), 0.01, 18); if (bone) return;                                          // the seam between the wing cases
+      for (const e of [-1, 1]) { c(P(0.48, e * 0.05, 0.08), 0.02, P(0.72, e * 0.22, 0.12), 0.012); for (let i = 0; i < 3; i++) leg(0.2 - i * 0.2, e, 0.5, 0.03, i); }
+    } else if (k === 9) {                                                  // slug: a long soft body that swells and thins as it glides, a mantle, two pairs of tentacles
+      const L = 2.4, w = 0.05 * sin(t * 2 + d.sd * 9) * mv;
+      for (let i = 0; i < 6; i++) { const a = -L / 2 + i * L / 6, b = a + L / 6, r = 0.32 * (1 - abs(i - 2.2) / 6) * (1 + w * (i % 2 ? 1 : -1)); c(P(a, 0, r * 0.7), r * 0.85, P(b, 0, r * 0.75), r * 0.8); }
+      c(P(0.1, 0, 0.35), 0.3, P(0.65, 0, 0.32), 0.28, 11); if (bone) return;                                           // the mantle
+      for (const e of [-1, 1]) { c(P(1.1, e * 0.08, 0.22), 0.03, P(1.35, e * 0.16, 0.48), 0.025); c(P(1.35, e * 0.16, 0.48), 0.04, P(1.36, e * 0.16, 0.49), 0.04, 13); c(P(1.15, e * 0.1, 0.12), 0.02, P(1.3, e * 0.14, 0.12), 0.015); }
+    } else if (k === 10) {                                                 // centipede: fifteen segments that ripple as it runs, a pair of legs on each
+      for (let i = 0; i < 15; i++) { const f = 0.9 - i * 0.13, s = 0.05 * sin(i * 0.8 - t * 6 * mv); c(P(f, s, 0.07), 0.07, P(f - 0.13, 0.05 * sin((i + 1) * 0.8 - t * 6 * mv), 0.07), 0.07); if (!bone) for (const e of [-1, 1]) leg(f - 0.06, e, 0.32, 0.015, i); }
+      if (!bone) for (const e of [-1, 1]) c(P(0.92, e * 0.04, 0.08), 0.015, P(1.3, e * 0.3, 0.15), 0.01);
+    } else if (k === 11) {                                                 // nematode: a clear worm, thrashing in a sine wave
+      for (let i = 0; i < 14; i++) { const f = 5 - i * 0.75, y = (u) => 0.9 * sin(u * 0.9 - t * 5 + d.sd * 9); c(P(f, y(i), 0.25), 0.22 - i * 0.008, P(f - 0.75, y(i + 1), 0.25), 0.22 - (i + 1) * 0.008); }
+    } else {                                                               // tardigrade: a plump barrel in four segments, eight stubby legs with claws
+      for (let i = 0; i < 4; i++) c(P(1 - i * 0.65, 0, 0.75), 0.7, P(0.4 - i * 0.65, 0, 0.75), 0.75);
+      c(P(1.25, 0, 0.65), 0.45, P(1.6, 0, 0.55), 0.3); if (bone) return;
+      for (const e of [-1, 1]) for (let i = 0; i < 4; i++) { const f = 0.8 - i * 0.65, p = ph + (i + (e > 0 ? 1 : 0)) * PI, sw = sin(p) * 0.15 * mv, fp = P(f + sw, e * 0.95, 0.05); c(P(f, e * 0.5, 0.45), 0.25, fp, 0.18); c(fp, 0.05, P(f + sw + 0.15, e * 1.05, 0), 0.02, 13); }
+    }
+  });
   // at the scale of moss the animals have six legs or eight: a springtail in three parts with feelers, a mite as one round body
   const bug = (d, t) => {
     const s = d.sc, k = d.kind, fx = cos(d.a), fz = sin(d.a), mv = min(1, d.v), bone = d.mode === 9 && d.dead > 25, coat = bone ? 9 : KIND[k][6];
     const hop = k === 5 ? max(0, sin(d.ph * 0.8)) * 1.7 * s * min(1, d.v / 4) : 0, y0 = B.Hgt(d.x, d.z) + (0.2 - 0.08 * d.lie) * s + hop;   // a frightened springtail leaps
     const P = (f, r, u) => [d.x + (fx * f - fz * r) * s, y0 + u * s, d.z + (fz * f + fx * r) * s], c = (a, ra, b, rb, kd) => cap(a, ra * s, b, rb * s, kd === undefined ? coat : kd, d.sd);
+    if (TIER > 3 && k > 6) return crawl(d, t, P, c, mv, bone);
     if (k === 5) { c(P(-0.45, 0, 0.02), 0.13, P(-0.05, 0, 0.06), 0.2); c(P(-0.05, 0, 0.06), 0.2, P(0.3, 0, 0.03), 0.15); c(P(0.3, 0, 0.03), 0.14, P(0.46, 0, -0.06 * d.g), 0.11); }
     else c(P(-0.22, 0, 0.05), 0.24, P(0.2, 0, 0.02), 0.17);
     if (bone) return;
@@ -290,7 +322,7 @@ export function mkLife(B0, G, rnd, low, say = () => {}, snd = () => {}, env = {}
 
   return {
     out, herd, birds, who, pack, get dirty() { return self.dirty; }, set dirty(v) { self.dirty = v; }, set fat(v) { self.fat = v; }, get noise() { return self.noise; }, set noise(v) { self.noise = v; },
-    get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
+    get counts() { const c = { deer: alive(0).length, birds: nb }; if (TIER > 3) { c.hares = alive(1).length; c.foxes = alive(2).length; if (alive(3).length) c.wolves = alive(3).length; if (alive(4).length) c.beavers = alive(4).length; if (alive(5).length) c.springtails = alive(5).length; if (alive(6).length) c.mites = alive(6).length; ['woodlice', 'beetles', 'slugs', 'centipedes', 'nematodes', 'tardigrades'].forEach((p, i) => { const n = alive(7 + i).length; if (n) c[p] = n; }); if (!c.deer && L.deer === 0) delete c.deer; if (!nb) delete c.birds; if (!L.hare) delete c.hares; if (!L.fox) delete c.foxes; } return c; },
     // how far each kind's inherited legs and boldness have moved from where they started
     genes() { return [0, 1, 2, 3].map((k) => { const a = alive(k); if (a.length < 2 || !a.some((d) => d.gen > 1)) return ''; const m = (i) => Math.round((a.reduce((s, d) => s + d.gn[i], 0) / a.length - 1) * 100); return KIND[k][0] + ' legs ' + (m(0) >= 0 ? '+' : '') + m(0) + '%, boldness ' + (m(1) >= 0 ? '+' : '') + m(1) + '%'; }).filter(Boolean).join(' · '); },
     world(b) { B = b; st = b.strm; },
@@ -482,15 +514,18 @@ export const MORE = {
 // ---- the year (2 MB rung). uSe.x autumn, uSe.y leaf fall, uSe.w spring. Broad leaves turn and drop; needles stay;
 // ferns and grass die back; flowers are out from spring until the leaves turn.
 export const SEAV = `
-  if ((uSe.y > 0. && (ty < .5 || (ty > 1.5 && ty < 4.5)) && h1(sd * 77.) < uSe.y * (ty > 2.5 ? .85 : 1.)) || (ty > 5.5 && uSe.x + uSe.y > .1)) { gl_Position = vec4(2., 2., 2., 1.); return; }
+  if ((uSe.y > 0. && (ty < .5 || (ty > 1.5 && ty < 4.5)) && h1(sd * 77.) < uSe.y * (ty > 2.5 ? .85 : 1.)) || (ty > 5.5 && ty < 7.5 && uSe.x + uSe.y > .1)) { gl_Position = vec4(2., 2., 2., 1.); return; }
 `;
 export const SEAF = `
-  if (ci.x > 5.5) { float hh = h1(ci.w * 7.3); alb = vein > .5 ? vec3(.9, .7, .1) : hh < .35 ? vec3(.92, .9, .85) : hh < .6 ? vec3(.95, .8, .15) : hh < .8 ? vec3(.5, .35, .85) : vec3(.9, .35, .5); }
+  if (ci.x > 7.5) { float hh = h1(ci.w * 11.7); alb = (hh < .3 ? vec3(.5, .3, .1) : hh < .6 ? vec3(.38, .2, .07) : hh < .8 ? vec3(.62, .42, .12) : vec3(.25, .15, .07)) * (.8 + .4 * vn(uv * 9. + ci.w * 40.)); }   // fallen leaves: tan, russet, gold, rotting brown
+  else if (ci.x > 5.5) { float hh = h1(ci.w * 7.3); alb = vein > .5 ? vec3(.9, .7, .1) : hh < .35 ? vec3(.92, .9, .85) : hh < .6 ? vec3(.95, .8, .15) : hh < .8 ? vec3(.5, .35, .85) : vec3(.9, .35, .5); }
   else if (ci.x < .5 || (ci.x > 1.5 && ci.x < 2.5)) alb = mix(mix(alb, alb * vec3(1.1, 1.4, .7) + vec3(.02, .05, 0.), uSe.w), mix(vec3(.62, .36, .03), vec3(.45, .07, .02), h1(ci.w * 91. + float(sp))), uSe.x * smoothstep(.05, .5, h1(ci.w * 13.) + .3));
   else if (ci.x > 2.5 && ci.x < 4.5) alb = mix(alb, vec3(.38, .27, .09), uSe.x * .7);
 `;
 // a flower: five petals round a yellow eye
 export const FLW = `
+  if (ty == 8) { float t = u.x, hw = .25 * pow(sin(3.1416 * pow(clamp(t, 0., 1.), .75)), .9) * (1. + (h1(sd * 3.1) < .5 ? .14 * sin(t * 34.) : .03 * sin(t * 90.))); vein = step(abs(u.y), .006) * step(t, .97);
+    LF = vec4(t, u.y / max(hw, 1e-3), h1(sd * 5.7), 0.); return max(step(.05, t) * step(t, 1.) * step(abs(u.y), hw), step(abs(u.y), .008) * step(t, .06)); }
   if (ty == 6) {
     vec2 q = u - vec2(.5, 0.); float r = length(q) * 2., a = atan(q.y, q.x), hh = h1(sd * 7.3), np = hh < .35 ? 14. : 5., e = hh < .35 ? .3 : .22, c = abs(cos(a * np * .5 + sd * 6.));
     float rim = hh < .35 ? .3 + .65 * pow(c, 5.) : hh < .8 ? .26 + .7 * pow(c, .8) : .3 + .62 * pow(c, .6) - .14 * smoothstep(.93, 1., c);

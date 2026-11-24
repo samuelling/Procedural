@@ -119,6 +119,7 @@ function grow(keepView, aged) {
   if (!keepView) {
     day = asin(pow((G.air.sun[0] - 6) / 62, 1 / 1.2)) / PI; $('day').value = round(day * 1000);
     tgt = [B.open[0], 0, B.open[1]]; rad = 9; pitch = 0.03; yaw = (G.air.sun[1] + 180 + 28) * RAD;      // start low among the trunks, looking toward the light
+    if (TIER > 3 && G.world) { tgt = [0, 0, 0]; rad = 38; pitch = 0.42; }
   }
   if (TIER > 2) { if (TIER > 3 && aged && LIFE) LIFE.world(B); else LIFE = mkLife(B, G, rng(seed + 7), coarse, say, snd, env); if (!keepView && B.strm) { yaw = (tgt[2] > B.strm.zc(tgt[0]) ? 0 : PI) + 0.3; pitch = 0.17; rad = 11; } }
   setSun();
@@ -126,7 +127,7 @@ function grow(keepView, aged) {
   $('l2').textContent = JSON.stringify(GENOMES[key]).length.toLocaleString() + ' bytes of genome → ' + B.st.trees + ' trees · ' + (B.st.wood / 1000).toFixed(1) + ' km of wood · '
     + (B.cards.length / 12).toLocaleString() + ' leaf clusters, fronds and tufts · ' + B.st.rocks + ' stones'
     + (TIER > 2 ? ' · ' + Object.entries(LIFE.counts).filter((e) => e[1]).map((e) => e[1] + ' ' + e[0]).join(' · ') : '') + ' · grown in ' + round(performance.now() - t0) + ' ms';
-  if (TIER > 3 && G.span) $('l2').textContent = 'A unit here is a millimetre: the same grammar, a thousand times smaller. ' + G.span + ' across.';
+  if (TIER > 3 && G.span) $('l2').textContent = (G.blurb || 'A unit here is a millimetre: the same grammar, a thousand times smaller.') + ' ' + G.span + ' across.';
   const css = (c) => 'rgb(' + c.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
   if (TIER > 3) tol();
   $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + (TIER > 3 ? (s.gone ? '<s>' + s.nm + '</s>' : s.nm) + (s.par ? ' <small>← ' + s.par.toLowerCase() + ', year ' + s.born + '</small>' : '') : s.nm) + '</li>').join('');
@@ -282,6 +283,18 @@ if (TIER > 3) {
   document.addEventListener('pointerlockchange', () => { $('xh').hidden = document.pointerLockElement !== canvas; });
 }
 
+// powers of ten (2 MB rung): + dives a step further in, - pulls back out. The view rushes toward the ground, whites out,
+// and comes in on the next world from high above, settling where you would stand there.
+const LAD = ['', 'log', 'moss', 'soil'];
+let home = 'mixed', dive = 0;
+const zoom = (dir) => {
+  if (dive) return; const i = max(0, LAD.indexOf(G.world || (key === 'moss' ? 'moss' : ''))), j = clamp(i + dir, 0, 3); if (i === j) return;
+  if (!i) home = key; walking(0); dive = 1; fly = null; fz = 0; const fd2 = $('fade'); fd2.style.opacity = 1;
+  const r0 = rad; let t = 0; const go = () => { t += 0.05; rad = r0 * (dir > 0 ? 1 - 0.95 * t : 1 + 6 * t); pitch += (0.9 - pitch) * 0.1; if (t < 1) return setTimeout(go, 30);
+    key = j ? LAD[j] : home; mut = 0; grow(); const r1 = rad, p1 = pitch; rad = dir > 0 ? r1 * 8 : r1 * 0.15; pitch = dir > 0 ? 0.9 : p1; fly = [tgt.slice(), r1, yaw, p1]; fz = 0; fd2.style.opacity = 0; dive = 0;
+    $('hint').textContent = ['×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across'][j] + ' · + further in, − back out'; $('hint').hidden = false; };
+  go();
+};
 const act = {
   seed() { seed = 1 + ((Math.random() * 9999) | 0); grow(1); },
   mut() { mut = 1 + ((Math.random() * 999) | 0); grow(1); },
@@ -304,7 +317,7 @@ if (TIER > 3) {
   $('day').min = -120; $('day').max = 1120;
   $('b-time').addEventListener('click', () => { clock = (clock + 1) % 4; $('b-time').textContent = 'Time: ' + TIMES[clock]; if (clock === 3) { setSea(1); yearF = Math.floor(yearF) + 0.3; } if (!clock) { day = 0.3; $('day').value = 300; setSun(); } });
   $('b-fire').addEventListener('click', strike);
-  $('b-walk').addEventListener('click', () => walking(!fp));
+  $('b-walk').addEventListener('click', () => walking(!fp)); $('b-in').addEventListener('click', () => zoom(1)); $('b-out').addEventListener('click', () => zoom(-1));
   $('b-evo').addEventListener('click', () => { const e = $('evo'), on = e.toggleAttribute('hidden'); $('b-evo').setAttribute('aria-pressed', !on); tol(); });
   $('b-wolf').addEventListener('click', () => LIFE.pack(!LIFE.counts.wolves));
   $('b-fol').addEventListener('click', () => {                             // step through the animals that have names, then let go
@@ -330,6 +343,8 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyG') act.mut();
   else if (e.code === 'KeyO') act.far();
   else if (e.code === 'KeyM') act.snd();
+  else if (TIER > 3 && (e.code === 'Equal' || e.code === 'NumpadAdd')) zoom(1);
+  else if (TIER > 3 && (e.code === 'Minus' || e.code === 'NumpadSubtract')) zoom(-1);
 });
 addEventListener('keyup', (e) => { keys[e.code] = 0; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });

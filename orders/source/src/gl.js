@@ -158,7 +158,7 @@ out vec2 uv; out vec3 pw; out float vz; flat out vec3 nn; flat out vec4 ci;
 void main() {
   float ty = floor(a1.w), sd = fract(a2.w); vec3 U = a1.xyz, N = a2.xyz, W = normalize(cross(N, U));
 ` + (TIER > 3 ? SEAV : '') + `
-  float asp = ty < .5 ? .62 : ty < 1.5 ? 1. : ty < 2.5 ? .42 : ty < 3.5 ? 1. : 2.;
+  float asp = ty < .5 ? .62 : ty < 1.5 ? 1. : ty < 2.5 ? .42 : ty < 3.5 ? 1. : 2.;` + (TIER > 3 ? ' if (ty > 7.5) asp = .55;' : '') + `
   vec2 c = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1) - .5);
   float ph = dot(a0.xz, vec2(.31, .23)) + sd * 6.3, fl = uWd.z * (sin(uT * 2.3 + ph) + .6 * sin(uT * 4.1 + ph * 1.7)) * .25 * c.x;   // the cluster flutters
   vec3 p = a0.xyz + U * c.x * a0.w + W * c.y * asp * a0.w + N * fl * a0.w + sway(a0.xyz);

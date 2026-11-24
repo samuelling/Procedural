@@ -116,6 +116,27 @@ angle, length and taper. Flowers come as daisies (many narrow rays), buttercups 
 petals). At dawn and after rain, leaves, fronds and blades carry dew: each drop a small lens with a dark rim and a point of
 sky. Ants run up some trunks, and about one leaf in thirty has a ladybird on it.
 
+## Powers of ten, inward (2 MB rung)
+
+Two more worlds, built from the same parts as the forest at other scales, and a way to dive between them: + (or In ×10)
+goes a step further in, − (or Out ×10) back out, along forest ×1 → rotting log ×100 → moss ×1000 → soil ×10,000. The
+view rushes at the ground, whites out, and comes in on the next world from above.
+
+- **Rotting log ×100** (a unit is a centimetre, 64 cm across). The log is part of the ground, so animals, seedlings,
+  fallen leaves and your feet go over it. Loose bark over grey wood, bracket fungi in tiers up one flank, a tuft of
+  bonnet mushrooms on top, scarlet elf cups beside it, acorns (some in their cups), twigs, about 300 fallen leaves
+  (a new card type: one blade, tan, russet, gold or rotting brown), oak seedlings, and haircap moss on the log.
+  Woodlice (seven plates, seven pairs of legs) graze; a centipede (fifteen rippling segments) hunts them; a ground
+  beetle and slugs (soft bodies that swell and thin as they glide, a mantle, two pairs of tentacles).
+- **Soil ×10,000** (a unit is a tenth of a millimetre, 6.4 mm across): sand grains; a fine root with root hairs
+  behind its tip; fungal threads that grow tip-first, branch, follow the surface over the grains and wrap the root,
+  with spores resting on them; pin moulds (a stalk a millimetre or two tall with a black ball of spores) and
+  Penicillium brushes whose bristles are chains of blue-green spores. Nematodes thrash through it in sine waves and
+  tardigrades (a plump barrel in four segments, eight stubby clawed legs) hunt them.
+
+The sizes are right to within a factor of two or so; the shapes are simplified, and the soil is lit as if the litter
+above had been lifted away.
+
 ## The valley (2 MB rung)
 
 The plot is no longer an island. The same height field carries on past its edge and, beyond, is lifted into a valley:
@@ -146,6 +167,9 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Inward worlds: both seen in renders, the soil also after diving into it from the moss; woodlice, beetles, slugs, the
+centipede, nematodes and tardigrades confirmed in the simulation (births, deaths, arrivals) but not looked at up close.
 
 Valley: seen in renders from the valley overview in summer, autumn and winter, from the plot overview, and from the
 ground while walking. Not checked: how it runs on a phone (about 4,500 more capsules and 25,000 more vertices).

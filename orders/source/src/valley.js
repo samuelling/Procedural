@@ -5,10 +5,9 @@
 // fine at the plot's edge and coarse at the horizon.
 /* global TIER */
 import { fbm, rng } from './noise.js';
-const { abs, max, min, exp, sqrt, hypot, pow, cos, sin, PI } = Math;
-const sm = (a, b, x) => { const t = min(1, max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 export function valley({ G, Hgt, strm, hs, seed, cap, low }) {
+  const { abs, max, min, exp, sqrt, hypot, pow, cos, sin, PI } = Math, sm = (a, b, x) => { const t = min(1, max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };   // (inside, so the lower rungs' builds drop it all)
   const R = 3000, K = low ? 34 : 48, N = low ? 64 : 128, ox = (seed % 977) * 0.37, oz = (seed % 613) * 0.53;
   const out = (x, z) => max(abs(x), abs(z)) - hs;                          // metres outside the plot
   const lake = strm && { x: hs + 700, z: strm.zc(hs + 700), rx: 380, rz: 240 };
