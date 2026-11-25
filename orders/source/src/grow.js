@@ -39,7 +39,8 @@ import { valley } from './valley.js';
 import { logLand, leafLand, barkLand, microBuild } from './micro.js';
 import { rangeLand } from './range.js';
 import { mkErosion } from './erosion.js';
-import { lakeLand, caveLand, underBuild, sheet } from './under.js';
+import { lakeLand, underBuild, sheet } from './under.js';
+import { cave3 } from './cave3.js';
 export function build(G, seed, q = 1, den = 1, stand) {
   let rnd = rng(seed); const rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
@@ -67,7 +68,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   let lg = null, lv = null; if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
   if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
   if (TIER > 3 && G.world === 'lake') Hgt = lakeLand(Hgt, hs);   // a lake bed
-  if (TIER > 3 && G.world === 'cave') { const l = caveLand(Hgt, rnd, hs); Hgt = l.Hgt; lv = l.cave; }   // a cave: floor, walls and a roof
+  if (TIER > 3 && G.world === 'cave') { lv = cave3(rnd, hs); Hgt = () => -60; }   // a cave in the rock; the ordinary ground goes far below, out of sight
   if (TIER > 3 && G.world === 'range') { const l = rangeLand(rnd, hs, G.stage ?? 10); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
   if (TIER > 3 && G.world === 'bark') { const l = barkLand(Hgt, rnd, hs); Hgt = l.Hgt; lv = l.bark; }   // beetle galleries cut into the wood, and the bark that is left
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
@@ -89,7 +90,12 @@ export function build(G, seed, q = 1, den = 1, stand) {
     for (let j = 0; j < 3; j++) rock(3, x + gs() * s * 1.4, z + gs() * s * 1.4, rr(0.08, 0.26), 0.6, rr(0.4, 1));
   }
   for (let n = round(L.peb * (low ? 0.5 : 1)); n > 0; n--) rock(3, rr(-hs, hs), rr(-hs, hs), rr(0.04, 0.14), rr(0.5, 0.9), rnd());
-  if (TIER > 3 && G.world) (G.world === 'lake' || G.world === 'cave' ? underBuild : microBuild)(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks, vein: lv, stomata: [], bark: lv, cave: lv });   // the worlds further in, and under
+  if (TIER > 3 && !G.world && !G.span) {                                   // a cave mouth in a limestone outcrop near one corner: walk into it and you go in
+    const ex = -hs + 6; let ez = -hs + 10; if (strm && abs(ez - strm.zc(ex)) < strm.wid(ex) + 6) ez = strm.zc(ex) + strm.wid(ex) + 9;
+    const ey = Hgt(ex, ez); for (let k = 0; k < 9; k++) rock(k % 3, ex - 2.4 - rr(0, 1.2), ez + (k - 4) * 0.85, rr(1.2, 2.3), rr(0.75, 1), 0.35);
+    cap([ex - 1.5, ey + 0.1, ez - 0.9], 1, [ex - 1.5, ey + 0.1, ez + 0.9], 1, 0, 0, 0.5, 18); placed.push({ x: ex - 1.5, z: ez, cr: 4 }); lv = { mouth: [ex - 1.5, ez] };
+  }
+  if (TIER > 3 && G.world) (G.world === 'lake' || G.world === 'cave' ? underBuild : microBuild)(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks, vein: lv, stomata: [], bark: lv, cave: lv, sea: G.sea });   // the worlds further in, and under
   if (TIER > 2 && strm) for (let n = low ? 30 : 56; n > 0; n--) {                       // stones in and along the stream
     const x = rr(-hs + 1, hs - 1), z = strm.zc(x) + gs() * (strm.wid(x) * 0.7 + 0.4); if (abs(z) < hs - 1) rock((rnd() * 4) | 0, x, z, rr(0.12, 0.5) * (rnd() < 0.15 ? 2.2 : 1), rr(0.5, 0.9), rr(0.3, 1));
   }
@@ -309,10 +315,11 @@ export function build(G, seed, q = 1, den = 1, stand) {
   const pal = { la: new Float32Array(24), lb: new Float32Array(24), ba: new Float32Array(24), bb: new Float32Array(24), bp: new Float32Array(32) };
   G.trees.forEach((sp, i) => { pal.la.set(sp.leaf.a, i * 3); pal.lb.set(sp.leaf.b, i * 3); pal.ba.set(sp.bark.a, i * 3); pal.bb.set(sp.bark.b, i * 3); pal.bp.set([sp.bark.t, sp.bark.sc, TIER > 3 && sp.leaf.t === 1 ? 1 : 0, 0], i * 4); });
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
-  const vy = TIER > 3 && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' && { roof: lv.roof, cave: lv });   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
+  const vy = TIER > 3 && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' && { cave: lv });
+  if (TIER > 3 && vy && lv && lv.mouth) vy.mouth = lv.mouth;   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
   const sr = rng(seed ^ 0x77);
   if (TIER > 3 && G.world === 'lake') water = sheet(Hgt, 0, -hs, hs, -hs, hs, 96);   // the lake's surface, seen from below
-  if (TIER > 3 && G.world === 'cave') water = sheet(Hgt, lv.fl(lv.pool[0], lv.pool[1]) + 0.6, lv.pool[0] - 6, lv.pool[0] + 6, lv.pool[1] - 6, lv.pool[1] + 6, 24);   // the pool
+  if (TIER > 3 && G.world === 'cave') { const p = lv.sump, y = lv.floorAt(p[0], p[1] + 1, p[2]) + 0.7; water = sheet((x, z) => lv.floorAt(x, y + 0.3, z), y, p[0] - 7, p[0] + 7, p[2] - 7, p[2] + 7, 28); }   // the sump, where the stream's canyon ends in a pool
   return { caps: new Float32Array(caps), cards: new Float32Array(cards), rocks: rocks.map((r) => new Float32Array(r)), stones: [stone(1, 3, sr), stone(9, 3, sr), stone(17, 3, sr), stone(23, 1, sr)],
     land: { v: new Float32Array(V), i: new Uint16Array(I), nTop }, Hgt, S, pal, st, open, water, strm, block: blockers, trees, ...vy };
 }

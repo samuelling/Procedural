@@ -48,7 +48,7 @@ float shd(vec3 p, vec3 n) {
 }
 vec3 amb(vec3 n, float ao) { return mix(vec3(.19, .16, .11) * (uHorC + .2), uSkyC * 1.1 + uHorC * .45, n.y * .5 + .5) * ao; }
 ` + (TIER > 3 ? `uniform vec2 uCv;   // underground: how much of the sky's light is shut out, and the lamp you carry
-vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { vec3 l = uCam - p; float d = length(l) + 1e-3; return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao) * (1. - uCv.x) + uCv.y * vec3(1., .86, .68) * max(dot(n, l / d), 0.) / (1. + .07 * d * d)); }` : `vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao)); }`) + `vec3 fogc(vec3 c, vec3 p) { vec3 d = p - uCam; float l = length(d), f = 1. - exp(-uFog.x * .4 * l * exp(-max(.5 * (p.y + uCam.y) - uFog.z, 0.) * uFog.y)); return mix(c, sky(normalize(vec3(d.x, .06 * l, d.z))) * .8, f); }
+vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { vec3 l = uCam - p; float d = length(l) + 1e-3; return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao) * (1. - uCv.x) + uCv.y * vec3(1., .86, .68) * max(dot(n, l / d), 0.) / (1. + .15 * d * d)); }` : `vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao)); }`) + `vec3 fogc(vec3 c, vec3 p) { vec3 d = p - uCam; float l = length(d), f = 1. - exp(-uFog.x * .4 * l * exp(-max(.5 * (p.y + uCam.y) - uFog.z, 0.) * uFog.y)); return mix(c, sky(normalize(vec3(d.x, .06 * l, d.z))) * .8, f); }
 // moss is a rule: it takes where a surface faces up, away from the sun, low down, and where the noise says it is damp
 float mossf(vec3 p, vec3 n, float k) { return smoothstep(.45, .72, n.y * .5 + fb3(p * 1.7) * .7 + k + uMoss - .78 - dot(n.xz, uSun.xz) * .15); }
 ` + (TIER > 3 ? MICRO : `vec3 mossc(vec3 p) { return mix(vec3(.05, .13, .02), vec3(.26, .38, .06), vn3(p * 9.) * .6 + vn3(p * 31.) * .4); }`) + `
@@ -317,6 +317,7 @@ export function mkRenderer(canvas, low) {
         buf(m.i, gl.ELEMENT_ARRAY_BUFFER); return { v, n: m.i.length, k: instances ? instances.length / 12 : 0 };
       };
       W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
+      if (TIER > 3) W.xm = B.xm && B.xm.map((m) => mesh(m));
       if (TIER > 3) W.str = B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // the rock bed a gorge cuts through
       if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const tot = G.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => G.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }
       gl.bindVertexArray(null);
@@ -330,6 +331,7 @@ export function mkRenderer(canvas, low) {
         if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PMx.uStr, W.str); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
         gl.bindVertexArray(W.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, W.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, W.land.n - W.nTop, gl.UNSIGNED_SHORT, W.nTop * 2); }
+        if (TIER > 3 && W.xm) { gl.uniform1f(PMx.uMat, 1); for (const m of W.xm) { gl.bindVertexArray(m.v); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0); } }   // rock in three dimensions: a cave
         if (TIER > 3 && !shadow && W.far) { gl.bindVertexArray(W.far.v); gl.uniform1f(PMx.uMat, 3); gl.uniform3fv(PMx.uFor, W.for); gl.drawElements(gl.TRIANGLES, W.far.n, gl.UNSIGNED_SHORT, 0); }
         gl.uniform1f(PMx.uMat, 0); for (const s of W.stones) if (s.k) { gl.bindVertexArray(s.v); gl.drawElementsInstanced(gl.TRIANGLES, s.n, gl.UNSIGNED_SHORT, 0, s.k); }
         com(PCx, f, view, K, R, or, nf); if (!shadow) { gl.uniform3fv(PCx.uBA, pal.ba); gl.uniform3fv(PCx.uBB, pal.bb); gl.uniform4fv(PCx.uBP, pal.bp); if (TIER > 3) gl.uniform3fv(PCx.uLB, pal.lb); }

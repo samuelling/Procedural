@@ -201,6 +201,40 @@ sandstone falls and are not measured for any one: unverified.
 land as raised to the last pass. Over them its mean height falls from 1.25 to 1.18 km, the lakes in its hollows go
 from 6% of it to 1.4% as rivers cut outlets, and its rivers lengthen. The stages are stages of wear, not measured years.
 
+## Any time (2 MB rung)
+
+Any time… lists nine forests of other ages; each is grown like any other forest, with its own sun latitude, snow and
+leaf fall, and a line saying when it is. All are sketches after the fossil record's broad picture, not reconstructions
+of a place: unverified.
+
+- **Devonian, 385 million years ago:** Archaeopteris, the first true tree (wood, bark, fern-like sprays, no seeds),
+  and nothing walking or flying among them. No grass and no flowers here or in the next three ages; grasses only
+  begin in the Eocene. No birdsong until the Cretaceous's birds, and no song at all until the Eocene.
+- **Carboniferous, 305 million years ago:** a coal swamp near the equator. Lepidodendron (a straight trunk forking two
+  by two at the top, grass-like leaf tufts, its bark a lattice of diamond leaf scars, a new bark rule), Sigillaria,
+  Calamites (giant horsetails, whorls of branches at every joint), Psaronius tree ferns and Cordaites. Arthropleura,
+  a millipede over two metres long, and Meganeura, a dragonfly with 70 cm wings.
+- **Jurassic, 150 million years ago:** Araucaria, cycads (diamond-scarred stumps, a crown of stiff fronds), ginkgos and
+  tree ferns, and a pair of sauropods: a barrel on four pillars with a neck and a tail each longer than the body.
+- **Cretaceous, 70 million years ago:** magnolias among redwoods, cycads, tree ferns and palms; birds; sauropods.
+- **Eocene, 50 million years ago:** dawn redwoods and palms far north in the warm world.
+- **The ice going**, four steps: the last ice age 20,000 years ago (mammoth steppe of grass, dwarf birch and willow,
+  a few junipers; woolly mammoths), 12,000 years ago (birch first), 9,000 (pine and hazel), 6,000 (the wildwood of
+  oak, elm, lime and hazel).
+
+## The partway tracks, moved on (2 MB rung)
+
+- **Kelp:** a kelp forest under the sea off a rocky coast, giant kelp from the bed to the surface, sea urchins on the
+  rock, garibaldi.
+- **Song by season, place and age:** birds sing most in spring and least in winter; on Earth a tropical place has its
+  own sketch of calls (a parrot-like screech among them), deserts few, tundra and ice none; the ages above get their
+  own sets, empty before birds sing. Sketches, unverified.
+- **Animal memory and teaching:** an animal remembers where it last ate its fill and goes back half the time; a young
+  one takes its mother's places as its own; a deer forgets a place where wolves have since killed. In a fourteen-year
+  run of the mixed wood, 20 of 21 animals alive at the end remembered a place and 18 had learned theirs from a mother.
+- **Animal evolution:** when a kind's mean gene drifts more than 15% from its founders it is named as a new form
+  (long-legged, stocky, bold or wary) in the chronicle.
+
 ## Under the lake, and into the rock (2 MB rung)
 
 Two worlds at the forest's own scale, a unit a metre. Walking into water too deep to wade, in any forest, takes you
@@ -214,16 +248,15 @@ under; − brings you back up to the forest you came from. Both have buttons too
   bent and bright; beyond it the surface mirrors the dim water beneath. Perch shoal and pike hunt them (a pair of
   pike, eight perch; over fourteen simulated years the pike caught eight). Fish swim between the bed and the surface
   rather than on the ground, their tails sweeping, the perch barred, the pike long with its dorsal fin far back.
-- **The cave.** Limestone: the ground is the floor and the rock between passages; a second surface, drawn as rock and
-  carried a little past each passage's edge so it meets the rock's top, is the roof. Passages are tubes that wander
-  out from a chamber to the plot's edges, lens-shaped in section the way water-filled passages are, with side branches;
-  the chamber's roof has fallen in to the sky, so sunlight falls through a hole onto the floor. Where water drips, a
-  stalactite hangs and a stalagmite grows directly under it, joined into a column where the gap is small; soda straws
-  cluster on the roof; a pool lies in a hollow of the chamber floor. Walls are limestone in its beds with flowstone
-  banded down them, mud on the floor, moonmilk, and wet patches that shine in your lamp. Almost all the sky's light
-  is shut out underground, and you carry a lamp that falls off with the square of distance, so passages go dark a few
-  metres ahead. You start on foot; bats fly under the roof. It is a height field with a roof over it, so passages
-  cannot run one above another, and there is no way in from the forest yet: the button is the way in.
+- **The cave**, now in true 3D: the rock is a field on a half-metre grid 64 m across and 34 deep, passages stamped
+  into it along wandering lines as tubes with flatter floors, the hillside's surface above, the walls roughened with
+  noise, and the surface between rock and air found by surface nets (a vertex in each cell the surface crosses, a
+  quad across each crossed edge): 27,000 vertices, built in about 0.35 s. So passages run one above another, from
+  about 0 m down to 18 m below: an older high level, the main level and its chamber, a stream's canyon cut down to a
+  sump with a pool, shafts between, and the way in climbing to daylight on the hillside. Each vertex keeps how much
+  sky it can see (five rays up through the rock), so daylight dies away down the entrance and is gone in the deep
+  passages; there the only light is your lamp. Walking finds the floor under your feet and the roof over your head.
+  **Every forest now has a cave mouth** in a limestone outcrop near one corner: walk into it and you go in.
 
 **Into the gorge.** Walking now has a cliff rule: a rise of more than a metre at a step is a wall. You can drop into
 the gorge deep time has cut and walk its floor below the falls, but not climb its walls (F to float out).
