@@ -106,6 +106,7 @@ function sun3() {
   if (TIER > 3 && smoke > 0.01) { f.skyC = mix3(f.skyC, [0.28, 0.2, 0.14], smoke * 0.7); f.horC = mix3(f.horC, [0.55, 0.3, 0.12], smoke * 0.75); f.sunC = mix3(f.sunC, [1.6, 0.6, 0.2], smoke * 0.7); }   // smoke: a brown sky and a red sun
   if (TIER > 3 && flash > 0.01) { f.skyC = f.skyC.map((v) => v + flash * 2.5); f.horC = f.horC.map((v) => v + flash * 3); }   // lightning lights the whole sky
   f.shafts = min(1.5, G.air.fog * fogK * 75) * (0.6 + 0.6 * (1 - k)) * (1 - 0.7 * oc) * (1 - night * 0.6);
+  if (TIER > 3 && G.world === 'lake') { f.sunC = f.sunC.map((v, i) => v * [0.45, 0.8, 0.75][i]); f.shafts *= 0.3; }   // under water the sunlight is green and its beams faint
 }
 function sun2() {
   const A = G.air, t0 = asin(pow((A.sun[0] - 6) / 62, 1 / 1.2)) / PI, el = (6 + 62 * pow(sin(PI * day), 1.2)) * RAD, az = (A.sun[1] + (day - t0) * 170) * RAD, k = sstep(5 * RAD, 38 * RAD, el);
@@ -131,17 +132,23 @@ function grow(keepView, aged) {
   if (TIER > 3 && !aged) G = { ...G, trees: G.trees.map((s) => ({ ...s })) };
   const t0 = performance.now(); if (TIER > 3 && !aged) world = { dam: 0, char: (x, z) => (fire ? fire.at(x, z) : 0) };
   if (TIER > 3 && aged) stand.world = world;                                 // the regrowth is told where it has burnt and how high the dam stands
-  B = build(G, seed, Q, den, TIER > 3 && aged ? stand : undefined); R.load(B, G);
+  B = build(G, seed, Q, den, TIER > 3 && aged ? stand : undefined);
+  if (TIER > 3 && B.cave) { B.stones.push(B.cave.roofMesh); B.rocks.push(new Float32Array([0, 0, 0, 0.3, 0, 0, 0, 1, 1, 0, 0.5, 0])); }   // the cave's roof, drawn as rock
+  if (TIER > 3) f.cv = G.world === 'cave' ? [0.96, 2.4] : [0, 0];
+  R.load(B, G);
   if (TIER > 3 && !aged) fire = mkFire(B.S, B.strm);
   if (TIER > 3) { col = B.trees.filter((t) => t.st < 2 && t.H > 1.5).map((t) => [t.x, t.z, 0.05 + 0.011 * t.H, B.Hgt(t.x, t.z) + t.H]); for (const a of B.rocks) for (let i = 0; i < a.length; i += 12) if (a[i + 3] > 0.35) col.push([a[i], a[i + 2], a[i + 3] * 0.8, a[i + 1] + a[i + 3] * 0.7]); }
   if (TIER > 3) { stand = B.trees; if (!aged) { year = 1; tape.length = 0; rew = 0; fol = null; $('log').textContent = ''; $('b-fol').textContent = 'Follow'; } }
-  f.fog = [G.air.fog, 0.07, 0]; f.moss = G.floor.moss; f.wd = [0.8, 0.6, G.air.wind * 0.18];
+  f.fog = [G.air.fog, TIER > 3 && G.world === 'lake' ? 0 : 0.07, 0]; f.moss = G.floor.moss; f.wd = [0.8, 0.6, G.air.wind * 0.18];
   if (!keepView) {
     day = asin(pow((G.air.sun[0] - 6) / 62, 1 / 1.2)) / PI; $('day').value = round(day * 1000);
     tgt = [B.open[0], 0, B.open[1]]; rad = 9; pitch = 0.03; yaw = (G.air.sun[1] + 180 + 28) * RAD;      // start low among the trunks, looking toward the light
     if (TIER > 3 && G.world) { tgt = [0, 0, 0]; rad = G.world == 'leaf' ? 80 : G.world == 'range' ? 72 : 38; pitch = G.world == 'leaf' ? 0.75 : G.world == 'range' ? 0.5 : 0.42; }
+    if (TIER > 3 && G.world === 'lake') { tgt = [6, -6, 4]; rad = 10; pitch = 0.06; }   // on the lake bed, looking along it
+    if (TIER > 3 && G.world === 'cave') { tgt = [B.cave.cx, 0, B.cave.cz]; rad = 5; pitch = 0.05; }   // standing in the chamber
   }
   if (TIER > 2) { if (TIER > 3 && aged && LIFE) LIFE.world(B); else LIFE = mkLife(B, G, rng(seed + 7), coarse, say, snd, env); if (!keepView && B.strm) { yaw = (tgt[2] > B.strm.zc(tgt[0]) ? 0 : PI) + 0.3; pitch = 0.17; rad = 11; } }
+  if (TIER > 3 && G.world === 'cave' && !keepView) { fp = 0; eye[0] = B.cave.cx; eye[2] = B.cave.cz; walking(1); pitch = -0.12; }   // in a cave you start on your feet, lamp lit
   setSun();
   $('l1').textContent = G.nm + (mut ? ' · mutant ' + mut : '') + ' · seed ' + seed;
   $('l2').textContent = JSON.stringify(GENOMES[key]).length.toLocaleString() + ' bytes of genome → ' + B.st.trees + ' trees · ' + (B.st.wood / 1000).toFixed(1) + ' km of wood · '
@@ -162,6 +169,7 @@ function view() {
   if (TIER > 3 && fp) {                                                     // walking: the eye is where you stand, and looks where you turn
     const cp = cos(pitch), b = Math.abs(sin(bob)), h = EYE * (sneak ? 0.82 : 1);
     eye[0] = wp[0] + cos(yaw) * sin(bob) * 0.012; eye[1] = wp[1] + h + b * 0.045 - 0.02; eye[2] = wp[2] - sin(yaw) * sin(bob) * 0.012;   // the head rises and sways a little with each step
+    if (TIER > 3) eye[1] = min(eye[1], G.world === 'lake' ? -0.2 : B.roof ? B.roof(eye[0], eye[2]) - 0.15 : 1e9);   // under the water, under the roof
     lookAt(V, eye, [eye[0] - sin(yaw) * cp, eye[1] - sin(pitch), eye[2] - cos(yaw) * cp]); IV.set([V[0], V[4], V[8], V[1], V[5], V[9], V[2], V[6], V[10]]);
     tgt[0] = wp[0]; tgt[2] = wp[2]; return;
   }
@@ -169,6 +177,7 @@ function view() {
   // above the horizon the eye orbits the point; below it the eye stays level and the gaze tilts up into the canopy
   const up = max(pitch, 0), cp = cos(up); eye[0] = tgt[0] + rad * cp * sin(yaw); eye[1] = tgt[1] + rad * sin(up); eye[2] = tgt[2] + rad * cp * cos(yaw);
   if (inside(eye[0], eye[2])) eye[1] = max(eye[1], B.Hgt(eye[0], eye[2]) + 0.35);
+  if (TIER > 3 && G.world === 'lake') eye[1] = min(eye[1], -0.25);
   lookAt(V, eye, [tgt[0], tgt[1] + rad * tan(max(-pitch, 0)), tgt[2]]); IV.set([V[0], V[4], V[8], V[1], V[5], V[9], V[2], V[6], V[10]]);
 }
 const walk = (r, fw) => {   // along the ground: right and forward as the camera sees them
@@ -215,7 +224,9 @@ function frame(now) {
     wv[0] += (tx - wv[0]) * gr; wv[2] += (tz - wv[2]) * gr;
     const h = B.S / 2 - 0.4, deep = (x, z) => st && st.dist(x, z) < 0 && st.lvl(x) - B.Hgt(x, z) > 1.15 && !flo;
     let nx = clamp(wp[0] + wv[0] * dt, -h, h), nz = clamp(wp[2] + wv[2] * dt, -h, h);
-    if (deep(nx, wp[2])) nx = wp[0]; if (deep(nx, nz)) nz = wp[2];                       // deep water is not for walking into
+    if (TIER > 3 && !G.world && (deep(nx, wp[2]) || deep(nx, nz))) { under('lake'); nx = wp[0]; nz = wp[2]; }   // walk into deep water and you go under
+    if (deep(nx, wp[2])) nx = wp[0]; if (deep(nx, nz)) nz = wp[2];
+    if (TIER > 3 && !flo) { if (B.Hgt(nx, wp[2]) > wp[1] + 1.1) nx = wp[0]; if (B.Hgt(nx, nz) > wp[1] + 1.1) nz = wp[2]; }   // a rise of more than a metre is a cliff: you can drop down one, not walk up it                       // deep water is not for walking into
     for (const c of col) if (wp[1] < c[3]) { const dx = nx - c[0], dz = nz - c[1], d = hypot(dx, dz), m = c[2] + 0.3; if (d < m) { nx = c[0] + dx / (d || 1e-4) * m; nz = c[1] + dz / (d || 1e-4) * m; } }   // round trunks and boulders: slide past them
     const moved = hypot(nx - wp[0], nz - wp[2]); wp[0] = nx; wp[2] = nz;
     const g = B.Hgt(nx, nz);
@@ -317,7 +328,11 @@ const LAD = ['range', '', 'log', 'moss', 'soil', 'leaf'], STEP = [1e4, 100, 10, 
 let home = 'mixed', dive = 0, gl = null, snapNext = null;
 const glide = (r1, p1, ms, then) => { gl = [performance.now(), rad, r1, pitch, p1, ms, then]; };
 const glideStep = (now) => { if (!gl) return; const [t0, ra, rb, pa, pb, ms, then] = gl, u = min(1, (now - t0) / ms), e = u * u * (3 - 2 * u); rad = ra * Math.pow(rb / ra, e); pitch = pa + (pb - pa) * e; if (u >= 1) { gl = null; if (then) then(); } };
+// under the water or into the rock and back: the last frame dissolves into the next world
+const under = (k) => { if (dive) return; walking(0); const sp = $('snap'); snapNext = () => { sp.width = canvas.width; sp.height = canvas.height; sp.getContext('2d').drawImage(canvas, 0, 0); sp.style.transition = 'none'; sp.style.opacity = 1;
+  setTimeout(() => { if (k === 'lake' || k === 'cave') home = G.world ? home : key; key = k; mut = 0; grow(); requestAnimationFrame(() => requestAnimationFrame(() => { sp.style.transition = 'opacity 1.2s'; sp.style.opacity = 0; })); $('hint').textContent = k === 'lake' ? 'Under the lake · − back up' : k === 'cave' ? 'In the cave, with a lamp · walk with WASD · − back out' : '×1: the plot, 64 m across'; $('hint').hidden = false; }, 20); }; };
 const zoom = (dir) => {
+  if (TIER > 3 && (key === 'lake' || key === 'cave')) { if (dir < 0) under(home); return; }
   if (dive) return; const i = key === 'bark' ? 3 : G.world ? LAD.indexOf(G.world) : key === 'moss' ? 3 : 1, j = clamp(i + dir, 0, 5); if (i === j || (key === 'bark' && dir > 0)) return;
   const nb = i === 2 && dir > 0 && B.Hgt(tgt[0], tgt[2]) > 6;                // diving at the log itself goes under its bark; anywhere else, into the moss
   const F = nb ? 10 : STEP[min(i, j)];
@@ -417,6 +432,6 @@ if (TIER > 3) $('hint').textContent += coarse ? ' · double-tap anything to look
 const HO = TIER > 3 && $('hint').textContent, HW = coarse ? 'Walking: left thumb to walk (push far to run) · drag on the right to look · double-tap to go closer' : 'Walking: WASD · click to look with the mouse (Esc frees it) · Shift run · Z sneak · Space hop · F float · double-click to go closer · O to leave';
 grow();
 // for tests and screenshots
-window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { pass(o.years); LIFE.lapse(o.years); grow(1, 1); } if (TIER > 3 && o.strike) strike(); if (TIER > 3 && o.see !== undefined) fol = LIFE.herd.find((d) => d.kind === o.see && d.mode !== 9) || null; if (TIER > 3 && o.burn) { for (let i = 0; i < o.burn; i++) fire.step(0.5, f.wd, 0, Math.random, stand, G); grow(1, 1); } if (TIER > 3 && o.wolves) LIFE.pack(1); if (TIER > 3 && o.deep) { if (!G.ero) { G.ero = 1; grow(1, 1); } for (let i = 0; i < o.deep; i++) deep(); } if (TIER > 3 && o.back) for (let i = 0; i < o.back && tape.length; i++) unspool(tape.pop()); if (TIER > 3 && o.look) look(o.look[0], o.look[1]); if (TIER > 3 && o.at) { fz = 1; fly = [o.at, o.r || 0.35, o.yaw ?? yaw, o.pitch ?? max(0.02, pitch)]; } if (TIER > 3 && o.dam) { world.dam = o.dam; grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
+window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { pass(o.years); LIFE.lapse(o.years); grow(1, 1); } if (TIER > 3 && o.strike) strike(); if (TIER > 3 && o.see !== undefined) fol = LIFE.herd.find((d) => d.kind === o.see && d.mode !== 9) || null; if (TIER > 3 && o.burn) { for (let i = 0; i < o.burn; i++) fire.step(0.5, f.wd, 0, Math.random, stand, G); grow(1, 1); } if (TIER > 3 && o.wolves) LIFE.pack(1); if (TIER > 3 && o.deep) { if (!G.ero) { G.ero = 1; grow(1, 1); } for (let i = 0; i < o.deep; i++) deep(); } if (TIER > 3 && o.walk) { walking(0); eye[0] = o.walk[0]; eye[2] = o.walk[1]; walking(1); yaw = o.yaw ?? yaw; pitch = o.pitch ?? 0; } if (TIER > 3 && o.back) for (let i = 0; i < o.back && tape.length; i++) unspool(tape.pop()); if (TIER > 3 && o.look) look(o.look[0], o.look[1]); if (TIER > 3 && o.at) { fz = 1; fly = [o.at, o.r || 0.35, o.yaw ?? yaw, o.pitch ?? max(0.02, pitch)]; } if (TIER > 3 && o.dam) { world.dam = o.dam; grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
 if (TIER > 3) Object.defineProperty(window.sylva, 'cam', { get: () => ({ tgt, rad, yaw, pitch, fz, fly, eye, fp, wp, ong, noise: LIFE.noise }) });   // for the headless checks
 requestAnimationFrame(frame);

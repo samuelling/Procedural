@@ -110,6 +110,7 @@ export const extra = () => {
   // further in: a hundred times smaller (a unit is a centimetre), and ten thousand times smaller (a tenth of a millimetre)
   const oakling = sp({ ...oak(0), id: 'oakling', nm: 'Oak seedling', sap: 0, H: [7, 18], cr: 5, clear: [0.25, 0.4], wet: 0.5, leaf: { ...oak(0).leaf, sz: 5.5, per: 3 } });
   const tinycap = sp({ ...haircap(0), id: 'tinycap', nm: 'Haircap moss', H: [1, 2.4], cr: 0.3, spo: 0, leaf: { ...haircap(0).leaf, sz: 0.12 } });
+  const pondweed = sp({ ...birch(0), id: 'pondweed', nm: 'Pondweed', sap: 0, H: [1.2, 2.8], cr: 0.5, wet: 0.9, rt: 0.002, dv: 2, fl: 0, clear: [0, 0.05], stub: 0, ax: [{ st: 0.3, tr: 0.5, to: 0.25 }, { st: 0.2, tr: 0.3, up: 0.2, to: 0.3, in: 0.25, wh: 1, ph: 137.5, an: [40, 30], len: 0.25, sh: 2 }], leaf: { t: 2, sz: 0.22, per: 14, o: 1, a: [0.1, 0.26, 0.05], b: [0.26, 0.42, 0.1], dr: 0.1 }, bark: { t: 3, sc: 0.2, a: [0.3, 0.4, 0.15], b: [0.15, 0.25, 0.08] } });
   extra.pool = { oak, birch, pine, spruce, giant, hemlock, maple, aspen, beech, alder, willow, larch, redwood, sp };   // for forests grown anywhere on Earth
   return {
     log: { nm: 'Rotting log', world: 'log', span: '64 cm', size: 64, blurb: 'A unit here is a centimetre: a hundred times smaller.',
@@ -127,6 +128,16 @@ export const extra = () => {
       air: { sun: [40, 150], fog: 0.004, haze: [0.72, 0.8, 0.9], sky: [0.3, 0.5, 0.8], wind: 0 },
       floor: { moss: 0, lit: [0.3, 0.3, 0.2], la: 0, fern: [0, 1], grass: [0, 1], shroom: 0, fa: [0.08, 0.3, 0.06], fb: [0.28, 0.5, 0.1], ga: [0.14, 0.32, 0.07], gb: [0.38, 0.52, 0.14], flower: 0 },
       trees: [], life: { deer: 0, birds: 0 } },
+    lake: { nm: 'Under the lake', world: 'lake', span: '64 m', size: 64, blurb: 'Below the surface of a lake in the valley, 8 m at its deepest. A unit is a metre again. Light fades and greens with depth; ripples above throw moving light on the bed.',
+      land: { amp: 0.6, f: 0.05, tilt: 0, rock: [14, 0.9], peb: 120, log: 6, stump: 2, ra: [0.35, 0.37, 0.33], rb: [0.15, 0.17, 0.15] },
+      air: { sun: [50, 140], fog: 0.16, haze: [0.04, 0.17, 0.18], sky: [0.06, 0.25, 0.3], wind: 0.25 },
+      floor: { moss: 0.3, lit: [0.18, 0.16, 0.08], la: 0.5, fern: [0, 1], grass: [500, 0.5], shroom: 0, fa: [0.08, 0.3, 0.06], fb: [0.28, 0.5, 0.1], ga: [0.1, 0.28, 0.08], gb: [0.25, 0.42, 0.12], flower: 0 },
+      trees: [pondweed(70)], life: { deer: 0, birds: 0, perch: 8, pike: 2 } },
+    cave: { nm: 'Cave', world: 'cave', span: '64 m', size: 64, blurb: 'A limestone cave, a unit a metre: passages dissolved along the bedding, a chamber whose roof has fallen in to the sky, stalactites over stalagmites where water drips. You carry a lamp.',
+      land: { amp: 0.3, f: 0.08, tilt: 0, rock: [12, 0.7], peb: 60, log: 0, stump: 0, ra: [0.62, 0.58, 0.5], rb: [0.35, 0.32, 0.27] },
+      air: { sun: [66, 160], fog: 0.001, haze: [0.02, 0.02, 0.025], sky: [0.3, 0.45, 0.7], wind: 0 },
+      floor: { moss: 0, lit: [0.2, 0.15, 0.1], la: 0, fern: [0, 1], grass: [0, 1], shroom: 0, fa: [0.08, 0.3, 0.06], fb: [0.28, 0.5, 0.1], ga: [0.14, 0.32, 0.07], gb: [0.38, 0.52, 0.14], flower: 0 },
+      trees: [], life: { deer: 0, birds: 0, bat: 6 } },
     bark: { nm: 'Under the bark', world: 'bark', span: '6.4 cm', size: 64, blurb: 'A unit here is a millimetre: a thousand times smaller, on a dead spruce where the bark has come away.',
       land: { amp: 0.1, f: 0.05, tilt: 0, rock: [0, 1], peb: 0, log: 0, stump: 0, ra: [0.6, 0.5, 0.4], rb: [0.3, 0.22, 0.15] },
       air: { sun: [38, 150], fog: 0.006, haze: [0.8, 0.76, 0.68], sky: [0.4, 0.55, 0.75], wind: 0 },

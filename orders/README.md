@@ -201,6 +201,33 @@ sandstone falls and are not measured for any one: unverified.
 land as raised to the last pass. Over them its mean height falls from 1.25 to 1.18 km, the lakes in its hollows go
 from 6% of it to 1.4% as rivers cut outlets, and its rivers lengthen. The stages are stages of wear, not measured years.
 
+## Under the lake, and into the rock (2 MB rung)
+
+Two worlds at the forest's own scale, a unit a metre. Walking into water too deep to wade, in any forest, takes you
+under; − brings you back up to the forest you came from. Both have buttons too.
+
+- **Under the lake.** 64 m of lake bed, 8 m at its deepest. Olive silt, sand rippled in the shallows, a film of algae,
+  sunken logs and boulders; pondweed (the tree grammar again: a soft stem and small leaves) stands up from the bed and
+  sways; lily pads float in the shallows, a few in flower. The light is the water's: dense green fog with no thinning
+  upward, sunlight tinted green and its beams faint, and moving caustics, the light the ripples gather and throw across
+  the bed, fading with depth. Looking up, the surface shows Snell's window: within 48.6° of straight up the sky,
+  bent and bright; beyond it the surface mirrors the dim water beneath. Perch shoal and pike hunt them (a pair of
+  pike, eight perch; over fourteen simulated years the pike caught eight). Fish swim between the bed and the surface
+  rather than on the ground, their tails sweeping, the perch barred, the pike long with its dorsal fin far back.
+- **The cave.** Limestone: the ground is the floor and the rock between passages; a second surface, drawn as rock and
+  carried a little past each passage's edge so it meets the rock's top, is the roof. Passages are tubes that wander
+  out from a chamber to the plot's edges, lens-shaped in section the way water-filled passages are, with side branches;
+  the chamber's roof has fallen in to the sky, so sunlight falls through a hole onto the floor. Where water drips, a
+  stalactite hangs and a stalagmite grows directly under it, joined into a column where the gap is small; soda straws
+  cluster on the roof; a pool lies in a hollow of the chamber floor. Walls are limestone in its beds with flowstone
+  banded down them, mud on the floor, moonmilk, and wet patches that shine in your lamp. Almost all the sky's light
+  is shut out underground, and you carry a lamp that falls off with the square of distance, so passages go dark a few
+  metres ahead. You start on foot; bats fly under the roof. It is a height field with a roof over it, so passages
+  cannot run one above another, and there is no way in from the forest yet: the button is the way in.
+
+**Into the gorge.** Walking now has a cliff rule: a rise of more than a metre at a step is a wall. You can drop into
+the gorge deep time has cut and walk its floor below the falls, but not climb its walls (F to float out).
+
 ## Anywhere on Earth (2 MB rung)
 
 Earth… opens a map of the world's climates. Click any land, choose how high to climb (0 to 5,000 m), and Grow here
@@ -266,6 +293,13 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Lake and cave: both grown clean and fourteen years of their animals run (perch 8 to 10 and pike 2 throughout; bats 4
+to 8); both seen in renders, the lake from its bed and looking up at the surface, the cave from the chamber floor in two
+directions (stalactites over stalagmites, columns, the skylight, the roof, a passage going dark). Not yet seen in a
+render: the fish themselves, the lily pads from below, the cave's pool, the bats, and walking into deep water to go
+under. Standing in the gorge after 5,000 years seen in a render looking downstream between its walls; the falls
+themselves still not framed head-on.
 
 Deep time: the falls' march and the gorge measured in node over 5,000 years; the gorge's layered walls and a sliver
 of white water seen in a render looking along it, but the falls have not been framed head-on in a render (the camera
