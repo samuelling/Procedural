@@ -10,8 +10,15 @@ export const WX3 = `
 uniform vec4 uWx, uSe;
 float gst(vec3 p) { return .5 + 1.2 * vn(p.xz * .035 - uT * .22 * uWd.xy); }               // gusts cross the plot as fronts
 float cn(vec2 p) { return .55 * vn(p) + .3 * vn(p * 2.3 + 7.) + .15 * vn(p * 5.1 + 3.); }
-// clouds are a sheet of noise 900 m up that drifts with the wind; cover decides how much of it is cloud
-float cdn(vec2 q) { return smoothstep(1.02 - uWx.z, 1.34 - uWx.z, cn(q * .0011 + uT * .004 * uWd.xy) + .22 * cn(q * .0043 - uT * .005) + .2); }
+// clouds are a sheet 900 m up that drifts with the wind; cover decides how much of it is cloud. The shape is noise
+// pushed about by noise (so the edges curl and billow instead of blurring), with fine detail eaten out of the thin edges
+float cf(vec2 p, int n) { float s = 0., a = .5; for (int i = 0; i < 6; i++) { if (i >= n) break; s += a * vn(p); p = mat2(1.62, 1.18, -1.18, 1.62) * p + 3.1; a *= .5; } return s; }
+float cdn(vec2 q) {
+  vec2 p = q * .0011 + uT * .004 * uWd.xy, w = vec2(cf(p * .6 + 11., 3), cf(p * .6 + 27., 3));
+  float c = cf(p + (w - .45) * 1.1, 5) * 1.12 + .2 * cf(q * .0043 - uT * .005, 3) + .3;
+  c -= (vn(p * 11. - uT * .03) * .6 + vn(p * 23.) * .4) * .16 * smoothstep(1.35 - uWx.z, 1.05 - uWx.z, c);
+  return smoothstep(1.02 - uWx.z, 1.22 - uWx.z, c);
+}
 float cshd(vec3 p) { vec2 q = (p.xz + uSun.xz / max(uSun.y, .1) * (900. - p.y)) * .0011 + uT * .004 * uWd.xy; return 1. - .85 * smoothstep(1.02 - uWx.z, 1.34 - uWx.z, .6 * vn(q) + .4 * vn(q * 2.3 + 7.) + .24); }   // a cloud's shadow, where the sun's ray to this point passes through it
 float star(vec3 d) { vec3 c = floor(d * 140.); return step(.9965, h3(c)) * smoothstep(.5, .0, length(fract(d * 140.) - .5)) * (.5 + .5 * sin(uT * 2. + h3(c + 3.) * 40.)); }
 vec3 skyc(vec3 d) {
@@ -24,9 +31,16 @@ vec3 skyc(vec3 d) {
   float rb = uWx.x * (1. - uWx.w) * smoothstep(.75, .4, uWx.z) * step(0., d.y);                                    // wet air, sun out: a rainbow, 42 degrees round the point opposite the sun
   if (rb > .01) { float t = (acos(clamp(-dot(d, uSun), -1., 1.)) - .7) / .045; c += rb * .35 * (.5 + .5 * cos(6.283 * (t * .8 + vec3(0., .33, .67)))) * smoothstep(0., .25, t) * smoothstep(1., .75, t) * length(uSunC) * .4; }         // night: stars (the moon is the light itself, so the sky already draws its disc)
   if (d.y < .015) return c;
-  vec2 q = uCam.xz + d.xz / d.y * 900.; float a = cdn(q), b = cdn(q + uSun.xz * 300.);   // b: how much cloud lies between this one and the sun
-  vec3 cc = mix(uSunC * .32 + uSkyC * .75 + .04, (uSkyC + uHorC) * .3, clamp(b * 1.2 + uWx.z * .45 - .2, 0., 1.));
-  return mix(c, cc, a * smoothstep(.015, .14, d.y));
+  vec2 q = uCam.xz + d.xz / d.y * 900.; float a = cdn(q);
+  if (a < .002) return c;
+  vec2 sx = uSun.xz / max(length(uSun.xz), .05);
+  float b = .55 * cdn(q + sx * 90.) + .45 * cdn(q + sx * 260.), mu = max(dot(d, uSun), 0.);   // b: how much cloud lies toward the sun from here, so how deep in its own shade
+  vec3 top = uSunC * .62 + uSkyC * .55 + .05, und = (uSkyC * .5 + uHorC * .45) * (.55 - .25 * uWx.z);   // a sunlit top, a grey belly lit by the sky
+  float ins = clamp(b * 1.15 + a * .35 + uWx.z * .5 - .3, 0., 1.);
+  vec3 cc = mix(top, und, ins * ins * (3. - 2. * ins));
+  cc += uSunC * (pow(mu, 10.) * .5 + pow(mu, 60.) * 1.4) * (1. - a) * (1. - ins * .7);   // the thin edges toward the sun light up
+  cc = mix(cc, sky(d) * .92 + uHorC * .08, 1. - smoothstep(.02, .3, d.y));   // and far off they sink into the haze
+  return mix(c, cc, min(1., a * 1.15) * smoothstep(.012, .1, d.y));
 }
 vec3 wxa(vec3 a, vec3 p, vec3 n) {
   a *= 1. - .42 * uWx.x;                                                   // wet things are darker

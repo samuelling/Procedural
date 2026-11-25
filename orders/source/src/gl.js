@@ -272,7 +272,7 @@ export function mkRenderer(canvas, low) {
     const U = { p }; for (const n of [...COMMON, ...names]) U[n] = gl.getUniformLocation(p, n); return U;
   };
   const PC = prog(CAPV, CAPF, ['uBA', 'uBB', 'uBP', ...(TIER > 3 ? ['uLB'] : [])]), PCS = prog(CAPV, CAPS), PM = prog(MSHV, MSHF, ['uMat', 'uRA', 'uRB', 'uLit', 'uLa', ...(TIER > 3 ? ['uNdl', 'uFor', 'uLeaf', 'uStr', 'uTl'] : [])]), PMS = prog(MSHV, NONE, ['uMat']);
-  const PK = prog(CRDV, CRDF, ['uLA', 'uLB']), PKS = prog(CRDV, CRDS), PSK = prog(QV, SKYF), PR = prog(QV, RAYF, ['uA']), PD = prog(QV, DOWN, ['uA', 'uP']), PP = prog(QV, POST, ['uA', 'uB', 'uC', 'uD', 'uG', 'uP', 'uO', 'uSC']);
+  const PK = prog(CRDV, CRDF, ['uLA', 'uLB']), PKS = prog(CRDV, CRDS), PSK = prog(QV, SKYF), PR = prog(QV, RAYF, ['uA']), PD = prog(QV, DOWN, ['uA', 'uP']), PP = prog(QV, TIER > 3 ? POST.replace(/(vec3 c\s*=)/, 'k*=1.-.85*step(.995,S.a);$1') : POST, ['uA', 'uB', 'uC', 'uD', 'uG', 'uP', 'uO', 'uSC']);
   const tex = (f) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
   // shadow map
   const sm = tex(gl.LINEAR), smf = gl.createFramebuffer();
