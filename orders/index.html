@@ -1,38 +1,91 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Orders of Magnitude: a forest</title>
+<title>Orders of Magnitude: one forest, five sizes</title>
 <style>
-:root { --field: #0a0d0a; --ink: #f1f3ea; --dim: #b9c0ad; --line: rgba(241,243,234,.2); --sun: #ffc457; }
+:root { --field: #0d120d; --ink: #eef0e2; --dim: #a9b19c; --line: rgba(238,240,226,.16); --amber: #e8b25a; --lichen: #a8c99a; --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--field); color: var(--ink); font: 400 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; }
-main { max-width: 760px; margin: 0 auto; padding: 56px 20px 80px; }
-h1 { margin: 0 0 8px; font: italic 600 34px/1.1 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
-.lede { margin: 0 0 36px; color: var(--dim); max-width: 60ch; text-wrap: pretty; }
-ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-li { border-bottom: 1px solid var(--line); }
-li a, li.off { display: block; padding: 20px 4px; color: inherit; text-decoration: none; }
-li a:hover, li a:focus-visible { background: rgba(241,243,234,.05); outline: none; }
-.h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
-.h b { font: 600 22px/1.1 ui-monospace, Menlo, Consolas, monospace; min-width: 5.2em; font-variant-numeric: tabular-nums; }
-.h span { font: italic 500 19px/1.2 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
-.h em { margin-left: auto; font: 400 12px/1.2 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); font-style: normal; font-variant-numeric: tabular-nums; }
-.bar { height: 5px; margin: 12px 0 10px; background: rgba(241,243,234,.1); }
-.bar i { display: block; height: 100%; background: var(--sun); }
-li p { margin: 0; color: var(--dim); font-size: 14px; max-width: 68ch; text-wrap: pretty; }
-.off { opacity: .5; }
-.story { margin: -12px 0 32px; } .story a { display: block; padding: 14px 16px; border: 1px solid var(--sun); color: var(--ink); text-decoration: none; font-weight: 600; } .story a:hover { background: rgba(255,196,87,.08); } .story span { display: block; font-weight: 400; font-size: 14px; color: var(--dim); }
-footer { margin-top: 32px; color: var(--dim); font-size: 13px; max-width: 68ch; text-wrap: pretty; }
+html { background: var(--field); }
+body { margin: 0; background: radial-gradient(1400px 700px at 20% 0%, #1a2418 0%, rgba(13,18,13,0) 70%) no-repeat; color: var(--ink); font: 400 16px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 64px 22px 90px; }
+header { max-width: 640px; margin-bottom: 44px; }
+h1 { margin: 0 0 14px; font: italic 600 clamp(40px, 7vw, 64px)/1 var(--serif); letter-spacing: -.01em; }
+h1 small { display: block; margin-top: 10px; font: italic 400 clamp(19px, 2.6vw, 24px)/1.2 var(--serif); color: var(--lichen); letter-spacing: 0; }
+.lede { margin: 0 0 22px; font-size: 17px; color: var(--ink); text-wrap: pretty; }
+.story { display: inline-block; padding: 10px 18px; border: 1px solid var(--amber); border-radius: 999px; color: var(--ink); text-decoration: none; font: italic 500 17px/1.2 var(--serif); }
+.story:hover, .story:focus-visible { background: var(--amber); color: #1b160c; outline: none; }
+.rung { display: grid; grid-template-columns: minmax(0, var(--w)) minmax(260px, 1fr); gap: 22px 28px; align-items: start; }
+.r4 { grid-template-columns: 1fr; }
+.pic { position: relative; display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+.pic img { display: block; width: 100%; height: auto; transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+.pic span { position: absolute; right: 10px; bottom: 10px; padding: 5px 11px; border-radius: 999px; background: rgba(13,18,13,.72); font: italic 500 14px/1 var(--serif); opacity: 0; transition: opacity .2s; }
+.pic:hover img, .pic:focus-visible img { transform: scale(1.04); } .pic:hover span, .pic:focus-visible span { opacity: 1; }
+.pic:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+h2 { margin: 0 0 8px; font: italic 500 clamp(22px, 3vw, 28px)/1.15 var(--serif); }
+h2 a { color: inherit; text-decoration: none; } h2 a:hover { color: var(--amber); }
+h2 b { display: block; font: 700 clamp(30px, 5vw, 44px)/1 var(--serif); font-style: normal; color: var(--amber); margin-bottom: 4px; font-variant-numeric: lining-nums; }
+.line { margin: 0 0 14px; max-width: 54ch; text-wrap: pretty; }
+.fill p { margin: 6px 0 0; font-size: 13px; color: var(--dim); } .fill b { color: var(--ink); font-weight: 600; }
+.jar { height: 8px; max-width: 320px; border-radius: 999px; background: rgba(238,240,226,.1); overflow: hidden; }
+.jar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--lichen), var(--amber)); }
+.code { margin: 16px 0 0; } .code figcaption { font: italic 400 14px/1 var(--serif); color: var(--lichen); margin-bottom: 6px; }
+.code code { display: block; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid var(--line); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); word-break: break-all; }
+.try { margin-top: 16px; } .try p { margin: 0 0 6px; font: italic 400 15px/1 var(--serif); color: var(--lichen); }
+.try ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.try li { padding-left: 20px; position: relative; font-size: 14.5px; max-width: 60ch; text-wrap: pretty; }
+.try li::before { content: ''; position: absolute; left: 3px; top: .55em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--amber); }
+.try b { font-weight: 600; color: var(--ink); }
+.r4 .txt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 36px; } .r4 .txt > h2, .r4 .txt > .line, .r4 .txt > .fill { grid-column: 1; } .r4 .try { grid-column: 2; grid-row: 1 / span 3; margin-top: 4px; } .r4 details { grid-column: 1 / -1; }
+details { margin-top: 22px; border-top: 1px solid var(--line); }
+summary { cursor: pointer; padding: 14px 0; font: italic 500 18px/1.2 var(--serif); color: var(--ink); list-style: none; }
+summary::-webkit-details-marker { display: none; } summary::after { content: ' +'; color: var(--amber); } details[open] summary::after { content: ' −'; }
+summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 28px; }
+dt { font: italic 600 16px/1.2 var(--serif); color: var(--lichen); } dd { margin: 4px 0 0; font-size: 14px; color: var(--dim); text-wrap: pretty; }
+.step { position: relative; height: 74px; }
+.step::before { content: ''; position: absolute; left: 18px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(var(--line), var(--amber), var(--line)); }
+.step span { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); font: italic 400 14px/1 var(--serif); color: var(--lichen); }
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; max-width: 70ch; text-wrap: pretty; }
 footer a { color: var(--ink); }
+@media (max-width: 720px) {
+  .rung { grid-template-columns: 1fr; } .pic { width: var(--w); min-width: 46%; }
+  .r4 .txt { display: block; } .step { height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) { .pic img { transition: none; } }
 </style></head><body><main>
-<h1>Orders of Magnitude</h1>
-<p class="lede">The same subject, a forest, at five sizes. Each rung is one page that must fit its allowance whole: program, numbers and unpacker. No stored images, models or sound. The bar shows how much of the allowance the rung really uses.</p>
-<p class="story"><a href="story/">What’s happening… <span>order by order: what each rung had to cut, how the top one was filled, and the two agents who argued it out</span></a></p>
-<ol>
-<li><a href="0.2kb/"><div class="h"><b>0.2 kB</b><span>One formula</span><em>198 of 200 bytes · 99.0%</em></div><div class="bar"><i style="width:99.00%"></i></div><p>Eighty firs in mist. One loop draws every tree as stacked bars; size, height and paleness all come from the tree&#x27;s index.</p></a></li>
-<li><a href="2kb/"><div class="h"><b>2 kB</b><span>One shader</span><em>1,670 of 2,000 bytes · 83.5%</em></div><div class="bar"><i style="width:83.50%"></i></div><p>Ten rows of trees computed per pixel: conifers with drooping tiers, ragged broadleaves, birches, boulders, mushrooms, grass, sun shafts with dust, falling leaves, a deer walking through. It drifts sideways forever.</p></a></li>
-<li><a href="20kb/"><div class="h"><b>20 kB</b><span>A genome and a grammar</span><em>19,960 of 20,000 bytes · 99.8%</em></div><div class="bar"><i style="width:99.80%"></i></div><p>Sylva: real 3D. Four biomes, eight species grown branch by branch, pipe-model trunks, moss as a rule, stones, logs, ferns, sun shadows, fog, light shafts, depth of field, wind and birdsong.</p></a></li>
-<li><a href="200kb/"><div class="h"><b>200 kB</b><span>The whole world, seen coarser</span><em>192,492 of 200,000 bytes · 96.2%</em></div><div class="bar"><i style="width:96.25%"></i></div><p>Everything the 2 MB rung does, with the Earth seen from further off. The whole program (lives and deaths, succession, fire, nine past ages, caves, the zoom from a mountain range to the underside of a leaf through a window into the next world) is about 90 kB. The rest is the same measured grids, each value the mean of a block and stored once: climate in 3° blocks, heights and tree ranges in 1.5°, climate classes in half degrees. Click anywhere on Earth and the forest grown is that place as a 300 km cell sees it.</p></a></li>
-<li><a href="2mb/"><div class="h"><b>2 MB</b><span>A world that keeps time and place</span><em>1,744,577 of 2,000,000 bytes · 87.2%</em></div><div class="bar"><i style="width:87.23%"></i></div><p>A forest that keeps time, where things act on each other. Animals carry hunger, thirst, tiredness, an age and two inherited genes: does drop fawns in spring, the stag grows antlers and roars, the fox runs down hares, a wolf pack pulls down deer, the old and the starved die and the birds wheel over them. Deer browse seedlings, so the wood only renews itself when wolves keep the deer down. Beavers fell young trees, raise a dam and drown a stand under their pond. Lightning sets dry woods alight: fire runs on the wind, stops at water and wet ground, spares thick-barked trees, and pioneers seed into the ash. Trees have lifespans, growth rates and shade tolerance and hand a pace of life to their seedlings, so over centuries the stand both changes and evolves. A chronicle reports it all and the camera can follow anyone with a name. Plus night, aurora, four seasons, flowers, insects, frogs, dives in to a rotting log (×100) and further, forests of nine other ages from the Devonian’s first trees and the coal swamps’ scale trees to sauropods, mammoths and the wildwood, a kelp forest, a 3D limestone cave entered from a mouth in every forest, under the lake (caustics, Snell’s window, perch and pike), a limestone cave with a lamp, deep time (a stream cutting back from a fault: a waterfall walks upstream through the plot and leaves a gorge), rewind and fast forward, anywhere on Earth (a map of the measured climate classes: click a place and a forest is grown on its measured ground from its measured months, ETOPO 2022 and CRU CL 2.0, about 1.5 MB of the page: heights, months, humidity, diurnal range, wet days and sunshine), the place’s year at every scale (snow, leaf fall, dew and rime, a soil-water bucket, daily weather from the measured wet days), the horizon out to 120 km, a fallen leaf at the foot of the ladder, a mountain range 640 km across worn down by its own rivers (on Earth, the real 640 km round the place), one world through the scales (the plot waits while you dive; you dive at a real log of its own species; the range is the plot’s surroundings), one continuous zoom from it down to a leaf, under the bark (×1000: engraver beetle galleries with grubs and pupae, honey fungus, checkered beetles), soil (×10,000: fungal threads, root hairs, moulds, nematodes, tardigrades), the underside of a leaf (×100,000: jigsaw cells, stomata, hairs, pollen, spider mites and the mites that hunt them), a valley 6 km across around the plot (ridges, river, lake, forest to the treeline), walking in first person with footsteps and animals that hear you, close detail that appears as you come near (double-click anything: leaf veins, single needles, lichens, gills, dew at dawn, litter, mineral grains, a ladybird or two), deer that remember where wolves killed, storms, gales, trees that evolve into new species (with a tree of life),  orb webs, nests, bracket fungi and beard lichen, mast years with jays planting oaks, a bird table by forest and six more forests. And the first step of powers of ten: the same grammar a thousand times smaller, a 6.4 cm square of moss where springtails are hunted by mites and the moss is in fruit.</p></a></li>
-</ol>
-<footer>The three small rungs are full. The 200 kB rung holds what was asked for at that order and no more. The 2 MB rung is about 89 kB of program; the rest is measured Earth (heights, climate, tree ranges), chosen round by round in a dialogue between two agents: see What’s happening. Rungs from 2 kB up unpack themselves in the browser, so they need to be served from a web address rather than opened as a file. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
+<header>
+<h1>Orders of Magnitude<small>one forest, five sizes</small></h1>
+<p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules. At the top there are also measurements of the real Earth. Smallest first:</p>
+<a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a>
+</header>
+<section class="rung r0" style="--w:30%">
+<a class="pic" href="0.2kb/"><img src="thumbs/0.2kb.webp" alt="" loading="eager" width="720" height="450"><span>Open ↗</span></a>
+<div class="txt"><h2><a href="0.2kb/"><b>0.2 kB</b> One formula</a></h2>
+<p class="line">Eighty firs fading into mist, from one loop. Each tree’s size, height and paleness come from its number in the line.</p>
+<div class="fill"><div class="jar"><i style="width:99.00%"></i></div><p><b>99.0% full</b> · 198 of 200 bytes, about a text message and a half</p></div>
+<figure class="code"><figcaption>All of it:</figcaption><code>&lt;canvas id=c width=900 height=500&gt;&lt;svg onload=&quot;for(q=c.getContext`2d`,i=0;i&lt;80;i++)for(q.fillStyle=`hsl(120,15%,${90-i}%)`,j=28;j--;)q.fillRect(i*i*7%900-(w=(j%4+j/4)*(s=i*i/500))/2,240-i+j*s,w,s)&quot;&gt;</code></figure></div></section>
+<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r1" style="--w:42%">
+<a class="pic" href="2kb/"><img src="thumbs/2kb.webp" alt="" loading="eager" width="720" height="450"><span>Open ↗</span></a>
+<div class="txt"><h2><a href="2kb/"><b>2 kB</b> One shader</a></h2>
+<p class="line">Every pixel works out which tree it falls on. Ten rows of conifers, birches and oaks, sun shafts with dust in them, leaves falling, and now and then a deer.</p>
+<div class="fill"><div class="jar"><i style="width:83.50%"></i></div><p><b>83.5% full</b> · 1,670 of 2,000 bytes, about a page of a paperback</p></div>
+<div class="try"><p>Try</p><ul><li>Just watch. It drifts sideways forever, and the deer is in no hurry.</li></ul></div></div></section>
+<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r2" style="--w:58%">
+<a class="pic" href="20kb/"><img src="thumbs/20kb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
+<div class="txt"><h2><a href="20kb/"><b>20 kB</b> A genome and a grammar</a></h2>
+<p class="line">Real 3D. Trees grown branch by branch from a genome, with moss where the rain runs, shadows, fog, wind and birdsong.</p>
+<div class="fill"><div class="jar"><i style="width:99.80%"></i></div><p><b>99.8% full</b> · 19,960 of 20,000 bytes, a short story</p></div>
+<div class="try"><p>Try</p><ul><li>Switch forests, then <b>Reseed</b> for a new one. No two are the same.</li></ul></div></div></section>
+<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r3" style="--w:78%">
+<a class="pic" href="200kb/"><img src="thumbs/200kb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
+<div class="txt"><h2><a href="200kb/"><b>200 kB</b> The whole world, seen coarser</a></h2>
+<p class="line">Everything the top rung does: every animal, every age, every scale. Only the Earth is blurrier, measured in 300 km squares.</p>
+<div class="fill"><div class="jar"><i style="width:96.25%"></i></div><p><b>96.2% full</b> · 192,492 of 200,000 bytes, a novella</p></div>
+<div class="try"><p>Try</p><ul><li>Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time</li><li><b>Places → Anywhere on Earth</b>, then click where you grew up</li></ul></div></div></section>
+<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r4" style="--w:100%">
+<a class="pic" href="2mb/"><img src="thumbs/2mb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
+<div class="txt"><h2><a href="2mb/"><b>2 MB</b> A world that keeps time and place</a></h2>
+<p class="line">A forest where things happen to each other, from 640 km of mountains down to the mites on a leaf, grown on the real climate of anywhere you click.</p>
+<div class="fill"><div class="jar"><i style="width:87.23%"></i></div><p><b>87.2% full</b> · 1,744,577 of 2,000,000 bytes, one photo from your phone</p></div>
+<div class="try"><p>Try</p><ul><li>Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time</li><li><b>Places → Anywhere on Earth</b>, then click where you grew up</li><li><b>Happenings → Wolves</b>, then <b>Time → Fast forward</b>, and watch the seedlings come back</li><li><b>Places → Another age</b>, and stand among the coal swamps’ scale trees</li></ul></div><details><summary>Everything in it</summary><dl><dt>Lives</dt><dd>Deer, wolves, foxes, hares, beavers and birds, each with hunger, an age and two inherited genes. Does fawn in spring, stags roar, wolves hunt, deer remember where the kills were.</dd><dt>A wood that changes</dt><dd>Trees grow, age, fall and burn. Lightning fires run on the wind and stop at water. Beavers drown a stand under their pond. Over centuries the trees evolve into new species, with a tree of life to prove it.</dd><dt>Time</dt><dd>Day and night, aurora, four seasons, storms. Rewind and fast forward. Nine other ages, from the first trees of the Devonian to mammoths and the wildwood.</dd><dt>Places</dt><dd>Anywhere on Earth, from measured heights, months, rain and tree ranges. Ten forests, a kelp forest, under a lake, inside a limestone cave.</dd><dt>Scales</dt><dd>Mountain range, plot, rotting log, moss or under the bark, soil, the underside of a leaf: ten times smaller each step, each world seen through a window into the next.</dd><dt>Look closer</dt><dd>Walk it on foot, with animals that hear you coming. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.</dd></dl></details></div></section>
+<footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Little’s range maps (USGS) and Caudullo et al. 2017; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
 </main></body></html>
