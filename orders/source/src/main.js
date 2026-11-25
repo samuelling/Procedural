@@ -5,7 +5,7 @@ import { rng } from './noise.js';
 import { mkRenderer, pick } from './gl.js';
 import { mkAudio } from './audio.js';
 import { mkLife, MORE, succeed, mkFire } from './fx.js';
-import { place, earthGenome, kg, KCOL } from './earth.js';
+import { place, earthGenome, kg, KCOL, ready } from './earth.js';
 
 const { sin, cos, tan, asin, min, max, round, exp, hypot, pow, PI } = Math, RAD = PI / 180, $ = (id) => document.getElementById(id);
 const canvas = $('c'), clamp = (x, a, b) => min(b, max(a, x)), mix3 = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -78,7 +78,7 @@ if (TIER > 3) { Object.assign(GENOMES, extra()); GENOMES.boreal.air.aur = GENOME
 const m = (TIER > 3 ? /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?(?:@(-?[\d.]+),(-?[\d.]+),(\d+))?$/ : /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?$/).exec(location.hash);
 let here = null;   // the place on Earth, once one is chosen
 const earthAt = (lat, lon, climb) => { here = place(lat, lon, climb); if (here) GENOMES.earth = earthGenome(here, GENOMES, extra.pool); return here; };
-if (TIER > 3 && m && m[1] === 'earth' && m[5]) earthAt(+m[5], +m[6], +m[7]);
+if (TIER > 3 && m && m[1] === 'earth' && m[5]) { earthAt(+m[5], +m[6], +m[7]); ready.then(() => { if (key === 'earth' && earthAt(+m[5], +m[6], +m[7])) grow(); }); }   // grown at once from the sketch, then again from the measured grids as soon as they are in
 if (m && GENOMES[m[1]]) { key = m[1]; seed = +m[2]; mut = +(m[3] || 0); den = clamp(+(m[4] || 100) / 100, 0.25, 2); }
 
 function lookAt(M, e, t) {

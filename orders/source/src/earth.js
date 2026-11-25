@@ -5,6 +5,13 @@
 //             place is tropical, dry, temperate, continental or polar, how wet its dry season is, and how warm its
 //             summer. The coastline is the same grid's land and sea.
 //   computed  day length and the sun's path, from the latitude and the date (the usual solar geometry).
+//   measured  the height of the ground: the mean of the land in each quarter-degree cell and its lowest point, from
+//             ETOPO 2022 (NOAA NCEI); a plot stands at the lowest point, a valley floor in the mountains.
+//   measured  twelve monthly temperatures and rainfalls, 1961-90 normals on a half-degree grid from CRU CL 2.0
+//             (Climatic Research Unit, University of East Anglia, ODbL), the temperatures carried from sea level to
+//             the ground at 6.5 °C a kilometre; then nudged as little as possible (a shift, a stretch of the yearly
+//             swing, a scaling of the rain) until the Köppen rules give the measured class, since the class map is a
+//             later period and a finer grid. Where CRU has no cell (Antarctica), the old sketch:
 //   modelled  twelve monthly temperatures and rainfalls: a zonal sketch (warmth by latitude, a yearly swing that grows
 //             with latitude and with distance from the sea upwind, rain belts by latitude), then nudged as little as
 //             possible until the Köppen rules give the measured class. So the numbers are the class's, made
@@ -13,6 +20,22 @@
 //   tables    soils, which trees grow, and their names by region, from general knowledge: unverified sketches.
 /* global TIER */
 import { KG } from './kg.js';
+import { DATA } from './data.js';
+
+// the measured grids (see tools/pack_data.py), inflated by the browser once the page has loaded
+let ELM = null, ELN = null, CI = null, CT = null, CP = null;
+const hq = (q) => (q / 255) ** 2 * 7500 - 500;
+export const ready = TIER > 3 && new Response(new Blob([Uint8Array.from(atob(DATA), (c) => c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer().then((b) => {
+  const u = new Uint8Array(b), g = kg(), E = Math.expm1, L = Math.log1p(2500); let o = 32400, n = 0;
+  CI = new Int32Array(259200).fill(-1); for (let q = 0; q < 259200; q++) if ((u[q >> 3] >> (7 - (q & 7))) & 1) CI[q] = n++;
+  const Q = new Uint8Array(n * 24); for (let k = 0; k < 24; k++) for (let c = 0, v = 0; c < n; c++) { v = (v + u[o++]) & 255; Q[c * 24 + k] = v; }
+  CT = new Float32Array(n * 12); CP = new Float32Array(n * 12);
+  for (let c = 0; c < n; c++) for (let k = 0, t = 0, p = 0; k < 12; k++) { t = (t + Q[c * 24 + k]) & 255; p = (p + Q[c * 24 + 12 + k]) & 255; CT[c * 12 + k] = t / 2 - 60; CP[c * 12 + k] = E(p / 255 * L); }
+  const pl = () => { const q = new Uint8Array(1036800); for (let j = 0; j < 720; j++) for (let i = 0, P = 0; i < 1440; i++) { const x = j * 1440 + i; if (g[x]) { P = (P + u[o++]) & 255; q[x] = P; } else P = 0; } return q; };
+  ELM = pl(); ELN = pl();
+});
+// the measured mean height of the land (m) near a point, or null at sea or before the grids are in
+export const elev = (lat, lon) => { if (!ELM) return null; const [j, i] = cell(lat, lon), x = j * 1440 + i; return kg()[x] ? hq(ELM[x]) : null; };
 
 export const KC = ['Af', 'Am', 'As', 'Aw', 'BSh', 'BSk', 'BWh', 'BWk', 'Cfa', 'Cfb', 'Cfc', 'Csa', 'Csb', 'Csc', 'Cwa', 'Cwb', 'Cwc', 'Dfa', 'Dfb', 'Dfc', 'Dfd', 'Dsa', 'Dsb', 'Dsc', 'Dsd', 'Dwa', 'Dwb', 'Dwc', 'Dwd', 'EF', 'ET'];
 // the usual colours of Köppen maps, by class (approximate), and sea
@@ -50,9 +73,23 @@ export function place(lat, lon, climb = 0) {
   if (!k) return null;
   lat = 90 - (j + 0.5) / 4; lon = (i + 0.5) / 4 - 180;
   const code = KC[k - 1], south = lat < 0, al = abs(lat), ck = cos(lat * RAD) * 27.8;
+  const hf = ELN ? hq(ELN[j * 1440 + i]) : null, hm = ELM ? hq(ELM[j * 1440 + i]) : null;
+  let mT = null, mP = null, nud = null;
+  if (CT) {                                                                  // the measured months of the nearest half-degree cell
+    const j2 = j >> 1, i2 = i >> 1; let c = CI[j2 * 720 + i2];
+    for (let r = 1; c < 0 && r < 4; r++) for (let a = -r; a <= r && c < 0; a++) for (const [y, x] of [[j2 - r, i2 + a], [j2 + r, i2 + a], [j2 + a, i2 - r], [j2 + a, i2 + r]]) if (y >= 0 && y < 360 && CI[y * 720 + ((x % 720) + 720) % 720] >= 0) { c = CI[y * 720 + ((x % 720) + 720) % 720]; break; }
+    if (c >= 0) { const g0 = max(hf, 0) / 1000; mT = [...CT.subarray(c * 12, c * 12 + 12)].map((t) => t - 6.5 * g0); mP = [...CP.subarray(c * 12, c * 12 + 12)]; }
+  }
   let dn = 61; for (let r = 1; r < 61 && dn > 60; r++) for (let a = -r; a <= r; a++) if (!at(j - r, i + a) || !at(j + r, i + a) || !at(j + a, i - r) || !at(j + a, i + r)) { dn = r; break; }   // to the nearest sea
   const wf = al > 30 && al < 72 ? -1 : 1; let du = 0; while (du < 700 && at(j, i + wf * (du + 1))) du++;   // to the sea upwind: west in the westerlies, east in the trades
   const c = cl(0.65 * (1 - exp(-du * ck / 1500)) + 0.35 * (1 - exp(-dn * 27.8 / 500)), 0, 1);
+  let Ta, A, Pa, s, fit, T, P;
+  if (mT) {                                                                  // nudged to the class: the smallest shift, stretch and rain scaling that agree
+    const Tm = mT.reduce((x, y) => x + y) / 12; let bc = koppen(mT, mP, south) === code ? 0 : 1e9; nud = bc ? null : [0, 1, 1];
+    for (let dT = -10; bc && dT <= 10; dT += 0.25) for (let a = 0.7; a < 1.45; a *= 1.05) { const c0 = (dT / 2) ** 2 + 5 * log(a) ** 2; if (c0 >= bc) continue; const Tn = mT.map((t) => Tm + a * (t - Tm) + dT);
+      for (let pp = 0.25; pp < 4; pp *= 1.08) { const cost = c0 + 2 * log(pp) ** 2; if (cost >= bc) continue; if (koppen(Tn, mP.map((x) => x * pp), south) === code) { bc = cost; nud = [dT, a, pp]; } } }
+    const [dT, a, pp] = nud || [0, 1, 1]; T = mT.map((t) => Tm + a * (t - Tm) + dT); P = mP.map((x) => x * pp); fit = !!nud;
+  } else {
   // the sketch
   const T0 = 27 - 0.0085 * al * al + (wf < 0 && !south ? 8 * (1 - c) ** 2 * exp(-(((al - 55) / 12) ** 2)) : 0) - (lat < -62 ? 15 : 0), A0 = 1 + 0.012 * al ** 1.75 * (0.3 + 1.4 * c) * (south ? 0.6 : 1);
   const P0 = (2300 * exp(-(((lat - 1) / 12) ** 2)) + 1000 * exp(-(((al - 50) / 13) ** 2)) + 250) * (1.25 - 0.65 * c), s0 = al < 28 ? 0.8 * cl(al / 12, 0, 1) : al < 46 && c < 0.35 && wf < 0 ? -0.6 : 0.35 * c;
@@ -61,13 +98,15 @@ export function place(lat, lon, climb = 0) {
   const tOK = (T) => { const t = koppen(T, T.map(() => 300), south); return code[0] === 'B' ? max(...T) >= 10 && (T.reduce((a, b) => a + b) / 12 >= 18) === (code[2] === 'h') : code[0] === 'E' ? t === code : t[0] === code[0] && (code[0] === 'A' || t[2] === code[2]); };
   let best = null, bc = 1e9;
   for (let dT = -24; dT <= 24; dT += 0.5) for (let a = 0.2; a < 3.2; a *= 1.12) { const cost = (dT / 4) ** 2 + log(a) ** 2 * 5; if (cost >= bc) continue; const [T] = series(T0 + dT, A0 * a, 0, 0, south); if (tOK(T)) { bc = cost; best = [T0 + dT, A0 * a]; } }
-  const [Ta, A] = best || [T0, A0], Pr = code[0] === 'B' ? (2 * Ta + 14) * (code[1] === 'W' ? 1.5 : 7) : P0; best = null; bc = 1e9;
+  [Ta, A] = best || [T0, A0]; const Pr = code[0] === 'B' ? (2 * Ta + 14) * (code[1] === 'W' ? 1.5 : 7) : P0; best = null; bc = 1e9;
   for (let p = 0.04; p < 12; p *= 1.09) for (let s = -0.95; s <= 0.951; s += 0.05) { const cost = log(p) ** 2 + (s - s0) ** 2 * 2; if (cost >= bc) continue; const [T, P] = series(Ta, A, Pr * p, s, south); if (koppen(T, P, south) === code) { bc = cost; best = [Pr * p, s]; } }
-  const [Pa, s] = best || [Pr, s0], fit = !!best;
-  let [T, P] = series(Ta, A, Pa, s, south); const km = climb / 1000;
+  [Pa, s] = best || [Pr, s0]; fit = !!best;
+  [T, P] = series(Ta, A, Pa, s, south); }
+  const km = climb / 1000;
   T = T.map((t) => t - 6.5 * km); P = P.map((p) => p * (1 + 0.3 * min(km, 3)));
   const now = koppen(T, P, south), day = (d) => { const x = -Math.tan(lat * RAD) * Math.tan(d * RAD); return x >= 1 ? 0 : x <= -1 ? 24 : 24 / PI * acos(x); };
-  return { lat, lon, climb, code, now, fit, T, P, Ta: T.reduce((a, b) => a + b) / 12, Pa: P.reduce((a, b) => a + b), c, south, day: [day(south ? 23.44 : -23.44), day(south ? -23.44 : 23.44)] };
+  const tm = (max(...T) - 10) / 6.5, sm = max(0.3, (max(...T) - 1) / 6.5), g0 = (max(hf, 0) + climb) / 1000;   // the treeline where the warmest month falls to 10 °C; the snowline, roughly, where it falls to 1 °C
+  return { lat, lon, climb, code, now, fit, T, P, elev: hf, mean: hm, src: mT ? 'CRU' : 0, nud, tl: hf === null ? null : [tm * 1000, g0 + tm, sm * 1000, g0 + sm], Ta: T.reduce((a, b) => a + b) / 12, Pa: P.reduce((a, b) => a + b), c, south, day: [day(south ? 23.44 : -23.44), day(south ? -23.44 : 23.44)] };
 }
 
 // soils, by class and rainfall (unverified sketch): a name, and the colour of the soil and its litter
@@ -119,8 +158,8 @@ export function earthGenome(p, G0, pool) {
   trees = trees.map((t) => ({ ...t, n: max(t.n ? 1 : 0, round(t.n * (g === 'B' || g === 'E' ? 1 : cl(dens, 0.35, 1.15)))) }));
   const [snm, sc] = soil(p), B = G0[base], dry = g === 'B' || k[1] === 's' || k === 'Aw' || k === 'As', snow = cl(-Tmin / 5, 0, 1) * cl(p.Pa / 300, 0.2, 1);
   const lit = sc.map((v) => v * 1.3), grass = g === 'E' ? 900 : k[1] === 'S' || k === 'Aw' || k === 'As' ? 1400 : k[1] === 'W' ? 120 : B.floor.grass[0];
-  const lat = Math.abs(p.lat).toFixed(1) + '°' + (p.lat < 0 ? 'S' : 'N') + ' ' + Math.abs(p.lon).toFixed(1) + '°' + (p.lon < 0 ? 'W' : 'E'), hr = (h) => (h | 0) + ' h ' + String(round((h % 1) * 60)).padStart(2, '0');
-  const txt = lat + (p.climb ? ', ' + p.climb.toLocaleString() + ' m up' : '') + ' · ' + p.now + ' ' + describe(p.now) + (p.now !== p.code ? ' (' + p.code + ' at the foot)' : ' (measured)') + ' · ' + p.Ta.toFixed(1) + ' °C a year, ' + round(min(...p.T)) + ' to ' + round(Tmax) + ' by month, ' + round(p.Pa).toLocaleString() + ' mm (modelled) · daylight ' + hr(p.day[0]) + ' in ' + (p.south ? 'June' : 'December') + ', ' + hr(p.day[1]) + ' in ' + (p.south ? 'December' : 'June') + ' · ' + snm;
+  const lat = Math.abs(p.lat).toFixed(1) + '°' + (p.lat < 0 ? 'S' : 'N') + ' ' + Math.abs(p.lon).toFixed(1) + '°' + (p.lon < 0 ? 'W' : 'E'), hr = (h) => { const m = round(h * 60); return ((m / 60) | 0) + ' h ' + String(m % 60).padStart(2, '0'); };
+  const txt = lat + (p.climb ? ', ' + p.climb.toLocaleString() + ' m up' : '') + ' · ' + p.now + ' ' + describe(p.now) + (p.now !== p.code ? ' (' + p.code + ' at the foot)' : ' (measured)') + ' · ' + p.Ta.toFixed(1) + ' °C a year, ' + round(min(...p.T)) + ' to ' + round(Tmax) + ' by month, ' + round(p.Pa).toLocaleString() + ' mm' + (p.src ? ' (measured, CRU 1961–90' + (p.nud && (p.nud[0] || p.nud[1] !== 1 || p.nud[2] !== 1) ? ', nudged ' + (p.nud[0] >= 0 ? '+' : '') + p.nud[0] + ' °C, swing ×' + p.nud[1].toFixed(2) + ', rain ×' + p.nud[2].toFixed(2) + ' to fit the class' : '') + ')' : ' (modelled)') + (p.elev !== null && p.elev !== undefined ? ' · ground ' + round(max(p.elev, 0)).toLocaleString() + ' m (measured)' : '') + ' · daylight ' + hr(p.day[0]) + ' in ' + (p.south ? 'June' : 'December') + ', ' + hr(p.day[1]) + ' in ' + (p.south ? 'December' : 'June') + ' · ' + snm;
   return { ...B, nm: 'Earth, ' + lat, cl: { ...p, txt, snow, dec: g === 'A' ? (k === 'Aw' || k === 'As' ? 0.4 : 0) : k[1] === 's' || k === 'BSh' || k === 'BWh' ? 0.2 : (r === 'au' ? 0.1 : 1), soil: sc },
     land: { ...B.land, stream: p.Pa > 700 && g !== 'B' && g !== 'E' ? [1.1, 6, 0.2, 4] : undefined, ra: dry ? [0.55, 0.45, 0.36] : B.land.ra, log: round(B.land.log * cl(dens, 0, 1)) },
     air: { ...B.air, fog: B.air.fog * (k === 'Af' || k === 'Am' ? 1.15 : dry ? 0.5 : 1), haze: dry ? [0.86, 0.8, 0.7] : B.air.haze, aur: abs(p.lat) > 58 ? 1 : 0 },

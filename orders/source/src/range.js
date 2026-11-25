@@ -8,16 +8,20 @@
 import { fbm } from './noise.js';
 
 const HIST = new Map();   // each range's wearing-down, kept a stage at a time so it can be played back
-export function rangeLand(rnd, hs, stage = 10) {
+// On Earth (E given: the measured mean height of the land in km at a point, or null at sea) the range is the 640 km
+// round the place instead: the measured heights raise it, ridged noise adds relief where the ground is high, the rivers
+// wear it as before, and then it is put back, cell by cell at the measured grid's scale, to the measured heights.
+export function rangeLand(rnd, hs, stage = 10, E = null, id = '') {
   const { sin, cos, sqrt, max, min, abs, exp, PI } = Math, N = 256, C = 2 * hs / (N - 1), NN = N * N, U = 1;   // units per km of height
   const h = new Float32Array(NN), f = new Float32Array(NN), A = new Float32Array(NN), rc = new Int32Array(NN), ord = new Int32Array(NN);
-  const ox = rnd() * 99, oz = rnd() * 99, belts = [], kh = ox + ',' + oz;
+  const ox = rnd() * 99, oz = rnd() * 99, belts = [], kh = ox + ',' + oz + id, e = E && new Float32Array(NN), sea = new Uint8Array(NN);
   for (let k = 0; k < 3; k++) belts.push([(rnd() - 0.5) * hs, (rnd() - 0.5) * hs, rnd() * PI, 6 + rnd() * 7, 2 + rnd() * 1.4, rnd() * 9]);   // centre, strike, half-width, height (km), phase
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const x = -hs + i * C, z = -hs + j * C, wx = x + 6 * fbm(x * 0.03 + ox, 0, z * 0.03, 3), wz = z + 6 * fbm(x * 0.03, 5, z * 0.03 + oz, 3);
     let u = 0; for (const b of belts) { const cs = cos(b[2]), sn = sin(b[2]), a = (wx - b[0]) * cs + (wz - b[1]) * sn, d = -(wx - b[0]) * sn + (wz - b[1]) * cs; u = max(u, b[4] * exp(-((d / b[3]) ** 2)) * (0.65 + 0.35 * sin(a * 0.09 + b[5]))); }
     const r = 1 - abs(fbm(x * 0.32 + ox, 2, z * 0.32 + oz, 4) * 2 - 1);                                    // ridged: sharp crests a few tens of km apart
     h[i + j * N] = 0.2 + u * (0.3 + 0.8 * r * r) + 0.3 * fbm(x * 0.06, 7, z * 0.06, 3) + 0.18 * fbm(x * 0.7, 3, z * 0.7, 3);
+    if (E) { const m = E(x, z), q = i + j * N; if (m === null) { sea[q] = 1; e[q] = 0.002; } else e[q] = max(0.002, m); h[q] = max(0.002, e[q] + (sea[q] ? 0 : min(1, e[q] / 1.2) * (0.9 * r * r - 0.3) + 0.06 * fbm(x * 0.7, 3, z * 0.7, 3))); }   // (heights stay above zero: the flood marks what it has reached by a height of zero or more)
   }
   const nb = [-1, 1, -N, N, -N - 1, -N + 1, N - 1, N + 1], dd = [1, 1, 1, 1, 1.414, 1.414, 1.414, 1.414];
   const edge = (q) => { const i = q % N, j = (q / N) | 0; return i === 0 || j === 0 || i === N - 1 || j === N - 1; };
@@ -36,11 +40,15 @@ export function rangeLand(rnd, hs, stage = 10) {
     for (let k = n - 1; k > 0; k--) { const q = ord[k]; if (rc[q] >= 0) A[rc[q]] += A[q]; }   // highest first: each cell passes on what drains through it
     for (let k = 1; k < n; k++) { const q = ord[k], r = rc[q]; if (r < 0) continue; const s = (f[q] - f[r]) / (C * 10), e = min(0.035 * sqrt(A[q]) * s, max(0, h[q] - f[r] - 0.002)); h[q] -= e; }
     const g = h.slice(); for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) { const q = i + j * N; h[q] += 0.06 * ((g[q - 1] + g[q + 1] + g[q - N] + g[q + N]) / 4 - g[q]); }   // creep
-    if (it === 29) { st.push(h.slice()); HIST.set(kh, st); }
+    if (it === 29) {
+      if (E) { const bl = (a) => { const b = a.slice(), t = new Float32Array(NN), R = 5; for (let p = 0; p < 2; p++) { for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { let s = 0, c = 0; for (let k = -R; k <= R; k++) { const x = i + k; if (x >= 0 && x < N) { s += b[j * N + x]; c++; } } t[j * N + i] = s / c; } for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { let s = 0, c = 0; for (let k = -R; k <= R; k++) { const y = j + k; if (y >= 0 && y < N) { s += t[y * N + i]; c++; } } b[j * N + i] = s / c; } } return b; };
+        const be = bl(e), bh = bl(h); for (let q = 0; q < NN; q++) h[q] = sea[q] ? 0.002 : max(0.002, h[q] + be[q] - bh[q]); }   // back to the measured heights, at their own scale
+      st.push(h.slice()); HIST.set(kh, st); if (HIST.size > 3) HIST.delete(HIST.keys().next().value);
+    }
   }
   h.set(st[Math.max(0, Math.min(10, stage))]);
   fill(); A.fill(1); for (let k = NN - 1; k > 0; k--) { const q = ord[k]; if (rc[q] >= 0) A[rc[q]] += A[q]; }
-  const lake = new Uint8Array(NN); for (let q = 0; q < NN; q++) if (f[q] - h[q] > 0.1) lake[q] = 1; else h[q] = f[q];   // deep hollows hold lakes; the shallow ones silt up
+  const lake = new Uint8Array(NN); for (let q = 0; q < NN; q++) if (sea[q]) { lake[q] = 1; h[q] = f[q] = 0.002; } else if (f[q] - h[q] > 0.1) lake[q] = 1; else h[q] = f[q];   // deep hollows hold lakes; the shallow ones silt up
   const at = (F, x, z) => { const u = (x + hs) / C, v = (z + hs) / C, i = max(0, min(N - 2, u | 0)), j = max(0, min(N - 2, v | 0)), a = min(1, max(0, u - i)), b = min(1, max(0, v - j)), q = i + j * N; return (F[q] * (1 - a) + F[q + 1] * a) * (1 - b) + (F[q + N] * (1 - a) + F[q + N + 1] * a) * b; };
   const Hgt = (x, z) => at(f, x, z) * U, L = new Float32Array(lake), wet = (x, z) => at(L, x, z);
   // rivers, where more than about 600 km² drains through, traced from each source down to the edge, a lake or a bigger
@@ -60,7 +68,7 @@ export function rangeLand(rnd, hs, stage = 10) {
   };
   // where the plot lies: a headwater stream (12 to 60 km² draining through, a brook a few metres wide) running roughly
   // east or west, below the treeline, nearest the middle
-  let spot = null, bd = 1e9; for (let q = 0; q < NN; q++) { const r = rc[q], d = r - q, x = xy(q), y = f[q];
+  let spot = E && [0, Hgt(0, 0), 0], bd = E ? -1 : 1e9; for (let q = 0; q < NN && !E; q++) { const r = rc[q], d = r - q, x = xy(q), y = f[q];
     if (A[q] >= 2 && A[q] <= 10 && r >= 0 && !lake[q] && (d === 1 || d === -1) && y > 0.4 && y < 1.5) { const e = Math.hypot(x[0], x[1]); if (e < bd) { bd = e; spot = [x[0], y * U, x[1]]; } } }
   return { Hgt, wet, range: { draw, spot } };
 }

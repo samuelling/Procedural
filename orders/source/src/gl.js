@@ -265,7 +265,7 @@ export function mkRenderer(canvas, low) {
     gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     const U = { p }; for (const n of [...COMMON, ...names]) U[n] = gl.getUniformLocation(p, n); return U;
   };
-  const PC = prog(CAPV, CAPF, ['uBA', 'uBB', 'uBP', ...(TIER > 3 ? ['uLB'] : [])]), PCS = prog(CAPV, CAPS), PM = prog(MSHV, MSHF, ['uMat', 'uRA', 'uRB', 'uLit', 'uLa', ...(TIER > 3 ? ['uNdl', 'uFor', 'uLeaf', 'uStr'] : [])]), PMS = prog(MSHV, NONE, ['uMat']);
+  const PC = prog(CAPV, CAPF, ['uBA', 'uBB', 'uBP', ...(TIER > 3 ? ['uLB'] : [])]), PCS = prog(CAPV, CAPS), PM = prog(MSHV, MSHF, ['uMat', 'uRA', 'uRB', 'uLit', 'uLa', ...(TIER > 3 ? ['uNdl', 'uFor', 'uLeaf', 'uStr', 'uTl'] : [])]), PMS = prog(MSHV, NONE, ['uMat']);
   const PK = prog(CRDV, CRDF, ['uLA', 'uLB']), PKS = prog(CRDV, CRDS), PSK = prog(QV, SKYF), PR = prog(QV, RAYF, ['uA']), PD = prog(QV, DOWN, ['uA', 'uP']), PP = prog(QV, POST, ['uA', 'uB', 'uC', 'uD', 'uG', 'uP', 'uO', 'uSC']);
   const tex = (f) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
   // shadow map
@@ -317,7 +317,7 @@ export function mkRenderer(canvas, low) {
         buf(m.i, gl.ELEMENT_ARRAY_BUFFER); return { v, n: m.i.length, k: instances ? instances.length / 12 : 0 };
       };
       W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
-      if (TIER > 3) W.xm = B.xm && B.xm.map((m) => mesh(m));
+      if (TIER > 3) { W.xm = B.xm && B.xm.map((m) => mesh(m)); W.tl = (G.cl && G.cl.tl) || [460, 1.85, 900, 2.95]; }   // the treeline: from the place's warmest month on Earth
       if (TIER > 3) W.str = B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // the rock bed a gorge cuts through
       if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const H = G.home || G, tot = H.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => H.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }   // the range's forest is the colour of the forest you came from
       gl.bindVertexArray(null);
@@ -328,7 +328,7 @@ export function mkRenderer(canvas, low) {
       const G = W.G, pal = W.pal;
       const geometry = (PMx, PCx, PKx, view, K, R, or, nf, shadow) => {
         com(PMx, f, view, K, R, or, nf);
-        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PMx.uStr, W.str); gl.uniform3fv(PMx.uFor, W.for); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
+        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PMx.uStr, W.str); gl.uniform3fv(PMx.uFor, W.for); gl.uniform4fv(PMx.uTl, W.tl); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
         gl.bindVertexArray(W.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, W.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, W.land.n - W.nTop, gl.UNSIGNED_SHORT, W.nTop * 2); }
         if (TIER > 3 && W.xm) { gl.uniform1f(PMx.uMat, 1); for (const m of W.xm) { gl.bindVertexArray(m.v); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0); } }   // rock in three dimensions: a cave

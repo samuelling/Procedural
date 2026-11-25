@@ -38,6 +38,7 @@ import { tl } from './fx.js';
 import { valley } from './valley.js';
 import { logLand, leafLand, barkLand, microBuild } from './micro.js';
 import { rangeLand } from './range.js';
+import { elev } from './earth.js';
 import { mkErosion } from './erosion.js';
 import { lakeLand, underBuild, sheet } from './under.js';
 import { cave3 } from './cave3.js';
@@ -69,7 +70,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
   if (TIER > 3 && G.world === 'lake') Hgt = lakeLand(Hgt, hs);   // a lake bed
   if (TIER > 3 && G.world === 'cave') { lv = cave3(rnd, hs); Hgt = () => -60; }   // a cave in the rock; the ordinary ground goes far below, out of sight
-  if (TIER > 3 && G.world === 'range') { const l = rangeLand(rnd, hs, G.stage ?? 10); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
+  if (TIER > 3 && G.world === 'range') { const c = G.cl, l = rangeLand(rnd, hs, G.stage ?? 10, c && c.elev != null && ((x, z) => { const m = elev(c.lat - z * 10 / 111.2, c.lon + x * 10 / (111.2 * Math.cos(c.lat * Math.PI / 180))); return m === null ? null : m / 1000; }), c && c.lon != null ? '@' + c.lat + ',' + c.lon : ''); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
   if (TIER > 3 && G.world === 'bark') { const l = barkLand(Hgt, rnd, hs); Hgt = l.Hgt; lv = l.bark; }   // beetle galleries cut into the wood, and the bark that is left
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
   const cap = (a, ra, b, rb, s0, s1, id, k) => caps.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, s0, s1, id, k);

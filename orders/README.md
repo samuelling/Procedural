@@ -298,7 +298,10 @@ grows a forest for that place. What is measured, computed, modelled and guessed 
 - **Computed:** the sun's path for the latitude and the season (declination ±23.44° at the solstices, the usual
   solar-elevation and azimuth formulas); the Time of day slider runs from 3 in the morning to 9 at night, so the
   Arctic summer keeps its sun up and the winter keeps it down. Day lengths at both solstices are shown.
-- **Modelled:** twelve monthly temperatures and rainfalls. A zonal sketch (warmth by latitude; a yearly swing that
+- **Measured, new:** the height of the ground, and twelve months of temperature and rain. See *Measured ground and
+  climate* below. Where they exist (everywhere on land except Antarctica's climate), they replace the sketch that
+  follows; the sketch is kept for Antarctica and for the moment before the grids are inflated.
+- **Modelled (now only the fallback):** twelve monthly temperatures and rainfalls. A zonal sketch (warmth by latitude; a yearly swing that
   grows with latitude and with distance from the sea upwind, west in the westerlies and east in the trades; a
   warmer oceanic west coast in the north; rain belts by latitude, less inland) is nudged as little as possible until
   the Köppen rules (Kottek et al. 2006) give the measured class. So the numbers belong to the class, made plausible
@@ -318,6 +321,39 @@ grows a forest for that place. What is measured, computed, modelled and guessed 
   little in the Mediterranean and tropical savanna), fog, and the aurora above 58°.
 
 The address keeps the place: `#earth-4821@42.625,-71.125,0`.
+
+### Measured ground and climate
+
+The 2 MB rung now carries about 800 kB of measured data, packed by `tools/pack_data.py` into one string the browser
+inflates when the page loads (about 0.1 s):
+
+- **Ground height: ETOPO 2022** (NOAA National Centers for Environmental Information, 2022, ETOPO 2022 15 Arc-Second
+  Global Relief Model, doi:10.25921/fd45-gt74; US government work). Read every 3 arc-minutes from the 60-arc-second
+  surface grid, 25 samples to each quarter-degree cell of the Köppen grid; for each land cell, the mean height of
+  the samples on land and the lowest one, each kept to a square-root byte (within 26 m at worst, 6 m on average,
+  for the mean). The plot stands at the lowest point: the valley floor, in the mountains. Innsbruck's cell has a mean
+  of 1,433 m and a floor of 579 m; the town is at 574 m. ETOPO calls itself a relief *model*: it is a grid of
+  measured heights (from survey, satellite and sounding data) like the climate grids, not a 3D model, and is used
+  here as data. It is the one entry on this page that is arguably a borderline case for the "no stored models" rule.
+- **Months: CRU CL 2.0** (New, Lister, Hulme and Makin 2002, *Climate Research* 21; Climatic Research Unit,
+  University of East Anglia; 1961–90 normals, 10 arc-minutes, averaged here to half a degree). Twelve monthly mean
+  temperatures, carried to sea level at 6.5 °C a kilometre with CRU's own heights and kept to half a degree, and
+  twelve monthly rainfalls as a log byte. At a place they are carried back up to the measured ground. The derived
+  grid is shared under the Open Database Licence (ODbL 1.0) like its source; the rest of this project is unchanged.
+- **Nudged to the class.** The Köppen map is from a later period (1980–2016) on a finer grid, and CRU's months give
+  the map's class in only about 78% of cells. So the months are moved as little as possible (a shift in °C, a
+  stretch of the yearly swing, a scaling of the rain) until the rules give the map's class, and the place's line
+  says by how much ("nudged −1 °C, swing ×0.98, rain ×1.00"), or says nothing when they already agree. Innsbruck
+  needs no nudge: 10.2 °C a year, 2 to 19 by month, 1,084 mm, ground 585 m. Quito's cell floor (2,095 m) is below the
+  city (2,850 m), so it comes out warmer than Quito.
+- **The treeline and snowline follow from them.** In the valley and in the range, forest stops where the warmest
+  month falls to 10 °C (the rule that also divides Köppen's tundra from forest) and permanent snow starts, roughly,
+  where it falls to 1 °C, at 6.5 °C a kilometre. Elsewhere they stay at the old fixed heights.
+- **The range is the real 640 km.** Zooming out from a place on Earth, the range is built from the measured mean
+  heights of the 640 km square round it (north is −z), with ridged noise adding relief where the ground is high, worn
+  by its rivers as before, then put back to the measured heights at their own 28 km scale. The sea is the Köppen grid's
+  sea, so coasts are stepped at 28 km. Seen: the Andes above Quito with the Pacific to the west; the Alps around
+  Innsbruck with the Adriatic to the south, lower and greener than they are, because a 28 km mean takes the peaks off.
 
 ## The valley (2 MB rung)
 

@@ -1,6 +1,6 @@
 # Filling the 2 MB rung
 
-The top rung holds about 114 kB of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
+The top rung holds about 919 kB, about 800 kB of it measured ground and climate of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
 guesses at packed bytes. Nothing here is padding: every track is rules, or tables of knowledge about real forests.
 
 | Track | Guess | State |
@@ -34,10 +34,15 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
 | Park the plot across dives; years away lived on return | **Done** (round 1) |
 | Site record: place, sun, log species and seed carried in | **Done** (round 1) |
 | Dive at a real log; acorns only near an oak | **Done** (round 1) |
-| Range out-dive onto a headwater; home forest colour | **Done** (round 1). To do: treeline from the place's climate |
+| Range out-dive onto a headwater; home forest colour | **Done** (round 1). Treeline from the place's climate: **done** (round 2) |
 | Radial dissolve from the spot | **Done** (round 1). To do: a viewfinder of the next world's extent |
 | Leaf world takes the species' colour and, for conifers, needle stomata in rows | Queued |
 | Bark beetle galleries per host | Queued |
 | Weather and night change the small worlds (stomata close, moss folds, tardigrades curl) | Queued |
 | Things that cross scales: falling leaves, a hoof, the plot's mites setting the moss world's | Queued |
+| Measured ground (ETOPO 2022) and months (CRU CL 2.0) under Earth places | **Done** (round 2) |
+| The range is the real 640 km round an Earth place | **Done** (round 2). To do: smoother coasts; finer relief where peaks are lost |
+| The globe as the top rung | Queued |
+| A soil-water bucket from the measured months, read by every scale | Queued |
+| Measured soil (SoilGrids) under the soil world; tree genera by measured range | Queued |
 
