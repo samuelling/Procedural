@@ -119,7 +119,7 @@ function grow(keepView, aged) {
   if (!keepView) {
     day = asin(pow((G.air.sun[0] - 6) / 62, 1 / 1.2)) / PI; $('day').value = round(day * 1000);
     tgt = [B.open[0], 0, B.open[1]]; rad = 9; pitch = 0.03; yaw = (G.air.sun[1] + 180 + 28) * RAD;      // start low among the trunks, looking toward the light
-    if (TIER > 3 && G.world) { tgt = [0, 0, 0]; rad = G.world == 'leaf' ? 80 : 38; pitch = G.world == 'leaf' ? 0.75 : 0.42; }
+    if (TIER > 3 && G.world) { tgt = [0, 0, 0]; rad = G.world == 'leaf' ? 80 : G.world == 'range' ? 72 : 38; pitch = G.world == 'leaf' ? 0.75 : G.world == 'range' ? 0.5 : 0.42; }
   }
   if (TIER > 2) { if (TIER > 3 && aged && LIFE) LIFE.world(B); else LIFE = mkLife(B, G, rng(seed + 7), coarse, say, snd, env); if (!keepView && B.strm) { yaw = (tgt[2] > B.strm.zc(tgt[0]) ? 0 : PI) + 0.3; pitch = 0.17; rad = 11; } }
   setSun();
@@ -247,7 +247,9 @@ function frame(now) {
   }
   if (TIER > 3) { f.nf = rad > 300 && !fp ? [2, 9000] : [0.1, 4000]; f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke) * (fp || G.span ? 1 : clamp(70 / rad, 0.08, 1)); }   // from high up the valley's air is clear
   f.focus = TIER > 3 && fp ? f.focus + (fd - f.focus) * 0.15 : rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
+  if (TIER > 3) glideStep(now);
   R.draw(f);
+  if (TIER > 3 && snapNext) { const g = snapNext; snapNext = null; g(); }   // the last frame of a world, kept to dissolve from
   requestAnimationFrame(frame);
 }
 
@@ -283,18 +285,30 @@ if (TIER > 3) {
   document.addEventListener('pointerlockchange', () => { $('xh').hidden = document.pointerLockElement !== canvas; });
 }
 
-// powers of ten (2 MB rung): + dives a step further in, - pulls back out. The view rushes toward the ground, whites out,
-// and comes in on the next world from high above, settling where you would stand there.
-const LAD = ['', 'log', 'moss', 'soil', 'leaf'];
-let home = 'mixed', dive = 0;
+// powers of ten (2 MB rung): + goes a step further in, − a step out, as one continuous zoom. Going in, the view closes on
+// the spot you are looking at until it is as near as the next world's whole plot is wide; then that world takes over,
+// seen from exactly that distance in its own units, and the last frame of the old one dissolves into it. Going out
+// runs the other way: the bigger world arrives seen from as close as you were, and pulls back. Between the plot and
+// the range, the valley around the plot carries the first part of the way.
+const LAD = ['range', '', 'log', 'moss', 'soil', 'leaf'], STEP = [1e4, 100, 10, 10, 10];
+let home = 'mixed', dive = 0, gl = null, snapNext = null;
+const glide = (r1, p1, ms, then) => { gl = [performance.now(), rad, r1, pitch, p1, ms, then]; };
+const glideStep = (now) => { if (!gl) return; const [t0, ra, rb, pa, pb, ms, then] = gl, u = min(1, (now - t0) / ms), e = u * u * (3 - 2 * u); rad = ra * Math.pow(rb / ra, e); pitch = pa + (pb - pa) * e; if (u >= 1) { gl = null; if (then) then(); } };
 const zoom = (dir) => {
-  if (dive) return; const i = key === 'bark' ? 2 : max(0, LAD.indexOf(G.world || (key === 'moss' ? 'moss' : ''))), j = clamp(i + dir, 0, 4); if (i === j || (key === 'bark' && dir > 0)) return;
-  const nb = i === 1 && dir > 0 && B.Hgt(tgt[0], tgt[2]) > 6;                // diving at the log itself goes under its bark; anywhere else, into the moss
-  if (!i) home = key; walking(0); dive = 1; fly = null; fz = 0; const fd2 = $('fade'); fd2.style.opacity = 1;
-  const r0 = rad; let t = 0; const go = () => { t += 0.05; rad = r0 * (dir > 0 ? 1 - 0.95 * t : 1 + 6 * t); pitch += (0.9 - pitch) * 0.1; if (t < 1) return setTimeout(go, 30);
-    key = nb ? 'bark' : j ? LAD[j] : home; mut = 0; grow(); const r1 = rad, p1 = pitch; rad = dir > 0 ? r1 * 8 : r1 * 0.15; pitch = dir > 0 ? 0.9 : p1; fly = [tgt.slice(), r1, yaw, p1]; fz = 0; fd2.style.opacity = 0; dive = 0;
-    $('hint').textContent = (nb ? '×1000: under the bark, 6.4 cm across' : ['×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j]) + (nb ? ' · − back out' : ' · + further in, − back out'); $('hint').hidden = false; };
-  go();
+  if (dive) return; const i = key === 'bark' ? 3 : G.world ? LAD.indexOf(G.world) : key === 'moss' ? 3 : 1, j = clamp(i + dir, 0, 5); if (i === j || (key === 'bark' && dir > 0)) return;
+  const nb = i === 2 && dir > 0 && B.Hgt(tgt[0], tgt[2]) > 6;                // diving at the log itself goes under its bark; anywhere else, into the moss
+  const F = nb ? 10 : STEP[min(i, j)];
+  if (i === 1) home = key; walking(0); dive = 1; fly = null; fz = 0; idle = 0;
+  const r0 = rad, rEnd = i + j === 1 ? (dir > 0 ? 0.25 : 2500) : dir > 0 ? r0 / F : r0, sp = $('snap'), a = dir > 0 ? r0 / rEnd : rEnd / r0;   // how far the old world carries the zoom: in, all the way; out, not at all, except that the plot pulls back to show its valley first
+  glide(rEnd, dir > 0 ? max(pitch, 0.75) : pitch, a > 1.5 ? 1600 : 1, () => { snapNext = () => {
+    sp.width = canvas.width; sp.height = canvas.height; sp.getContext('2d').drawImage(canvas, 0, 0); sp.style.transition = 'none'; sp.style.opacity = 1;
+    setTimeout(() => {
+      key = nb ? 'bark' : j === 1 ? home : LAD[j]; mut = 0; const p0 = pitch; grow(); const r1 = rad, p1 = pitch;
+      rad = dir > 0 ? rEnd * F : rEnd / F; pitch = p0; glide(r1, p1, 2000, () => { dive = 0; });
+      requestAnimationFrame(() => requestAnimationFrame(() => { sp.style.transition = 'opacity .9s'; sp.style.opacity = 0; }));
+      $('hint').textContent = (nb ? '×1000: under the bark, 6.4 cm across' : ['÷10,000: a mountain range, 640 km across', '×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j]) + (nb ? ' · − back out' : j ? ' · + further in, − back out' : ' · + back in'); $('hint').hidden = false;
+    }, 20);
+  }; });
 };
 const act = {
   seed() { seed = 1 + ((Math.random() * 9999) | 0); grow(1); },

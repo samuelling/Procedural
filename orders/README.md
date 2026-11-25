@@ -116,12 +116,29 @@ angle, length and taper. Flowers come as daisies (many narrow rays), buttercups 
 petals). At dawn and after rain, leaves, fronds and blades carry dew: each drop a small lens with a dark rim and a point of
 sky. Ants run up some trunks, and about one leaf in thirty has a ladybird on it.
 
-## Powers of ten, inward (2 MB rung)
+## Powers of ten (2 MB rung)
 
-Four more worlds, built from the same parts as the forest at other scales, and a way to dive between them: + (or In ×10)
-goes a step further in, − (or Out ×10) back out, along forest ×1 → rotting log ×100 → moss ×1000 → soil ×10,000 → leaf ×100,000.
-Diving at the log itself rather than the ground beside it goes under its bark instead of into the moss. The
-view rushes at the ground, whites out, and comes in on the next world from above.
+Five more worlds, built from the same parts as the forest at other scales, and one continuous zoom through them: + (or
+Zoom in) goes a step further in, − (or Zoom out) back out, along range ÷10,000 → forest ×1 → rotting log ×100 → moss
+×1000 → soil ×10,000 → leaf ×100,000. Zooming in at the log itself rather than the ground beside it goes under its bark
+instead of into the moss.
+
+The zoom keeps true scale the whole way. Going in, the view closes on the spot you are looking at until it is exactly
+as close as the next world is wide; that world is then grown and seen from the same distance in its own units, and the
+last frame of the old one (copied off the canvas the moment before) dissolves into it while the view settles. Going
+out runs the other way: the bigger world arrives seen from as close as you were and pulls back. Between the forest and
+the range, the valley around the plot carries the first stretch, so the path is plot → valley (2.5 km up) → range.
+The two worlds are never drawn at once, so the dissolve is between matched views, not one scene seen through another.
+
+- **Mountain range ÷10,000** (a unit is ten kilometres, 640 km across; heights drawn ten times taller, as relief maps
+  do). Raised in two or three belts with ridged noise, then worn down by its own rivers: thirty passes, each filling
+  the hollows (a priority flood from the edges), routing every cell to its steepest neighbour, summing the area that
+  drains through each, and cutting each in proportion to the square root of that area times its slope (the
+  stream-power law), with a little creep that rounds the ridges. Hollows still deeper than 100 m become lakes; wherever
+  more than about 600 km² drains, a river is traced from its source and smoothed so it bends (drawn half a km to 2 km
+  wide so it shows, which is wider than real). Forest up to a treeline that sits higher on sunny slopes, then alpine
+  turf, rock where it is steep, snow above a line that comes down in winter, larch-gold low forest in autumn, and
+  cumulus over the high ground.
 
 - **Rotting log ×100** (a unit is a centimetre, 64 cm across). The log is part of the ground, so animals, seedlings,
   fallen leaves and your feet go over it. Loose bark over grey wood, bracket fungi in tiers up one flank, a tuft of
@@ -186,11 +203,13 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
 
-Inward worlds: all four seen in renders (under the bark from above and close in, and after diving at the log and
-back out), the soil also after diving into it from the moss, the leaf from above and
+Worlds of other scales: all five seen in renders (the range from above and low over it, and after zooming out from a
+forest and back in; under the bark from above and close in, and after zooming in at the log and back out; the soil also after diving into it from the moss, the leaf from above and
 from a few cell-widths away (jigsaw cells, stomata, hairs, pollen and both mites seen; the bacteria and the hypha's
 entry into the stoma not picked out); woodlice, beetles, slugs, the centipede, nematodes, tardigrades, both mites and both bark beetles
 confirmed in the simulation over fourteen years (births, deaths, arrivals) but the log and soil animals not looked at up close.
+The zoom: the start and end of every step seen, and the dissolve's first frames; headless Chrome draws a frame only
+every second or two, so the glide itself has not been watched at full frame rate.
 
 Valley: seen in renders from the valley overview in summer, autumn and winter, from the plot overview, and from the
 ground while walking. Not checked: how it runs on a phone (about 4,500 more capsules and 25,000 more vertices).

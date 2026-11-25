@@ -737,6 +737,23 @@ export const CROWND = `
     }
 `;
 
+// a mountain range from far above: forest up to a treeline that sits higher on sunny slopes, then alpine meadow, then
+// scree and rock where it is steep, snow above a line that comes down in winter, green valley floors, dark lakes
+export const RANGEG = `
+  } else if (uMat < 1.5 && uLeaf > 2.5) {
+    vec2 p = pw.xz; float y = pw.y, sl = 1. - n.y, w1 = vn(p * 1.3), w2 = vn(p * 5.3 + 3.), w3 = vn(p * 21. + 7.);
+    float tl = 1.85 + .4 * (w1 - .5) + .35 * n.x - .4 * sl, sn = mix(2.95, 1.2, uSe.y) + .35 * (w1 - .5) - .25 * n.x;
+    vec3 fo = mix(vec3(.04, .1, .045), vec3(.09, .17, .06), w2 * .7 + w3 * .3);
+    fo = mix(fo, mix(vec3(.42, .26, .06), vec3(.3, .14, .05), w3), uSe.x * smoothstep(1.3, .8, y) * smoothstep(.3, .7, w2) * .8);
+    alb = mix(fo, mix(vec3(.24, .28, .12), vec3(.4, .37, .28), smoothstep(.2, .5, sl)) * (.85 + .3 * w3), smoothstep(tl - .12, tl + .12, y));
+    alb = mix(alb, vec3(.34, .32, .3) * (.75 + .45 * w3), smoothstep(.42, .62, sl + .15 * w2));
+    alb = mix(alb, vec3(.2, .27, .1) * (.8 + .4 * w3), smoothstep(.7, .35, y) * smoothstep(.12, .03, sl) * .75);
+    alb = mix(alb, vec3(.92, .94, .97), smoothstep(sn - .08, sn + .08, y + .3 * w3) * smoothstep(.75, .5, sl));
+    alb = mix(alb, vec3(.85, .88, .92), uWx.y * smoothstep(.6, .3, sl) * .8);
+    float wt = smoothstep(.4, .6, xx.y); alb = mix(alb, vec3(.03, .07, .09), wt); GL = .35 * wt;
+    float hh2 = (w3 - .5) * .004 * (1. - wt); BUMP(n, pw, hh2) ao = 1.;
+`;
+
 // under the bark: pale sapwood with the grain running along x, growth rings cut at a slant as broad flames, the
 // blue-grey stain bark beetles carry in; frass packed brown in the galleries; on the bark left, red-brown scales on
 // top and, at the torn edge, cream inner bark under darker cork

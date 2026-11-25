@@ -37,6 +37,7 @@ function stone(sd, sub, rnd) {
 import { tl } from './fx.js';
 import { valley } from './valley.js';
 import { logLand, leafLand, barkLand, microBuild } from './micro.js';
+import { rangeLand } from './range.js';
 export function build(G, seed, q = 1, den = 1, stand) {
   let rnd = rng(seed); const rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
@@ -59,6 +60,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   }
   let lg = null, lv = null; if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
   if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
+  if (TIER > 3 && G.world === 'range') { const l = rangeLand(rnd, hs); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
   if (TIER > 3 && G.world === 'bark') { const l = barkLand(Hgt, rnd, hs); Hgt = l.Hgt; lv = l.bark; }   // beetle galleries cut into the wood, and the bark that is left
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
   const cap = (a, ra, b, rb, s0, s1, id, k) => caps.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, s0, s1, id, k);
@@ -280,7 +282,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   }
 
   // ---- the ground itself, shaded where things stand on it, and the plot's cut sides
-  const n = TIER > 3 && G.world === 'bark' ? (low ? 160 : 250) : low ? 80 : 128, w = n + 1, V = [], I = [];
+  const n = TIER > 3 && (G.world === 'bark' || G.world === 'range') ? (low ? 160 : 250) : low ? 80 : 128, w = n + 1, V = [], I = [];
   let yb = 1e9;
   for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
     const x = -hs + S * i / n, z = -hs + S * j / n, y = Hgt(x, z), e = TIER > 3 ? S / n * 0.6 : 0.3, nn = nrm([Hgt(x - e, z) - Hgt(x + e, z), 2 * e, Hgt(x, z - e) - Hgt(x, z + e)]);

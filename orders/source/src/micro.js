@@ -98,6 +98,7 @@ export function microBuild(world, c) {
     }
     return;
   }
+  if (world === 'range') return c.bark.draw(cap);
   if (world === 'bark') {
     const { larvae, mother, xn, zn, zb } = c.bark, at = (x, z, h) => [x, Hgt(x, z) + h, z];
     for (const L of larvae) {
