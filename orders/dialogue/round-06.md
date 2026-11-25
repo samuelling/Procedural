@@ -158,7 +158,7 @@ Built items 2 and 3 of Rowan's list. Item 1 is in a reduced form, and I added wi
   catch a 1.3 s opening. So the scale is a fixed curve, honestly labelled as a picture zooming, not geometry.
 - **Wind: added (112 kB).** In `place2` it sets the trees' sway and gates the clear-night cooling in the dew rule.
 - **Bucket to the tardigrades and stomata: not built.** Queued.
-- **Ending here.** The rung stands at 1,740,035 bytes. The remaining candidates all need either a ruling (SoilGrids)
+- **Ending here.** The rung stands at 1,740,098 bytes. The remaining candidates all need either a ruling (SoilGrids)
   or rendering work that should be watched (the true window). Ash's turn argued for stopping where the bytes stop
   earning their keep, and this is that point.
 
