@@ -5,7 +5,7 @@ R = [  # folder, allowance in bytes, built file, title, what is in it
  ('2kb', 2000, 'b/index.html', 'One shader', 'Ten rows of trees computed per pixel: conifers with drooping tiers, ragged broadleaves, birches, boulders, mushrooms, grass, sun shafts with dust, falling leaves, a deer walking through. It drifts sideways forever.'),
  ('20kb', 20000, 'c/index.html', 'A genome and a grammar', 'Sylva: real 3D. Four biomes, eight species grown branch by branch, pipe-model trunks, moss as a rule, stones, logs, ferns, sun shadows, fog, light shafts, depth of field, wind and birdsong.'),
  ('200kb', 200000, 'd/index.html', 'A whole scene', ''),
- ('2mb', 2000000, 'e/index.html', 'Everything I could write', ''),
+ ('2mb', 2000000, 'e/index.html', 'A world that keeps time and place', ''),
 ]
 notes = {}
 if os.path.exists('tools/notes.py'): exec(open('tools/notes.py').read(), notes)
@@ -41,11 +41,13 @@ li a:hover, li a:focus-visible { background: rgba(241,243,234,.05); outline: non
 .bar i { display: block; height: 100%; background: var(--sun); }
 li p { margin: 0; color: var(--dim); font-size: 14px; max-width: 68ch; text-wrap: pretty; }
 .off { opacity: .5; }
+.story { margin: -12px 0 32px; } .story a { display: block; padding: 14px 16px; border: 1px solid var(--sun); color: var(--ink); text-decoration: none; font-weight: 600; } .story a:hover { background: rgba(255,196,87,.08); } .story span { display: block; font-weight: 400; font-size: 14px; color: var(--dim); }
 footer { margin-top: 32px; color: var(--dim); font-size: 13px; max-width: 68ch; text-wrap: pretty; }
 footer a { color: var(--ink); }
 </style></head><body><main>
 <h1>Orders of Magnitude</h1>
 <p class="lede">The same subject, a forest, at five sizes. Each rung is one page that must fit its allowance whole: program, numbers and unpacker. No stored images, models or sound. The bar shows how much of the allowance the rung really uses.</p>
+<p class="story"><a href="story/">What’s happening… <span>order by order: what each rung had to cut, how the top one was filled, and the two agents who argued it out</span></a></p>
 <ol>
 ''' + rows + '''</ol>
 <footer>__FOOT__ Rungs from 2 kB up unpack themselves in the browser, so they need to be served from a web address rather than opened as a file. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>

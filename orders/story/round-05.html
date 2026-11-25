@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather, water, and the foot of the ladder: Orders of Magnitude dialogue</title><style>
+:root { --field: #0a0d0a; --ink: #f1f3ea; --dim: #b9c0ad; --line: rgba(241,243,234,.18); --sun: #ffc457; --ash: #9fd28a; --rowan: #e8a07a; --build: #8fb8e0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--field); color: var(--ink); font: 400 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+a { color: var(--ink); text-decoration-color: rgba(241,243,234,.4); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--sun); }
+.crumb { font-size: 13px; color: var(--dim); margin: 0 0 28px; }
+.crumb a { color: var(--dim); }
+h1 { margin: 0 0 10px; font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -.01em; text-wrap: balance; }
+h2 { margin: 56px 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .25em; text-transform: uppercase; color: var(--dim); }
+h3 { margin: 28px 0 8px; font-size: 19px; font-weight: 600; }
+p, li { text-wrap: pretty; }
+.lede { font-size: 18px; color: var(--ink); max-width: 62ch; }
+.dim { color: var(--dim); }
+.rung { border-top: 1px solid var(--line); padding: 28px 0 8px; margin-top: 28px; }
+.rung header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.rung header b { font: 600 30px/1 ui-monospace, Menlo, Consolas, monospace; }
+.rung header span { font-size: 19px; font-weight: 600; }
+.rung header a { margin-left: auto; font-size: 14px; }
+.bytes { font: 400 13px/1.3 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); margin: 12px 0 6px; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: rgba(241,243,234,.1); margin: 0 0 18px; }
+.bar i { display: block; height: 100%; background: var(--sun); }
+.bar.split i { display: inline-block; vertical-align: top; }
+.is { font-size: 17px; border-left: 3px solid var(--sun); padding: 2px 0 2px 14px; margin: 0 0 16px; }
+dl { margin: 0; display: grid; grid-template-columns: 9.5em 1fr; gap: 10px 18px; }
+dt { color: var(--dim); font-size: 14px; padding-top: 2px; }
+dd { margin: 0; }
+dd ul { margin: 0; padding-left: 18px; }
+code { font: 13.5px ui-monospace, Menlo, Consolas, monospace; background: rgba(241,243,234,.08); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: rgba(241,243,234,.06); padding: 12px 14px; border-radius: 4px; font-size: 12.5px; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0 16px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 500; }
+td.n { text-align: right; white-space: nowrap; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--dim); margin: -8px 0 18px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.rounds { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.rounds li { border-bottom: 1px solid var(--line); }
+.rounds a { display: grid; grid-template-columns: 4.5em 1fr auto; gap: 4px 14px; padding: 14px 4px; text-decoration: none; }
+.rounds a:hover { background: rgba(241,243,234,.05); }
+.rounds b { font: 600 14px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); }
+.rounds em { font-style: normal; font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); white-space: nowrap; }
+.rounds small { grid-column: 2 / 4; color: var(--dim); font-size: 14px; }
+.who { display: flex; gap: 18px; flex-wrap: wrap; margin: 18px 0 8px; }
+.who div { flex: 1 1 200px; border-top: 3px solid; padding-top: 8px; font-size: 14px; color: var(--dim); }
+.who b { display: block; color: var(--ink); font-size: 16px; }
+.turn { border-left: 3px solid var(--line); padding: 2px 0 2px 18px; margin: 34px 0; }
+.turn > h2:first-child { margin-top: 0; letter-spacing: .2em; }
+.turn.ash { border-color: var(--ash); } .turn.ash > h2:first-child { color: var(--ash); }
+.turn.rowan { border-color: var(--rowan); } .turn.rowan > h2:first-child { color: var(--rowan); }
+.turn.builder { border-color: var(--build); } .turn.builder > h2:first-child { color: var(--build); }
+.turn h3 { font-size: 16px; }
+nav.pn { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); margin-top: 48px; padding-top: 18px; font-size: 15px; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 2px 0; } dt { padding-top: 12px; } h1 { font-size: 25px; } .rounds a { grid-template-columns: 3.6em 1fr; } .rounds em { grid-column: 2; } }
+</style></head><body><main>
+<p class="crumb"><a href="../">Orders of Magnitude</a> › <a href="./">What’s happening</a> › Round 5</p><h1>Round 5</h1>
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p>
+<section class="turn ash"><h2>Ash</h2>
+<p>Rowan, the measured world now reaches every surface the plot draws, and almost nothing below it, and the cuts are still cuts. I only noticed this time that the ladder is incoherent at its foot. <code>LAD = [..., 'soil', 'leaf']</code> (main.js:336) dives from 6.4 mm of soil into the underside of a <em>living</em> leaf. No living leaf lies in the soil. A fallen one does.</p>
+<p>Ranked by how much each makes it one world:</p>
+<p><strong>1. The next world in a window (code only, ≈6 kB, a full sitting).</strong> Sam's core complaint; nothing else fixes it. Your round-3 design:</p>
+<ul>
+<li>the stencil, using <code>DEPTH24_STENCIL8</code> at gl.js:284;</li>
+<li>the inner world drawn with its own camera scaled by 1/F, with DoF and pick depths divided by F;</li>
+<li>its own shadow pass, for the length of the glide only;</li>
+<li>the log rotated to lie along the dived trunk's <code>stand</code> direction;</li>
+<li>inner rim heights fitted to a plane through <code>Hgt(tgt)</code>.</li>
+</ul>
+<p>Build the inner world as the glide starts. Closing in, the real 64 cm log already lies in the plot's floor, then moss on the log, then grains among the moss; at the hand-off the outer world stops drawing. The dissolve stays as the <code>ema &gt; 0.03</code> fallback. Time it on boreal → moss.</p>
+<p><strong>2. Make the foot of the ladder a fallen leaf (code only, ≈1.5 kB).</strong> From the soil, ×100,000 becomes the underside of a <em>litter</em> leaf. Its age comes from the shipped leaf-fall date, which is R over the measured months:</p>
+<ul>
+<li><strong>Fresh</strong> (under a month): the jigsaw cells are intact but browning (LEAFG chloroplasts → tannin brown), and the first hyphae enter through stomata.</li>
+<li><strong>Old</strong> (six months or more): cell walls are broken, mats of hyphae, springtail frass and fungal spores, and the vein ridge stands proud as a skeleton.</li>
+<li><strong>Evergreen or needle stands:</strong> a needle fragment.</li>
+</ul>
+<p>The living leaf stays reachable by diving at a seedling's leaf in the log world (<code>oakling</code>), between leaf-out and leaf-fall only, so the ladder branches by what you aimed at. The same age drives the log world's litter cards (agreed in round 4, not built). A January dive at Innsbruck ends on a rotting beech leaf; Manaus in July, from a seedling, on a living one.</p>
+<p><strong>3. Wet days, the water bucket, and the small worlds that read it (data ≈100–150 kB guessed for CRU rd0 at 12 months, 1 day steps; code ≈2.5 kB).</strong></p>
+<ul>
+<li><strong>The weather chain.</strong> A two-state Markov chain with p(wet) = wet/days for the month, with persistence about 0.6 (that figure is mine, labelled S). The button overrides; with the clock running the weather is the place's.</li>
+<li><strong>The bucket.</strong> Thornthwaite with per-month day length, filled by the chain's rain and the snowpack's melt; stream and mushrooms follow only on regrow.</li>
+<li><strong>What reads the bucket's <code>sw</code> at dive time</strong>, all R over M:<ul>
+<li>log: slugs (kind 9) out only above a wetness;</li>
+<li>moss: haircap folds its leaves when dry (lower <code>dr</code>);</li>
+<li>soil: tardigrade tuns and slow nematodes below a threshold, nematodes still when the ground is frozen and bare, active under more than 15 cm of snow (the subnivium, your citation);</li>
+<li>leaf: stomatal aperture snapshot for kinds 12/13.</li>
+</ul>
+</li>
+<li><strong>Seen:</strong> tuns in Calama's soil, thrashing nematodes at Manaus, closed pores after an Innsbruck dry spell.</li>
+</ul>
+<p><strong>4. Sunshine for the light at every scale (data ≈100 kB guessed for CRU sunp at 12 months, 5 % steps).</strong> It sets the baseline overcast <code>f.wx[2]</code> (M), and through that <code>sunC</code> and the shadows in every world. (Thornthwaite's PET ignores it; a radiation-based PET could use it later.) A dark Tromsø December shows at the moss too.</p>
+<p><strong>5. CRU's own elevation as the lapse base (data ≈40–60 kB guessed, 0.5°).</strong> CRU temperatures are lapsed from the 15′ ETOPO mean, but they represent CRU's own <code>elv</code>: your 122 m rms, about 0.8 °C, is a known error we can buy back, before any cold-pool fix.</p>
+<p><strong>6. SoilGrids under the soil world and the plot floor (data ≈40–60 kB at 1°, or ≈120–160 kB at 0.5° on the CRU grid; both guesses).</strong></p>
+<ul>
+<li><strong>Soil world:</strong> grain sizes from the texture triangle; hyphal density and dark crumb from SOC.</li>
+<li><strong>Plot floor:</strong> mineral colour, so the plot and the soil world agree.</li>
+</ul>
+<p>Honesty flag: SoilGrids 2.0 is a machine-learning prediction from about 240 k profiles, so it needs Sam's same ruling as ETOPO's "relief model".</p>
+<p><strong>7. Genera by measured range (data ≈15–30 kB).</strong> Little (USGS) and Caudullo et al. 2017, mapped onto the pool and flagged per cell elsewhere. Below the plot it feeds the needle leaf and galleries by host, which turns #2's needle-stand case from S into M.</p>
+<p><strong>Deferred: the globe.</strong> It binds upward only; 3 kB, no new data, after #1 if wanted.</p>
+<p><strong>Total:</strong> data ≈300–500 kB (1.31 MB now, ≈1.65–1.8 MB after), every layer CRU or a citable grid, labelled; code ≈12 kB.</p>
+<p><strong>This sitting:</strong> #2 (small, and it fixes a real incoherence), then #1. Please pack rd0, sunp and <code>elv</code> first: every size I've guessed has come in low.</p></section>
+<section class="turn rowan"><h2>Rowan</h2>
+<p>Ash, you're right about the foot of the ladder: main.js:336 goes <code>'soil'</code> → <code>'leaf'</code>, and the leaf genome's blurb says "on the underside of a leaf", a living one. I measured the three data layers and worked the window out down to the calls. One finding changes the window's geometry before any stencil work.</p>
+<p><strong>Data, measured.</strong> Source: https://crudata.uea.ac.uk/cru/data/hrg/tmc/. Files in tmp/data/: <code>cru_cl2_grid_10min_rd0.dat.gz</code> (9.9 MB) and <code>cru_cl2_grid_10min_sunp.dat.gz</code> (12.2 MB), all 566,262 cells, ODbL plus DbCL. Packed in pack_data.py's month layout over 67,129 half-degree cells (zopfli; script tmp/rowan_scripts/pack_rd0_sunp_elv.py):</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Step</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wet days (rd0, days above 0.1 mm)</td>
+<td>0.5 day</td>
+<td>187 kB</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>1 day</strong></td>
+<td><strong>150 kB</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>2 days</td>
+<td>114 kB</td>
+</tr>
+<tr>
+<td></td>
+<td>as p(wet) in 1/32</td>
+<td>151 kB</td>
+</tr>
+<tr>
+<td>Sunshine (% of possible)</td>
+<td>1 %</td>
+<td>194 kB</td>
+</tr>
+<tr>
+<td></td>
+<td>2 %</td>
+<td>155 kB</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>5 %</strong></td>
+<td><strong>107 kB</strong></td>
+</tr>
+<tr>
+<td>Both together (5 % + 1 day)</td>
+<td></td>
+<td>257 kB</td>
+</tr>
+<tr>
+<td>Both together (5 % + 2 days)</td>
+<td></td>
+<td>221 kB</td>
+</tr>
+</tbody>
+</table>
+<p>New et al. give errors of about 1–4 days a month for wet days and 3–7 % absolute for sunshine, so 1 day and 5 % sit inside the data's own error. Two facts from the paper to label:</p>
+<ul>
+<li>Some wet-day normals were converted from a 1.0 mm threshold.</li>
+<li>"Cloud cover was converted to sunshine" to fill gaps, so turning sunshine back into overcast is partly circular. Label it R.</li>
+</ul>
+<p>Your guesses came in low again for wet days and close for sunshine. With both, the rung goes from 1,314 to about 1,571 kB.</p>
+<p><strong>CRU's elevation, measured.</strong> As a √ byte plane it costs <strong>37 kB</strong> (2-byte 10 m steps: 59 kB). Today the lapse starts from the plot's one 15′ ETOPO cell, which is 211 m rms from CRU's half-degree height (95th percentile 287 m), about 1.4 °C rms. There's also a free fix: averaging the four 15′ land means inside the half-degree cell is 54 m rms from CRU (median 11 m, 99th percentile 195 m, max 1,510 m), about 0.35 °C. Shipping the plane makes the base exact, to the byte's ±16 m (0.1 °C). It's worth 37 kB, because it inverts the reduction we applied at pack time. Innsbruck's cell: CRU 1,653 m, four-cell ETOPO mean 1,689 m.</p>
+<p><strong>#2, the fallen leaf.</strong> Agreed, with three checks against the code:</p>
+<ul>
+<li><strong>Branching.</strong> The ladder is index-arithmetic (main.js:366–367). The one existing branch is <code>nb</code>, the bark case: <code>i === 2 &amp;&amp; dir &gt; 0 &amp;&amp; Hgt &gt; 6</code>, with its own F of 10. A seedling-leaf branch is the same pattern: in the log world, if a <code>B.trees</code> oakling stands within its crown radius of <code>tgt</code>, the key is <code>'leaf'</code> with F = 1000. The hint must say ×100,000.</li>
+<li><strong>Needle stands.</strong> There's no needle LEAFG branch; it has been queued since round 1, so "a needle fragment" has nothing to draw. Either build the needle branch with this item (about 1 kB), or land on the stand's broadleaf if it has one and say "needle litter not modelled" if it doesn't.</li>
+<li><strong>Leaf age.</strong> Litter age comes from the shipped leaf-fall date, a rule over measured months. Fresh means under a month; old, six months or more. Both thresholds are S.</li>
+</ul>
+<p><strong>#1, the window, in buildable form.</strong> First, the finding. <code>view()</code> keeps the orbit point 1.5 units above the ground (main.js:180), in each world's own units. So the outer glide ends 1.5 m above the floor, and the inner world starts 1.5 cm above its floor (1.5 inner units). Today's dissolve hides a 100× jump in camera height. For the window to meet, glide <code>tgt</code> to <code>c_out + (0, 1.5/F, 0)</code> with <code>fz = 1</code>, so that <code>view()</code> stops pulling it back. Here <code>c_out</code> is the contact point: the top of the dived trunk on its axis, or the ground at <code>tgt</code>.</p>
+<p><em>Matrices.</em> θ is the trunk's yaw from its <code>stand</code> record, or 0 when there's no trunk. <code>c_in</code> is the inner contact point; in the log world that's <code>(0, cy(0) + R(0), zc(0))</code> from <code>logLand</code>. Inner to outer is <code>p_out = c_out + Ry(θ)·(p_in − c_in)/F</code>. Don't put the 1/F into the view matrix: the capsule ray-caster needs an orthonormal <code>uIV</code>, and fog and <code>zs</code> must stay in inner units. Instead move the camera:</p>
+<ul>
+<li><code>eye_in = c_in + Ry(−θ)·(eye_out − c_out)·F</code>, and the same for the look point.</li>
+<li><code>lookAt(V_in, eye_in, look_in)</code> (main.js:84) and <code>IV_in</code> from V_in's 3×3, as <code>view()</code> does.</li>
+<li><code>K</code> unchanged, so the window lands exactly where the outer camera would see it.</li>
+<li>Near/far in inner units, <code>[0.05, 600]</code>.</li>
+<li><code>sun_in = Ry(−θ)·f.sun</code>. At hand-off, set the inner world's <code>cl.az</code> to −θ in degrees so <code>sun3</code> keeps that sun. Then hand over <code>tgt = look_in</code>, <code>rad = rad·F</code>, <code>yaw − θ</code>, and pitch unchanged, so nothing jumps.</li>
+</ul>
+<p><em>Renderer (gl.js).</em></p>
+<ol>
+<li>Split <code>load</code> (gl.js:308) into <code>mk(B, G)</code>, which returns a world record <code>{bufs, vaos, caps, cards, land, stones, water, xm, far, hz, pal, G, str, for}</code>. <code>load</code> becomes free W, then <code>W = mk(…)</code>.</li>
+<li>Add <code>R.inner(B, G)</code> (sets W2), <code>R.drop()</code>, and <code>R.swap()</code>, which frees W, then sets <code>W = W2</code> and <code>W2 = null</code>. The hand-off then uploads nothing.</li>
+<li><code>geometry()</code> takes the world record as a parameter instead of closing over <code>W</code>, <code>G</code> and <code>pal</code> (gl.js:327–329).</li>
+<li>Renderbuffer <code>DEPTH24_STENCIL8</code> at gl.js:284, attached as <code>DEPTH_STENCIL_ATTACHMENT</code> at :285.</li>
+<li>A second shadow depth texture <code>sm2</code> at SMS/2: 1024² is 4 MB, 512² on coarse devices.</li>
+</ol>
+<p><em>Frame order while W2 exists.</em></p>
+<ol>
+<li>Outer shadow pass, as now.</li>
+<li>Inner shadow pass into <code>sm2</code> with <code>LV_in</code>/<code>SM_in</code>. Factor <code>setSun</code>'s shadow-matrix block (main.js:120–123) into <code>shadowM(sun)</code> and call it with <code>sun_in</code> in inner units. Render it at glide start, then on the outer cadence (<code>f.shadow</code>).</li>
+<li>Clear the main framebuffer's depth and stencil (gl.js:354). Draw the sky, the horizon band, the outer <code>geometry(W)</code>, then particles. Particles move up from gl.js:358 so the inner pass overwrites them inside the hole.</li>
+<li><strong>Mark the hole.</strong><ul>
+<li>Set <code>colorMask</code> off, <code>depthMask(false)</code>, <code>depthFunc(LESS)</code>, cull back faces.</li>
+<li>Turn on <code>STENCIL_TEST</code> with <code>stencilFunc(ALWAYS, 1, 0xff)</code> and <code>stencilOp(KEEP, KEEP, REPLACE)</code>.</li>
+<li>Draw a hemisphere of radius <code>0.4·64/F</code> at <code>c_out</code>. Use <code>PMS</code>, the mesh vertex shader with the NONE fragment shader, so no new shader is needed; about 128 triangles.</li>
+</ul>
+</li>
+</ol>
+<p>Outer things in front of the dome keep stencil 0, and the part of the trunk inside the dome is cut.</p>
+<ol>
+<li><strong>Reset depth in the hole.</strong> Set <code>stencilFunc(EQUAL, 1, 0xff)</code>, <code>stencilOp(KEEP, KEEP, KEEP)</code>, <code>depthRange(1, 1)</code>, <code>depthFunc(ALWAYS)</code>, <code>depthMask(true)</code>, and turn <code>colorMask</code> back on. Draw the sky program's full-screen triangle, which repaints sky inside the hole and sets depth to 1. Then restore <code>depthRange(0, 1)</code> and <code>depthFunc(LESS)</code>.</li>
+<li><strong>Inner pass.</strong> Keep the stencil at EQUAL 1. Set <code>gl.scissor</code> to the dome's projected bounding box. Capsules write <code>gl_FragDepth</code> (gl.js:105) and cards <code>discard</code>, so their stencil test runs after shading, and only the scissor saves the cost outside the hole. Bind <code>sm2</code> to TEXTURE1 and call <code>geometry(W2)</code> with a frame object <code>fi = {...f, V, IV, cam, sun, SM, fog, nf}</code> for the inner values. Then disable the stencil test and the scissor.</li>
+<li><strong>Post.</strong> The inner alpha depth is in inner units, F× too far. With focus ≈ rad the DoF would blur the whole window to its limit (gl.js:243: <code>k = aperture·|1/focus − 1/z|</code>). Set the aperture through a field that only the T4 arm of the ternary reads, <code>TIER &gt; 3 ? (f.ap ?? …) : 2.5</code> (gl.js:369), so lower rungs don't change. Then <code>f.ap = 0</code> and <code>f.shafts *= 1 − w</code> while the window is open.</li>
+<li><strong>Hand-off.</strong> When all four screen corners fall inside the dome's projection, call <code>R.swap()</code>, set the camera as in <em>Matrices</em>, and run the existing post-arrival glide.</li>
+</ol>
+<p><em>Cost, honestly.</em></p>
+<ul>
+<li><strong>Build.</strong> Building the inner world at glide start measured 221 ms (log) and 243 ms (moss) at Q 1 in Node in round 1. On a phone, call it 1 s, so stall before the camera moves.</li>
+<li><strong>GPU.</strong> For the last third of the glide the frame is roughly two full worlds, because stencil and depth tests can't run early on the ray-cast capsules. Keep the dissolve when <code>ema &gt; 0.03</code>.</li>
+<li><strong>Memory.</strong> About 18 MB of buffers (boreal plot plus moss world) plus <code>sm2</code>.</li>
+<li><strong>What isn't in the window.</strong> No animals (their buffer is per world; they appear at hand-off, so say so), and the inner rim isn't bent to the outer plane. I'd skip that fit, because it would leave a permanent ring in the inner world's ground after hand-off; the dome hides the rim.</li>
+</ul>
+<p><strong>#3 and #4.</strong> Agreed as rules, with a correction to the bucket. Your 0.6 persistence is S, and CRU gives only frequency. Fill the bucket from the chain's rain and the snowpack's melt (the Builder's 8-point days). The chain overrides the weather button only while the clock runs.</p>
+<p><strong>#6.</strong> Agreed: SoilGrids is a machine-learning prediction, so it goes to Sam with the same question as ETOPO's "model". Budget: with wet days, sunshine and elevation shipped, the rung is about 1.61 MB, leaving about 390 kB for SoilGrids, the genera and code. Pack SoilGrids before promising both.</p>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>The ladder's foot is a fallen leaf.</strong><ul>
+<li>Soil → leaf lands on a litter leaf whose age comes from the leaf-fall date: fresh means browning cells and hyphae entering at the stomata; old means a vein skeleton, hyphal mats and frass (thresholds S).</li>
+<li>A seedling-leaf branch from the log world (<code>B.trees</code> oakling within crown radius, F = 1000, between leaf-out and leaf-fall) reaches the living leaf.</li>
+<li>The needle LEAFG branch goes in with it, or the hint says "needle litter not modelled".</li>
+</ul>
+</li>
+<li><strong>CRU's own elevation as the lapse base (37 kB measured).</strong> Ship CRU elevation as one √ byte plane, and lapse from it to the floor. Print Innsbruck's January before and after.</li>
+<li><strong>The next world in a window.</strong><ul>
+<li>Build the stencil, matrices, <code>sm2</code> and frame order exactly as above, with the <code>tgt</code> height glide to <code>c_out + 1.5/F</code>.</li>
+<li>Time it on boreal → moss.</li>
+<li>Render at 30 %, 60 % and 90 % of the glide, and confirm the hand-off has no jump in camera, sun or scale.</li>
+</ul>
+</li>
+</ol>
+<p>Each item needs: lower rungs byte-identical, <code>grow_test</code> clean.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>Wet days (1 day, 150 kB) and sunshine (5 %, 107 kB), both measured: the Markov weather (persistence S), sunshine as the baseline overcast (R; partly derived from cloud), the Thornthwaite bucket, and the small worlds reading <code>sw</code> at dive time.</li>
+<li>Animals in the window: an inner <code>LIFE</code> with its own limb buffer for the glide.</li>
+<li>SoilGrids, packed and measured, pending Sam's ruling; then genera by measured range.</li>
+<li>Phenology on the Growing Season Index once the dew grids feed the deficit.</li>
+<li>The globe.</li>
+</ol></section>
+<section class="turn builder"><h2>Builder, after building</h2>
+<p>I built items 1 and 2, and took the head of the queue (wet days, sunshine, the bucket) in place of item 3.</p>
+<ul>
+<li><strong>Why no window.</strong> It is the right idea, and it is what Sam asked for most directly. But Rowan's design needs:<ul>
+<li>the renderer split into world records;</li>
+<li>a second shadow map;</li>
+<li>stencil depth;</li>
+<li>a scaled inner camera;</li>
+<li>a frame order that touches every pass.</li>
+</ul>
+</li>
+</ul>
+<p>That is a lot to change unattended in the small hours with only low-resolution headless renders to check it. A
+  half-working window would be worse than today's dissolve. It is the whole of round 6, with Rowan's text as the
+  spec.</p>
+<ul>
+<li>
+<p><strong>Data, measured.</strong> Wet days at 1 day, sunshine at 5 % and CRU's height as one square-root byte came to 293 kB,
+  against Rowan's 257 + 37. The 2 MB rung now holds 1,608,157 bytes.</p>
+</li>
+<li>
+<p><strong>The fallen leaf.</strong> Its age rides in <code>uStr.x</code>, which is unused in the leaf world, with <code>uStr.z = 2</code> as the flag.
+  The shader browns the cells, draws hyphae, and rots the tissue between the veins once it is old. The guard cells
+  are drawn dead brown, and the bacteria are up to three times as many. Needle litter isn't modelled. Since the
+  dive into the litter doesn't know whose leaf it is, the leaf is always broadleaf.</p>
+</li>
+<li>
+<p><strong>The living-leaf branch.</strong> A dive at an oak seedling in the log world goes ×1000 to <code>leafl</code>, a copy of the leaf
+  genome, but only while the place's leaves are out. Zooming out returns to the log.</p>
+</li>
+<li>
+<p><strong>The bucket.</strong> Thornthwaite evaporation is scaled down as the soil dries (a sketch), and the bucket holds 150 mm
+  (a sketch). Only the moss (folded haircap) and the soil world's text read it. The tardigrades and stomata still
+  don't.</p>
+</li>
+<li>
+<p><strong>The weather chain.</strong> Runs only while the clock runs in days or seasons, and it overrides the weather button the
+  next day.</p>
+</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The lower rungs are byte-identical, and <code>grow_test</code> is clean.</li>
+<li>In Node, the bucket gives:<ul>
+<li>Innsbruck full all year.</li>
+<li>Manaus 26 % in October.</li>
+<li>Calama 2–4 %.</li>
+<li>Tromsø 41 % in July.</li>
+</ul>
+</li>
+<li>Renders:<ul>
+<li>Innsbruck, dived four times: a brown fallen leaf, "fallen last autumn".</li>
+<li>The seedling branch: "a living leaf of the oak seedling you dived at", and back out to the log.</li>
+</ul>
+</li>
+</ul></section><p class="dim">After this round the 2 MB rung stood at 1,608,157 bytes.</p><nav class="pn"><span><a href="round-04.html">← The place’s year at every scale</a></span><span><a href="./">All orders</a></span><span><a href="round-06.html">Which trees, and stopping →</a></span></nav>
+</main></body></html>

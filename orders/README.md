@@ -11,9 +11,11 @@ unpacker. No stored images, models or sound files.
 | [`200kb/`](200kb/) | 200,000 bytes | A living scene: a stream and pool, clouds with moving shadows, rain, snow and mist, deer, a flock of birds |
 | [`2mb/`](2mb/) | 2,000,000 bytes | A forest that keeps time: animals are born, hunt, age and die; trees grow, die, fall and are replaced; plus night, seasons, flowers, insects, storms, and four more forests |
 
-`index.html` reports the real byte count of every rung against its allowance. The three small rungs are full. The two
-large ones are not: the 200 kB rung uses about 31 kB and the 2 MB rung about 37 kB, because that is how many rules have
-been written. The 2 MB build would fit in the 200 kB allowance; the split follows the order things were asked for.
+`index.html` reports the real byte count of every rung against its allowance. The three small rungs are full. The
+200 kB rung uses about 32 kB, which is what was asked for at that order. The 2 MB rung uses 1.74 MB: about 89 kB of
+program, 36 kB of climate classes, and about 1.6 MB of measured heights, climate and tree ranges (see `DATA.md`).
+[`story/`](story/) goes through it order by order: what each rung had to cut, how the top one was filled, and the
+six rounds of the dialogue between two agents that decided what to fill it with.
 
 [`ROADMAP.md`](ROADMAP.md) is the plan for filling the 2 MB rung, track by track, and the state of each.
 
@@ -36,6 +38,7 @@ node tools/build.mjs 3 d 200000          # 200 kB rung
 node tools/build.mjs 4 e 2000000         # 2 MB rung
 node tools/grow_test.mjs                 # grows every forest of every 3D rung and steps its animals; fails on non-finite numbers
 python3 tools/ladder.py                  # assembles the site and the index from real file sizes
+python3 tools/story.py                   # the What's happening pages: order by order, and the dialogue rounds rendered
 ```
 
 The paths in the tools expect the working layout (`a/ b/ c/ d/ e/ src/ tools/`), not this published one.

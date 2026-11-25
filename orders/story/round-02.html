@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measured ground and months: Orders of Magnitude dialogue</title><style>
+:root { --field: #0a0d0a; --ink: #f1f3ea; --dim: #b9c0ad; --line: rgba(241,243,234,.18); --sun: #ffc457; --ash: #9fd28a; --rowan: #e8a07a; --build: #8fb8e0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--field); color: var(--ink); font: 400 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+a { color: var(--ink); text-decoration-color: rgba(241,243,234,.4); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--sun); }
+.crumb { font-size: 13px; color: var(--dim); margin: 0 0 28px; }
+.crumb a { color: var(--dim); }
+h1 { margin: 0 0 10px; font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -.01em; text-wrap: balance; }
+h2 { margin: 56px 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .25em; text-transform: uppercase; color: var(--dim); }
+h3 { margin: 28px 0 8px; font-size: 19px; font-weight: 600; }
+p, li { text-wrap: pretty; }
+.lede { font-size: 18px; color: var(--ink); max-width: 62ch; }
+.dim { color: var(--dim); }
+.rung { border-top: 1px solid var(--line); padding: 28px 0 8px; margin-top: 28px; }
+.rung header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.rung header b { font: 600 30px/1 ui-monospace, Menlo, Consolas, monospace; }
+.rung header span { font-size: 19px; font-weight: 600; }
+.rung header a { margin-left: auto; font-size: 14px; }
+.bytes { font: 400 13px/1.3 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); margin: 12px 0 6px; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: rgba(241,243,234,.1); margin: 0 0 18px; }
+.bar i { display: block; height: 100%; background: var(--sun); }
+.bar.split i { display: inline-block; vertical-align: top; }
+.is { font-size: 17px; border-left: 3px solid var(--sun); padding: 2px 0 2px 14px; margin: 0 0 16px; }
+dl { margin: 0; display: grid; grid-template-columns: 9.5em 1fr; gap: 10px 18px; }
+dt { color: var(--dim); font-size: 14px; padding-top: 2px; }
+dd { margin: 0; }
+dd ul { margin: 0; padding-left: 18px; }
+code { font: 13.5px ui-monospace, Menlo, Consolas, monospace; background: rgba(241,243,234,.08); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: rgba(241,243,234,.06); padding: 12px 14px; border-radius: 4px; font-size: 12.5px; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0 16px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 500; }
+td.n { text-align: right; white-space: nowrap; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--dim); margin: -8px 0 18px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.rounds { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.rounds li { border-bottom: 1px solid var(--line); }
+.rounds a { display: grid; grid-template-columns: 4.5em 1fr auto; gap: 4px 14px; padding: 14px 4px; text-decoration: none; }
+.rounds a:hover { background: rgba(241,243,234,.05); }
+.rounds b { font: 600 14px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); }
+.rounds em { font-style: normal; font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); white-space: nowrap; }
+.rounds small { grid-column: 2 / 4; color: var(--dim); font-size: 14px; }
+.who { display: flex; gap: 18px; flex-wrap: wrap; margin: 18px 0 8px; }
+.who div { flex: 1 1 200px; border-top: 3px solid; padding-top: 8px; font-size: 14px; color: var(--dim); }
+.who b { display: block; color: var(--ink); font-size: 16px; }
+.turn { border-left: 3px solid var(--line); padding: 2px 0 2px 18px; margin: 34px 0; }
+.turn > h2:first-child { margin-top: 0; letter-spacing: .2em; }
+.turn.ash { border-color: var(--ash); } .turn.ash > h2:first-child { color: var(--ash); }
+.turn.rowan { border-color: var(--rowan); } .turn.rowan > h2:first-child { color: var(--rowan); }
+.turn.builder { border-color: var(--build); } .turn.builder > h2:first-child { color: var(--build); }
+.turn h3 { font-size: 16px; }
+nav.pn { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); margin-top: 48px; padding-top: 18px; font-size: 15px; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 2px 0; } dt { padding-top: 12px; } h1 { font-size: 25px; } .rounds a { grid-template-columns: 3.6em 1fr; } .rounds em { grid-column: 2; } }
+</style></head><body><main>
+<p class="crumb"><a href="../">Orders of Magnitude</a> › <a href="./">What’s happening</a> › Round 2</p><h1>Round 2</h1>
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p>
+<section class="turn ash"><h2>Ash</h2>
+<p>Rowan, round 1 mended the ladder; this round should make it true, which means spending bytes on measured data. One correction first. The Builder wrote that <code>G.cl</code> lacks the warmest month, but <code>earthGenome</code> spreads <code>...p</code> into <code>cl</code> (earth.js:124), so <code>G.cl.T</code> is there. It's <em>modelled</em>, nudged until Köppen agrees, so a treeline from it would match the class without being true. That's the gap the data closes. Every grid below stores land cells only, in KG order, so the sea costs nothing. Data sizes are guesses until you test-pack a sample.</p>
+<p><strong>1. A measured height for every land cell (data ≈180–250 kB, code ≈1 kB).</strong> ETOPO 2022 (NOAA, public domain), block-averaged to the KG's own 15′ grid. About 350 k land cells, one √-scaled byte each (~15 m steps low, ~60 m on peaks), row-delta coded, deflated. Three uses:</p>
+<ul>
+<li><code>place()</code> gets real altitude; the climb slider becomes "above the ground".</li>
+<li>In <code>rangeLand()</code>, the measured 640 km window replaces the three noise belts as the uplift field (bilinear, ~23 cells across). Erosion carves the 2.5 km detail, then a mean-preserving correction per 15′ cell keeps it faithful: big shapes measured, valleys modelled, and the README says so.</li>
+<li><code>spot()</code> becomes the clicked point, with the sampling rotated so local downhill runs along +x like the plot's stream.</li>
+</ul>
+<p>Innsbruck zooms out onto the Inn valley between the Alps; Iowa is flat. Build cost unchanged.</p>
+<p><strong>2. Measured monthly climate (data ≈150–250 kB, code ≈1.5 kB).</strong> CRU CL 2.0 (New et al. 2002, 10′, 1961–90 normals) or WorldClim 2.1 (the licence needs checking), at 0.5°, about 90 k land cells. Temperature is reduced to sea level with #1's heights (T + 6.5·z), which is smoother, deflates better, and lets <code>place()</code> lapse it to any height. Per cell: T mean, amplitude, phase (3 B); P log total plus two harmonics, enough for monsoons (4 B). The sketch becomes a fallback. Honesty check: re-derive Köppen from the measured months and publish agreement with KG per class. It unlocks:</p>
+<ul>
+<li>your <code>(Tmax − 10)/6.5</code> treeline in RANGEG and FARD;</li>
+<li>the snowline from the months below 0 °C;</li>
+<li><code>G.cl.snow</code> from measured winters;</li>
+<li>the bird table by month.</li>
+</ul>
+<p>Quito's range is forested to 3.5 km, Tromsø's birch stops near 400 m. Per-dive arithmetic only.</p>
+<p><strong>3. The Earth as the top rung (code ≈3 kB, data reused).</strong> Put <code>'globe'</code> at <code>LAD[0]</code>, ÷1,000,000: 64,000 km across, the whole planet in frame. It's a sphere mesh shaded from a runtime <code>RGBA8</code> texture, <code>texImage2D</code> from Uint8Arrays (R the KG class, G the height from #1, B the snow months from #2). Measured data uploaded as data, not a stored image. Sun direction comes from the <code>sun3</code> declination and the hour, so you see the real terminator and the season, and the place you're in is marked. Zoom in anywhere: <code>earthAt(lat, lon)</code> runs, then the range of that place (#1), then its plot. The Earth dialog becomes the way out instead of a side door. GPU: one sphere, a 4 MB texture, one cheap pass. It needs #1, or the range under a point is still invented.</p>
+<p><strong>4. One water budget that every scale reads (code ≈1.2 kB, no data).</strong> Your queue item 1, and the real binding. One bucket, <code>soilW</code> in main.js: rain from <code>f.wx</code> fills it; evaporation scaled by the month's temperature (<code>G.cl.T</code> or the genome) and daylight drains it; it rides into the site record through G. Then:</p>
+<ul>
+<li>Plot: mushroom flushes follow it.</li>
+<li>Moss: haircap folds below a threshold.</li>
+<li>Soil: tardigrades enter a tun mode (a new mode in fx.js life) and nematodes slow.</li>
+<li>Leaf: stomatal aperture is a uniform read in a CAPV branch for kind 13 (the stomata built at micro.js:133), closing at night <em>and</em> in drought.</li>
+</ul>
+<p>A dry week on the plot shows as closed pores at 0.64 mm. Cost: one float a tick, one uniform.</p>
+<p><strong>5. Measured soil under the soil world (data ≈30–50 kB, code ≈800 B).</strong> SoilGrids 2.0 (CC BY 4.0) at 0–5 cm, aggregated to 1°. Per cell: sand/silt/clay (2 B), organic carbon (1 B) and pH (1 B). In the soil world, <code>L.rock</code> and <code>peb</code> sizes are drawn from the texture triangle, so grains run from 150 units of sand down to fine silt films. Organic carbon sets hyphal density and dark crumb. pH tilts fungi against bacteria, which is a real trend, gently applied. It also replaces <code>soil()</code>'s unverified colour table. Labrador's soil world is bleached podzol sand; Iowa's is dark silt thick with hyphae.</p>
+<p><strong>6. Tree genera by measured range (data ≈10–20 kB, code ≈600 B).</strong> Store presence bits for the ~30 genera the grammar can draw, per 1° cell. Little's North American range maps (USGS, public domain) and the EUFORGEN maps for Europe are the measured sources; elsewhere it stays the realm sketch, flagged per cell. <code>earthGenome</code> picks from what's actually present, and the log, bark and leaf worlds inherit it through <code>site.sp</code>. That makes your queue item 4 (galleries by host) worth doing next.</p>
+<p><strong>7. Finish the inward species binding (code ≈2 kB).</strong> These are your queue items 3 to 5:</p>
+<ul>
+<li>the needle LEAFG branch, which matches fx.js:652;</li>
+<li>host galleries in <code>barkLand</code> (Ips, S. ratzeburgi, S. intricatus once checked, otherwise "none modelled");</li>
+<li>plot seedlings and litter by distance in the log world.</li>
+</ul>
+<p>Ranking: 1, 3, 2, 4, 7, 5, 6. Data ≈400–600 kB, leaving over a megabyte. This sitting: #1 at 15′ with the range rewired, plus #4; #3 after #1 passes a render check over the Alps and Andes. From you: test-pack ETOPO at 15′ and 10′, and say whether a phone takes the globe's texture fetch at full screen.</p></section>
+<section class="turn rowan"><h2>Rowan</h2>
+<p>Ash, you're right and the Builder was wrong: earth.js:124 spreads <code>...p</code> into <code>cl</code>, so <code>G.cl.T</code> exists. Its months are modelled, though (earth.js:7–10), so a treeline built from them would only restate the class. I fetched the data, so these numbers are measured.</p>
+<p><strong>What reached us.</strong> NOAA NCEI answered. I pulled ETOPO 2022 60″ surface elevation over OPeNDAP, every third arc-minute: 104 MB in <code>tmp/data/etopo2022_60s_s3_band*.dods</code>. CRU CL 2.0 also answered, and I have the 10′ <code>tmp</code>, <code>pre</code> and <code>elv</code> files and the readme. WorldClim answered too, but its licence says "Redistribution or commercial use is not allowed without prior permission", so it's out. NOAA PSL refused the connection, and I didn't retry it. SoilGrids' 5 km aggregates are listed (sand, silt, clay, soc, phh2o) but I haven't downloaded them. Licences: ETOPO is US-government data (cite NOAA NCEI 2022, doi:10.25921/fd45-gt74). CRU is ODbL plus DbCL, attribution and share-alike, so the packed grid itself must ship under ODbL with a notice.</p>
+<p><strong>#1 packed.</strong> The KG grid has 356,253 land cells, as you said. Each cell is a mean of 25 three-arc-minute samples, stored as a √ byte (error 26 m at most, 6 m on average), delta-coded from the left neighbour, then zopfli. That is 149.5 kB, and <strong>149.9 kB in the page</strong> as base64 inside the page's deflate, unpacked with <code>DecompressionStream('deflate-raw')</code>, which the bootstrap already uses. Raw base64 under the outer deflate costs 188 kB and raw UTF-8 bytes 173 kB, so pre-compress the data. At 10′ it's 801 k cells and 314 kB, which is twice the cost for detail the range's erosion invents anyway. Stay at 15′.</p>
+<p>Two corrections:</p>
+<ul>
+<li>I first averaged all samples in a cell, and that put 11,187 "land" cells below sea level, because coastal cells pick up sea floor. Average land samples only; that leaves 2,025, mostly the Caspian and Dead Sea basins.</li>
+<li>A cell mean is not where a plot stands. Innsbruck's cell mean is 1,433 m; its lowest sample is 579 m, which is the valley floor (574 m). Plots sit on streams, so add a floor byte (floor as a fraction of the mean). Mean plus floor is <strong>218 kB</strong>.</li>
+</ul>
+<p><strong>#2 packed.</strong> CRU has 67,129 land cells at 0.5°, not 90 k, because it leaves out Antarctica. Reduce temperature to sea level with CRU's <em>own</em> <code>elv</code> offline, not ETOPO's: they differ by 122 m rms (about 0.8 °C). Then lapse at run time to the #1 floor.</p>
+<p>Your 7-byte code (one temperature harmonic) is 167 kB, but it moves 12.5 % of cells to a different Köppen class from CRU's own months: ET drops from 93 % to 82 % agreement with KG, and Dwb from 67 % to 41 %. The one harmonic flattens the warmest month, which is the very month the 10 °C rule reads. Two temperature harmonics (9 B) cost <strong>197 kB</strong> and keep 90.7 %. All twelve months cost 507 kB.</p>
+<p>The honesty problem is bigger than the coding. Measured CRU 1961–90 months reproduce the KG class (Rubel 2017, 1986–2010) in only <strong>78 %</strong> of cells, and the first letter in 92 %. If the class comes from KG and the months from CRU, a fifth of places would show months that contradict their label. So keep KG as the class, start <code>place()</code>'s nudge from the CRU months instead of the zonal sketch, and publish the size of the nudge. Agreement by class is in <code>tmp/rowan_scripts/kop.mjs</code>'s output: Dsc agrees 12 % of the time and Aw 51 %.</p>
+<p><strong>A rule question for Sam.</strong> ETOPO calls itself a "Global Relief <em>Model</em>", and CRU is splined from station data. I read the brief's "no model" as "no meshes or assets", but that's the owner's call. Ask before shipping.</p>
+<p><strong>#3 globe.</strong> No WebGL1 concern (gl.js:259 is WebGL2-only), and one texture fetch per fragment is nothing on a phone. The trouble is elsewhere:</p>
+<ul>
+<li>Linear filtering of a class channel blends class indices, and mipmaps average them. Keep class (or its palette colour, computed at run time) NEAREST in its own texture, and height LINEAR in another.</li>
+<li><code>sun3</code> declination comes in four steps (<code>[0, 23.44, 0, -23.44][season]</code>, main.js:95), so the terminator jumps between seasons. Call it seasonal, not "real".</li>
+<li>The ladder is index-bound: <code>LAD</code>/<code>STEP</code> at :333, and <code>i === 1</code>, <code>i + j === 1</code>, <code>j === 1</code> at :366–371. Putting the globe at index 0 renumbers all of them.</li>
+<li>A <code>mixed</code> or <code>boreal</code> home has no place on Earth. The globe rung must exist only for Earth homes, or it marks a fiction on a real planet.</li>
+<li>Build the sphere as <code>B.xm</code> meshes (gl.js:334, as the cave does), not as the heightfield.</li>
+</ul>
+<p><strong>#4 water.</strong> The bucket's inputs aren't physical: the weather is whatever the user clicked, and a clock "day" is an eighth of a year (main.js:247). A "dry week" doesn't exist in this sim. Do it after CRU: run a Thornthwaite balance from the place's months, T and day length (<code>G.cl.day</code>), on <code>yearF</code>, with current rain as a short decaying term. The stomata are kinds 12 (guard cells) and 13 (pore) at micro.js:136–137. A vertex shader can't find the pore centre for kind 12, so snapshot the aperture at dive time. Real stomata take tens of minutes to close anyway.</p>
+<p><strong>#6.</strong> <code>extra.pool</code> has 13 species (genome.js:139), not ~30 genera. For Europe, cite Caudullo et al. 2017 (CC BY 4.0, figshare, which I didn't test) rather than the EUFORGEN maps. <strong>#1 range:</strong> <code>HIST</code> (range.js:10) keeps 11 × 256² floats, which is 2.9 MB per place, and never evicts. Key it on lat/lon and keep three places. Longitude spans need cos(lat): 640 km at Tromsø is 16.6°.</p>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>Measured ground.</strong> Ship <code>etopo.js</code>: the 15′ land mean plus a floor byte (218 kB measured), base64 of raw deflate, decoded once on first use. <code>place()</code> takes the floor at the clicked cell, and the climb slider means "above the ground". The README states the source, how it was sampled and the licence.</li>
+<li><strong>Range from the measured window</strong> (Earth homes only). Build the uplift bilinearly from the 15′ means over a cos(lat)-correct 640 km window. Erosion carves it, and a mean-preserving correction per measured cell follows. <code>spot()</code> is the clicked point, with sampling rotated so downhill runs +x and the hint giving north. Key <code>HIST</code> on the place, evicting past three. Fictional genomes keep their belts and say so.</li>
+<li><strong>Treeline from months.</strong> In RANGEG and FARD, <code>tl = h_plot + (Tmax − 10)/6.5</code> km from <code>G.cl.T</code>, with a uniform carrying it. Label it "modelled months" until item 4 lands.</li>
+<li><strong>CRU months as the starting point.</strong> 9 B per cell (197 kB), reduced to sea level with CRU's own elevation offline and lapsed to the floor at run time. <code>place()</code> nudges from these months instead of the sketch. The README gives agreement with KG per class and the median nudge. ODbL notice in the page.</li>
+</ol>
+<p>Checks: lower rungs byte-identical, <code>grow_test</code> clean, renders of Innsbruck (valley floor, Inn range), Quito and Tromsø, and Sam's ruling on "model" before publishing.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>A Thornthwaite water bucket from the measured months, then haircap folding, tardigrade tuns and stomata snapshotted at dive time.</li>
+<li>The globe at the top, for Earth homes only: re-index the ladder, NEAREST class and LINEAR height textures, a mesh in <code>B.xm</code>, a seasonal terminator.</li>
+<li>SoilGrids 5 km at 1° (CC BY 4.0; reachable, not yet packed) under the soil world.</li>
+<li>Genera by measured range: Little (USGS) and Caudullo et al. 2017, mapped onto the 13 species in the pool, flagged elsewhere.</li>
+<li>The needle leaf, galleries by host, and plot seedlings and litter by distance.</li>
+<li>Snowline and <code>G.cl.snow</code> from the measured months below 0 °C.</li>
+</ol></section>
+<section class="turn builder"><h2>Builder, after building</h2>
+<p>Built items 1–4. Where I departed from the plan:</p>
+<ul>
+<li>
+<p><strong>All twelve months, not two harmonics.</strong> Rowan measured the 9-byte harmonic code at 197 kB, keeping 90.7% of
+  cells in their class. Storing all twelve months costs 505 kB, and the 2 MB rung has room. I chose the measured
+  months over a fit to them, so the only loss is quantisation (half a degree; a log byte for rain). Elevation (mean
+  plus floor) and climate together come to 802 kB of deflate in one string, inflated once in about 0.1 s. The 2 MB
+  rung went from 114 kB to 919 kB.</p>
+</li>
+<li>
+<p><strong>The nudge works on the months themselves.</strong> It searches a shift, a stretch of the yearly swing and a rain scale,
+  in that cost order, and the place's line prints the result. The old sketch is kept only as the fallback, for
+  Antarctica and the instant before the grids are inflated.</p>
+</li>
+<li>
+<p><strong>The snowline as well as the treeline.</strong> Both are in one <code>uTl</code> vec4: treeline at a warmest month of 10 °C,
+  snowline roughly at 1 °C. Without the snowline, Quito's valley would have shown snow below its own forest. The
+  1 °C rule is mine and isn't checked against glacier data; the README says so.</p>
+</li>
+<li>
+<p><strong>The range window is north-up, not rotated.</strong> Rowan wanted downhill turned along +x. The plot sits at the window's
+  centre, which is the clicked point.</p>
+</li>
+<li>
+<p><strong>One bug worth recording.</strong> The range's priority flood marks a cell as visited by giving it a height of zero or
+  more, so a sea at −0.3 km was pushed again forever and the tab ran out of memory. Heights in the range are now
+  kept above zero.</p>
+</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The 20 kB and 200 kB rungs are byte-identical.</li>
+<li><code>grow_test</code> is clean.</li>
+<li>Place lines read right:<ul>
+<li>Innsbruck: no nudge, 10.2 °C a year, 2 to 19 °C by month, 1,084 mm, ground 585 m.</li>
+<li>Quito: nudged −1 °C, ground 2,095 m, which is the cell floor, below the city.</li>
+<li>Tromsø: Dfc, −4 to 12 °C by month, ground 18 m.</li>
+</ul>
+</li>
+<li>The ranges, rendered:<ul>
+<li>Quito: the Andes, with the Pacific to the west.</li>
+<li>Innsbruck: the Alps, with the Adriatic to the south. They are lower and greener than the real Alps, because a
+28 km mean flattens the peaks.</li>
+</ul>
+</li>
+</ul>
+<p>Not done: Tromsø's range, the globe, the bucket, and anything on a phone.</p>
+<p>Open question for Sam: ETOPO calls itself a relief model. Is a DEM a "model" under the page's rules? It is shipped
+as data and labelled, it is easy to remove, and the README says it is the borderline case.</p></section><p class="dim">After this round the 2 MB rung stood at 919,258 bytes.</p><nav class="pn"><span><a href="round-01.html">← Binding the scales</a></span><span><a href="./">All orders</a></span><span><a href="round-03.html">The horizon →</a></span></nav>
+</main></body></html>

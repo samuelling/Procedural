@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The place’s year at every scale: Orders of Magnitude dialogue</title><style>
+:root { --field: #0a0d0a; --ink: #f1f3ea; --dim: #b9c0ad; --line: rgba(241,243,234,.18); --sun: #ffc457; --ash: #9fd28a; --rowan: #e8a07a; --build: #8fb8e0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--field); color: var(--ink); font: 400 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+a { color: var(--ink); text-decoration-color: rgba(241,243,234,.4); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--sun); }
+.crumb { font-size: 13px; color: var(--dim); margin: 0 0 28px; }
+.crumb a { color: var(--dim); }
+h1 { margin: 0 0 10px; font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -.01em; text-wrap: balance; }
+h2 { margin: 56px 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .25em; text-transform: uppercase; color: var(--dim); }
+h3 { margin: 28px 0 8px; font-size: 19px; font-weight: 600; }
+p, li { text-wrap: pretty; }
+.lede { font-size: 18px; color: var(--ink); max-width: 62ch; }
+.dim { color: var(--dim); }
+.rung { border-top: 1px solid var(--line); padding: 28px 0 8px; margin-top: 28px; }
+.rung header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.rung header b { font: 600 30px/1 ui-monospace, Menlo, Consolas, monospace; }
+.rung header span { font-size: 19px; font-weight: 600; }
+.rung header a { margin-left: auto; font-size: 14px; }
+.bytes { font: 400 13px/1.3 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); margin: 12px 0 6px; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: rgba(241,243,234,.1); margin: 0 0 18px; }
+.bar i { display: block; height: 100%; background: var(--sun); }
+.bar.split i { display: inline-block; vertical-align: top; }
+.is { font-size: 17px; border-left: 3px solid var(--sun); padding: 2px 0 2px 14px; margin: 0 0 16px; }
+dl { margin: 0; display: grid; grid-template-columns: 9.5em 1fr; gap: 10px 18px; }
+dt { color: var(--dim); font-size: 14px; padding-top: 2px; }
+dd { margin: 0; }
+dd ul { margin: 0; padding-left: 18px; }
+code { font: 13.5px ui-monospace, Menlo, Consolas, monospace; background: rgba(241,243,234,.08); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: rgba(241,243,234,.06); padding: 12px 14px; border-radius: 4px; font-size: 12.5px; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0 16px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 500; }
+td.n { text-align: right; white-space: nowrap; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--dim); margin: -8px 0 18px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.rounds { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.rounds li { border-bottom: 1px solid var(--line); }
+.rounds a { display: grid; grid-template-columns: 4.5em 1fr auto; gap: 4px 14px; padding: 14px 4px; text-decoration: none; }
+.rounds a:hover { background: rgba(241,243,234,.05); }
+.rounds b { font: 600 14px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); }
+.rounds em { font-style: normal; font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); white-space: nowrap; }
+.rounds small { grid-column: 2 / 4; color: var(--dim); font-size: 14px; }
+.who { display: flex; gap: 18px; flex-wrap: wrap; margin: 18px 0 8px; }
+.who div { flex: 1 1 200px; border-top: 3px solid; padding-top: 8px; font-size: 14px; color: var(--dim); }
+.who b { display: block; color: var(--ink); font-size: 16px; }
+.turn { border-left: 3px solid var(--line); padding: 2px 0 2px 18px; margin: 34px 0; }
+.turn > h2:first-child { margin-top: 0; letter-spacing: .2em; }
+.turn.ash { border-color: var(--ash); } .turn.ash > h2:first-child { color: var(--ash); }
+.turn.rowan { border-color: var(--rowan); } .turn.rowan > h2:first-child { color: var(--rowan); }
+.turn.builder { border-color: var(--build); } .turn.builder > h2:first-child { color: var(--build); }
+.turn h3 { font-size: 16px; }
+nav.pn { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); margin-top: 48px; padding-top: 18px; font-size: 15px; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 2px 0; } dt { padding-top: 12px; } h1 { font-size: 25px; } .rounds a { grid-template-columns: 3.6em 1fr; } .rounds em { grid-column: 2; } }
+</style></head><body><main>
+<p class="crumb"><a href="../">Orders of Magnitude</a> › <a href="./">What’s happening</a> › Round 4</p><h1>Round 4</h1>
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p>
+<section class="turn ash"><h2>Ash</h2>
+<p>Rowan, the measured world now stops at the plot. Below it, Innsbruck in January and Manaus in July differ only through <code>G.cl.T</code> feeding snow and <code>uTl</code>: both have a living leaf, a bare log, and dew every dawn (gl.js:211, <code>DEW = max(smoothstep(.5,.15,uSun.y), uWx.x)</code>, so even the Atacama gets dew). I mark each change <strong>M</strong> (measured number), <strong>R</strong> (rule applied to measured numbers) or <strong>S</strong> (sketch).</p>
+<p><strong>1. Two buckets, water and snow, from the shipped months (reuse; ≈2 kB code).</strong> Stepped beside <code>yearF</code> (main.js:252), passed down in the site record (main.js:134) as <code>sw</code> and <code>swe</code>.</p>
+<ul>
+<li><strong>Water:</strong> Thornthwaite PET from <code>mon()</code>'s T, with day length per month from latitude and the continuous declination you specified.</li>
+<li><strong>Snow:</strong> a degree-day snowpack. P is stored as SWE when T &lt; 0 and melts at about 3 mm/°C/day.</li>
+</ul>
+<p>Both R over M:</p>
+<ul>
+<li><strong>Plot:</strong> snow cover from SWE, not the month's T, so late March at Innsbruck still has snow lying; mushrooms follow <code>sw</code>; the stream only on regrow.</li>
+<li><strong>Log (64 cm):</strong> Innsbruck's January pack (20–30 cm if the rule holds) is a white land layer at <code>Hgt + depth</code> with only the log's top showing; slugs (kind 9) dormant, active only at high <code>sw</code>. Manaus: always wet, unchanged.</li>
+<li><strong>Moss (6.4 cm):</strong> under a pack, a dim blue space below a snow ceiling near 0 °C, where springtails really winter; dry haircap folds its leaves (lower <code>dr</code>).</li>
+<li><strong>Soil (6.4 mm):</strong> unfrozen under snow, so nematodes stay active; still on bare frozen ground; tardigrades tun when dry.</li>
+<li><strong>Leaf:</strong> stomatal aperture is snapshotted from <code>sw</code> at dive time.</li>
+</ul>
+<p><strong>2. Phenology from the measured months (reuse; ≈1 kB).</strong> Replace the four-step leaf calendar with dates from <code>G.cl.T</code>: leaf-out at about 5 °C plus a degree-day sum, fall below about 10 °C; evergreens (<code>ev</code>) never. All R; thresholds from memory, marked unverified.</p>
+<ul>
+<li><strong>Plot:</strong> <code>uSe.x/.y</code> from the dates: Innsbruck colours in October, Manaus never.</li>
+<li><strong>Log:</strong> litter freshness follows days since fall: gold in November, skeletal by June.</li>
+<li><strong>Moss:</strong> open canopy between fall and leaf-out, so more light in spring.</li>
+<li><strong>Leaf:</strong> between fall and leaf-out a deciduous dive lands on a fallen leaf with hyphae, or a needle; LEAFG's chloroplasts yellow on the same date.</li>
+</ul>
+<p>No data, all five scales: the best value here.</p>
+<p><strong>3. Relative humidity and diurnal range from CRU (new data; I'd guess ≈40–60 kB each as three harmonics; please pack them).</strong> Dawn is T − DTR/2; the dew point comes from <code>reh</code> by Magnus; dew when dawn is below it, hoar frost when also below 0 °C. R over M, replacing gl.js:211 with a <code>uDew</code> vec2 (dew, rime).</p>
+<ul>
+<li><strong>Plot:</strong> dew only on nights that earn it; white needle tips; valley fog at saturated dawns (Innsbruck's January inversion).</li>
+<li><strong>Log:</strong> rime along the bark edges, and the elf cups beaded.</li>
+<li><strong>Moss:</strong> drops of about 1–3 mm on the shoot tips, as lenses at true scale.</li>
+<li><strong>Leaf:</strong> dew droplets of about 100 µm, which is 10 units, sitting on the cuticle. Frost shows as a feathery rime on the hairs.</li>
+</ul>
+<p>Check: harmonics may flatten DTR as they flattened Tmax; measure dew-night misclassification against twelve months before choosing the coding.</p>
+<p><strong>4. Wet-day frequency and sunshine from CRU (new data; ≈40–60 kB each).</strong> The clock's weather becomes a two-state Markov chain with wet probability <code>wet/days</code> (R over M); sunshine sets the baseline overcast <code>f.wx[2]</code> (M); the button stays as an override.</p>
+<ul>
+<li><strong>Plot:</strong> the counts decide, not my memory: Manaus's wet March against its drier August, Innsbruck's summer storms.</li>
+<li><strong>Log:</strong> slugs out after rain.</li>
+<li><strong>Moss:</strong> raindrops.</li>
+<li><strong>Bucket:</strong> #1 gets real rain events instead of clicks.</li>
+</ul>
+<p>It binds less than #3, but makes the weather itself measured.</p>
+<p><strong>5. SoilGrids under the soil world (new data, guessed ≈40–60 kB; pack it).</strong> Sand, silt, clay, SOC and pH at 1°.</p>
+<ul>
+<li><strong>Soil world:</strong> grain sizes from the texture triangle (M, mapped by R), and hyphal density from SOC (R).</li>
+<li><strong>Plot:</strong> the floor's litter and mineral colour from the same numbers, so the plot and the soil world agree (R).</li>
+<li><strong>Moss:</strong> low pH favours <em>Sphagnum</em> or haircap. That rule is S, so I'll keep it gentle.</li>
+</ul>
+<p><strong>6. Genera by measured range (new data ≈10–20 kB).</strong> Little plus Caudullo, mapped onto the pool. M for presence; everything below inherits it through <code>site.sp</code>, then the needle leaf and host galleries.</p>
+<p><strong>Not proposed:</strong></p>
+<ul>
+<li>CRU wind: below the plot the air is near-still everywhere.</li>
+<li>CRU ground-frost days: CRU partly derives them from tmp and DTR, so with #3 we compute them (R) rather than ship a derived layer as measured.</li>
+</ul>
+<p><strong>Ranked by one world per byte:</strong> 2, 1, 3, 4, 5, 6. #1 and #2 are about 3 kB of code and no data, and make January and July differ at every rung. #3 adds about 100 kB and is the most visible, dew and rime at every scale. This sitting: #2 and #1, with render checks of the snow-covered log (Innsbruck, 15 January) and the leaf (Manaus, 15 July); then #3 once packed.</p></section>
+<section class="turn rowan"><h2>Rowan</h2>
+<p>Ash, I checked your readings against the code, fetched the humidity and diurnal-range data, and tested your snow rule on the data we ship. One finding stops the Innsbruck render check before it starts.</p>
+<p><strong>Your readings of the code.</strong></p>
+<ul>
+<li><strong>Dew.</strong> The dew term is in CRDF, the card shader, only (gl.js:211). It is multiplied by <code>(1 − uWx.y)</code>, and it draws only on cards seen from very close (<code>FP &lt; .004</code>, fx.js:666). So the Atacama does get dew, but only on close-up leaves.</li>
+<li><strong>Evergreens.</strong> <code>ev</code> is set only on Earth's evergreen broadleaves (earth.js:139–146). The pool's conifers don't carry it, and larch is deciduous. Use <code>ev || (leaf.t === 1 &amp;&amp; id !== 'larch')</code>.</li>
+<li><strong>Animals.</strong> Slugs are life kind 9 (fx.js:135), as you said.</li>
+</ul>
+<p><strong>Innsbruck has no snow at the floor in our data.</strong> The shipped months, lapsed at 6.5 °C/km from the half-degree cell's mean height (about 1.65 km) down to the 585 m floor, give a January mean of <strong>+1.9 °C</strong>. The real valley is around −1.5 °C (from memory, unverified). Winter valleys pool cold air, and a fixed free-air lapse can't know that. Run with the degree-day rule, the plot builds <strong>0 mm</strong> of snow water by January and 0 by March (tmp/rowan_scripts/snow_test.py), so a render of the snow-covered log on 15 January would show bare ground.</p>
+<p>We need a lapse rate that is weaker in winter; I recall Rolland (2003) reporting lower Alpine lapse rates in winter than in summer, unverified. And the README should state the bias. Until then, check the snow log at Tromsø.</p>
+<p><strong>The snow rule.</strong> Your 3 mm per °C per day is inside Hock's (2003) range for snow, "2 to 7 mm d⁻¹ °C⁻¹" (<a href="https://cambridge.org/core/services/aop-cambridge-core/content/view/S0022143000003087">Hock 2003, J. Glaciol.</a>). The weak part is using the monthly mean, not the rate. I compared two versions:</p>
+<table>
+<thead>
+<tr>
+<th>Place</th>
+<th>Month-mean rule, Jan / Mar SWE</th>
+<th>Days spread ±4 °C (σ), Jan / Mar SWE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tromsø</td>
+<td>291 / 440 mm</td>
+<td>54 / 69 mm</td>
+</tr>
+<tr>
+<td>Boston</td>
+<td>206 / 47 mm</td>
+<td>45 / 0 mm</td>
+</tr>
+</tbody>
+</table>
+<p>The choice of rule moves snow water by up to five times. With the diurnal range shipped (below), take the daily spread from each month's own range instead of my arbitrary 4 °C (still a rule, labelled). Convert snow water to depth at a stated density.</p>
+<p>Under snow: at "around a half-foot or more", the subnivium stays "just around freezing", and "some invertebrates remain active" (<a href="https://grow.cals.wisc.edu/departments/front-list/five-features-of-the-secret-ecosystem-under-the-snow">UW–Madison CALS</a>). That page doesn't name springtails; that part is unverified, though snow fleas are springtails.</p>
+<p><strong>Phenology thresholds.</strong></p>
+<ul>
+<li><strong>Spring.</strong> "A forcing temperature threshold of 5 °C is commonly used in temperate regions" (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3468505">Fu et al., PMC3468505</a>). But the sum needed (F*) is fitted per species and depends on winter chilling, so any number we pick is a sketch. Mark it S.</li>
+<li><strong>Autumn.</strong> I found no source for a 10 °C monthly-mean rule. Delpierre et al. model leaf colouring as triggered by photoperiod, followed by a cold-degree-day sum (<a href="https://modis.gsfc.nasa.gov/sci_team/pubs/abstract_new.php?id=01144">abstract</a>); no numbers there. Mark it S.</li>
+<li><strong>A better rule.</strong> Jolly, Nemani &amp; Running's (2005) Growing Season Index (<a href="https://scholarworks.umt.edu/ntsg_pubs/148">record</a>) multiplies three ramps: minimum temperature, photoperiod and vapour-pressure deficit. The photoperiod ramp of 10–11 h is confirmed through Daham et al. (2018) (<a href="https://core.ac.uk/download/151188326.pdf">pdf</a>), who use their own 0–20 °C and 125–5,100 Pa for the other two. Jolly's own −2 to 5 °C and 900–4,100 Pa are from my memory, unverified. All three inputs come from tmp plus the new two grids: minimum temperature is T − DTR/2, and the deficit comes from vapour pressure and Tmax. That turns your rule into one fed by measured inputs, and it also handles savannas that drop leaves in the dry season, which a temperature rule can't. Ship the temperature-only version now, labelled S, and switch to GSI once the grids land.</li>
+</ul>
+<p><strong>Humidity and diurnal range: measured.</strong> Both came from https://crudata.uea.ac.uk/cru/data/hrg/tmc/ and are in tmp/data/:</p>
+<ul>
+<li><code>cru_cl2_grid_10min_reh.dat.gz</code> (11.8 MB)</li>
+<li><code>cru_cl2_grid_10min_dtr.dat.gz</code> (8.6 MB)</li>
+</ul>
+<p>Both have all 566,262 cells and the same licence as before (ODbL plus DbCL). Packed in pack_data.py's month layout (12 planes, change from the month before, then change from the cell before) over the 67,129 half-degree cells, zopfli sizes:</p>
+<table>
+<thead>
+<tr>
+<th>Coding</th>
+<th>zopfli</th>
+<th>Dew/no-dew flips</th>
+<th>Worst error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>reh 1 % + dtr 0.5 °C</td>
+<td>338 kB</td>
+<td>0.53 %</td>
+<td>0.62 °C</td>
+</tr>
+<tr>
+<td>dew-point depression + dtr, 0.5 °C</td>
+<td>295 kB</td>
+<td>1.75 %</td>
+<td>0.37 °C</td>
+</tr>
+<tr>
+<td>dew-point depression + dtr, 1 °C</td>
+<td><strong>226 kB</strong></td>
+<td>3.5 %</td>
+<td>0.75 °C</td>
+</tr>
+<tr>
+<td>mean + 2 harmonics of each, 0.25 °C</td>
+<td>122 kB</td>
+<td>1.7 %</td>
+<td>10.6 °C</td>
+</tr>
+</tbody>
+</table>
+<p>Flips are cell-months where the dew answer differs from the unquantised field. Separately, reh at 1 % alone is 181 kB, and dtr at 0.25/0.5 °C alone is 197/157 kB.</p>
+<p>The harmonic form breaks badly in some cells. New et al. warn RH errors of "up to ±15 %", which is about ±2–3 °C in dew point, so 1 °C steps sit inside the data's own error. My pick is <strong>226 kB</strong>, which takes the rung from 1,085 to about 1,311 kB. Your guess of 40–60 kB each was low.</p>
+<p><strong>How the dew rule should use them.</strong></p>
+<ol>
+<li><strong>Vapour pressure.</strong> CRU made its RH as 100·e/es(T mean) (New et al. 2002), so e = RH/100 · es(T) inverts it exactly. es is Magnus: 6.1094·exp(17.625T/(T + 243.04)) hPa. Compute it at the cell's own height (offline, so we ship the depression T − Td). At the plot, keep RH and recompute at the lapsed T. That step is a rule, R.</li>
+<li><strong>Dew point.</strong> Td is the inverse of Magnus.</li>
+<li><strong>Leaf surface at dawn.</strong> Tsurf = T − DTR/2 − ΔT. ΔT is about 2 °C on clear, calm nights ("a few degrees", <a href="https://weather.metoffice.gov.uk/learn-about/weather/types-of-weather/frost-and-ice/forecasting-frost">Met Office</a>; the 2 is unverified) and about 0 when overcast, windy or raining.</li>
+<li><strong>Classify on the margin, don't scale by it.</strong> Margin = Tsurf − Td, and dew = smoothstep(1, −1, margin). The size of a negative margin means nothing: Quito's months put Td 6 °C above dawn, and air can't be that supersaturated.</li>
+<li><strong>Frost.</strong> If also Td &lt; 0 °C, it's hoar frost (rime). If Td ≥ 0 but Tsurf &lt; 0, it's dew that then freezes. Strictly, frost needs the frost point over ice, which is a little above Td.</li>
+<li><strong>Timing.</strong> Multiply by the existing dawn envelope (<code>smoothstep(.5, .15, uSun.y)</code>) and send it as <code>uDew = (dew, rime)</code>.</li>
+</ol>
+<p>The shipped months give:</p>
+<ul>
+<li>Manaus: margin −3 in both January and July, so dew on every clear night.</li>
+<li>Calama: +3.7 and +5.6, so never.</li>
+<li>Innsbruck's cell: January −1.3, hoar frost; July −1.7, dew.</li>
+</ul>
+<p>Coastal fog in the Atacama (camanchaca) is outside this rule. Say so.</p>
+<p><strong>Agreeing with you:</strong> frost days computed from our own grids, not shipped (CRU derives them); no wind.</p>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>Phenology from the months, as a sketch.</strong><ul>
+<li>Leaf-out at a 5 °C base plus a degree-day sum, leaf-fall on a cold-season rule, evergreen = <code>ev || (leaf.t === 1 &amp;&amp; id !== 'larch')</code>. Thresholds labelled S with these citations.</li>
+<li>It drives <code>uSe.x/.y</code>, the log world's litter freshness, and the leaf world's fallen-leaf case.</li>
+<li>Render check: Manaus in July stays green; a beech plot at Innsbruck colours in October.</li>
+</ul>
+</li>
+<li><strong>Winter valley temperatures, then the snowpack.</strong><ul>
+<li>A month-dependent lapse to the floor, weaker in winter, numbers marked unverified. Print January at the Innsbruck floor next to the station value in the place line's check.</li>
+<li>Then the degree-day pack at 3 mm per °C per day (Hock's 2–7) and Thornthwaite water, both carried down in the site record.</li>
+<li>Plot snow cover from snow water, the log under snow, snowpack depth at a stated density.</li>
+<li>Render check: the snowy log at Tromsø; Innsbruck only once item 2's January is believable.</li>
+</ul>
+</li>
+<li><strong>Dew and rime from measured months.</strong><ul>
+<li>Ship dew-point depression and DTR, 12 months each at 1 °C (226 kB, measured), labelled CRU plus Magnus.</li>
+<li>Feed <code>uDew</code> (dew, rime) by the rule above, replacing gl.js:211's always-dew.</li>
+<li>Render check: Manaus at a July dawn, dew; Calama, dry; Innsbruck in January, rime.</li>
+</ul>
+</li>
+</ol>
+<p>Each item needs: lower rungs byte-identical, <code>grow_test</code> clean.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>Phenology on the Growing Season Index (minimum temperature, photoperiod, deficit), once item 3's grids are in; the snowpack's daily spread from DTR.</li>
+<li>Wet days (rd0, 10 MB source) for a Markov weather chain, and sunshine for the cloud baseline. Pack and measure first; my guess, unmeasured, is 100–150 kB each at 12 months.</li>
+<li>The bucket's effects below the plot: haircap folding, tardigrade tuns, stomata snapshot, dormant slugs.</li>
+<li>SoilGrids, then genera by measured range and the host-specific inward details.</li>
+<li>The next world in a window, and the globe.</li>
+</ol></section>
+<section class="turn builder"><h2>Builder, after building</h2>
+<p>Built all three items. Where the build departs from the plan:</p>
+<ul>
+<li>
+<p><strong>Dew and rime: as agreed.</strong> I packed both variables into <code>pack_data.py</code>'s month layout (12 planes each) and
+  measured the cost: 228 kB, against Rowan's 226. At the plot the dew-point depression is kept as shipped rather
+  than recomputed at the lapsed temperature; humidity held, that is close enough at whole degrees. Dew and rime
+  ride in <code>uCv.zw</code>, which is now a vec4: rime whitens the leaves at dawn, and the dew drops are gated by <code>uCv.z</code>.
+  Fictional forests keep dew at every dawn, as before.</p>
+</li>
+<li>
+<p><strong>Snowpack: as agreed, with DTR spreading the day.</strong> Eight points through each day, 3 mm of melt per degree-day,
+  and snow below 1 °C, spun up over two years. The Thornthwaite water bucket isn't built yet. It moves to round 5
+  with the small worlds that would read it.</p>
+</li>
+<li>
+<p><strong>Winter lapse: built, and still short.</strong> The lapse rate is 5.4 − 1.2·cos(month) °C/km, scaled by latitude up to
+  30°, applied from the 15′ cell mean (not CRU's half-degree height, which isn't shipped) down to the floor. That
+  brings Innsbruck's January from +1.9 to −0.2 °C. Rowan's −1.5 for the station is from memory. Either way, the
+  snow test is Tromsø's, as Rowan said.</p>
+</li>
+<li>
+<p><strong>Phenology: a sketch, labelled as one.</strong> I used Ash's thresholds; for the colouring rule Rowan found no source.
+  Only deciduous broadleaves are affected (<code>uSe</code> is already gated by the needle fraction in the shaders).
+  Evergreen broadleaves on Earth hold their leaves. The Growing Season Index stays queued.</p>
+</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The lower rungs are byte-identical, and <code>grow_test</code> is clean.</li>
+<li>In Node, <code>place()</code> gives:<ul>
+<li>Tromsø: 123 and 261 mm of snow water in mid-January and mid-March.</li>
+<li>Innsbruck: leaves out on 11 May and bare on 18 November; dew depression 4 °C in January; rime.</li>
+<li>Calama: depression 10–16 °C, no dew at any season.</li>
+</ul>
+</li>
+<li>Renders:<ul>
+<li>Tromsø in mid-January: snow on the spruce, the sun below the horizon at noon.</li>
+<li>Innsbruck on 1 November: crowns orange.</li>
+<li>Innsbruck at a January dawn: bare, no snow.</li>
+</ul>
+</li>
+</ul>
+<p>The rime itself is too subtle to see at the render tool's resolution.</p></section><p class="dim">After this round the 2 MB rung stood at 1,313,751 bytes.</p><nav class="pn"><span><a href="round-03.html">← The horizon</a></span><span><a href="./">All orders</a></span><span><a href="round-05.html">Weather, water, and the foot of the ladder →</a></span></nav>
+</main></body></html>

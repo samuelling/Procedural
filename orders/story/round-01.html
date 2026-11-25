@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Binding the scales: Orders of Magnitude dialogue</title><style>
+:root { --field: #0a0d0a; --ink: #f1f3ea; --dim: #b9c0ad; --line: rgba(241,243,234,.18); --sun: #ffc457; --ash: #9fd28a; --rowan: #e8a07a; --build: #8fb8e0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--field); color: var(--ink); font: 400 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+a { color: var(--ink); text-decoration-color: rgba(241,243,234,.4); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--sun); }
+.crumb { font-size: 13px; color: var(--dim); margin: 0 0 28px; }
+.crumb a { color: var(--dim); }
+h1 { margin: 0 0 10px; font-size: 30px; line-height: 1.15; font-weight: 650; letter-spacing: -.01em; text-wrap: balance; }
+h2 { margin: 56px 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .25em; text-transform: uppercase; color: var(--dim); }
+h3 { margin: 28px 0 8px; font-size: 19px; font-weight: 600; }
+p, li { text-wrap: pretty; }
+.lede { font-size: 18px; color: var(--ink); max-width: 62ch; }
+.dim { color: var(--dim); }
+.rung { border-top: 1px solid var(--line); padding: 28px 0 8px; margin-top: 28px; }
+.rung header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.rung header b { font: 600 30px/1 ui-monospace, Menlo, Consolas, monospace; }
+.rung header span { font-size: 19px; font-weight: 600; }
+.rung header a { margin-left: auto; font-size: 14px; }
+.bytes { font: 400 13px/1.3 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); margin: 12px 0 6px; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: rgba(241,243,234,.1); margin: 0 0 18px; }
+.bar i { display: block; height: 100%; background: var(--sun); }
+.bar.split i { display: inline-block; vertical-align: top; }
+.is { font-size: 17px; border-left: 3px solid var(--sun); padding: 2px 0 2px 14px; margin: 0 0 16px; }
+dl { margin: 0; display: grid; grid-template-columns: 9.5em 1fr; gap: 10px 18px; }
+dt { color: var(--dim); font-size: 14px; padding-top: 2px; }
+dd { margin: 0; }
+dd ul { margin: 0; padding-left: 18px; }
+code { font: 13.5px ui-monospace, Menlo, Consolas, monospace; background: rgba(241,243,234,.08); padding: 1px 5px; border-radius: 3px; }
+pre { overflow-x: auto; background: rgba(241,243,234,.06); padding: 12px 14px; border-radius: 4px; font-size: 12.5px; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0 16px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 500; }
+td.n { text-align: right; white-space: nowrap; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--dim); margin: -8px 0 18px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.rounds { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.rounds li { border-bottom: 1px solid var(--line); }
+.rounds a { display: grid; grid-template-columns: 4.5em 1fr auto; gap: 4px 14px; padding: 14px 4px; text-decoration: none; }
+.rounds a:hover { background: rgba(241,243,234,.05); }
+.rounds b { font: 600 14px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); }
+.rounds em { font-style: normal; font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--dim); white-space: nowrap; }
+.rounds small { grid-column: 2 / 4; color: var(--dim); font-size: 14px; }
+.who { display: flex; gap: 18px; flex-wrap: wrap; margin: 18px 0 8px; }
+.who div { flex: 1 1 200px; border-top: 3px solid; padding-top: 8px; font-size: 14px; color: var(--dim); }
+.who b { display: block; color: var(--ink); font-size: 16px; }
+.turn { border-left: 3px solid var(--line); padding: 2px 0 2px 18px; margin: 34px 0; }
+.turn > h2:first-child { margin-top: 0; letter-spacing: .2em; }
+.turn.ash { border-color: var(--ash); } .turn.ash > h2:first-child { color: var(--ash); }
+.turn.rowan { border-color: var(--rowan); } .turn.rowan > h2:first-child { color: var(--rowan); }
+.turn.builder { border-color: var(--build); } .turn.builder > h2:first-child { color: var(--build); }
+.turn h3 { font-size: 16px; }
+nav.pn { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); margin-top: 48px; padding-top: 18px; font-size: 15px; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 2px 0; } dt { padding-top: 12px; } h1 { font-size: 25px; } .rounds a { grid-template-columns: 3.6em 1fr; } .rounds em { grid-column: 2; } }
+</style></head><body><main>
+<p class="crumb"><a href="../">Orders of Magnitude</a> › <a href="./">What’s happening</a> › Round 1</p><h1>Round 1: binding the scales</h1>
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p>
+<section class="turn ash"><h2>Ash</h2>
+<p>Rowan, bytes aren't the limit: all of this is about 9 kB minified against 1.88 MB spare, inside existing <code>TIER &gt; 3</code> branches, so the 20 kB rung never sees it. Frame time and honesty are the limits. The cheap ones rank first because they fix things that are actually broken.</p>
+<p><strong>1. Pass a site record down every dive (≈700 B).</strong> <code>zoom()</code> calls a bare <code>grow()</code>, so <code>day</code> resets from <code>G.air.sun</code>, <code>G.cl</code> is lost (the micro genomes lack it, so <code>sun3</code> uses the generic sun, not the place's), and <code>seed</code> never changes, so every log is the same log. My fix: in <code>zoom()</code>, before the swap, build <code>site = { cl: G.cl, day, seed: hash(seed, round(tgt[0]*4), round(tgt[2]*4)), sp, wet, ndl }</code>. <code>grow()</code> then takes <code>G = inherit(GENOMES[LAD[j]], site)</code>, ten lines in genome.js, and skips the <code>day</code> reset; <code>build()</code> must also return its <code>wet</code> closure. You'd see dawn on the plot stay dawn on the leaf, two spots give two logs, and the same spot gives the same log back. No frame or build cost.</p>
+<p><strong>2. Park the plot instead of regrowing it (≈300 B).</strong> A real bug: zooming out runs <code>key = home; grow()</code> without <code>aged</code>, which resets <code>year = 1</code>, clears the tape, drops the evolved species, burn and dam, and calls <code>mkLife</code> again. One round trip wipes out two centuries. Keep <code>{G, B, LIFE, stand, world, fire, year, yearF, tape}</code> when leaving i=1; on return, <code>R.load(B, G)</code> and restore them. Nothing is rebuilt, so the way out gets instant too. The cost is one plot's Float32Arrays held while you're deeper in; I'd guess 5 to 15 MB, so please measure it on a phone.</p>
+<p><strong>3. The inner worlds are made of what you dived at (≈2.5 kB).</strong> <code>site.sp</code> is the species of whatever is nearest <code>tgt</code>. That's a kind-1 log capsule (its <code>id</code> already encodes the species index) or a record in <code>B.trees</code>. It drives:</p>
+<ul>
+<li><strong>Log</strong>: the wood and bark colours come from <code>G.trees[sp].bark</code>. Seedlings are the plot's species within 10 m, scaled as <code>oakling</code> is; litter cards (<code>card(..., 8, ..., pal)</code>) take <code>pal</code> from those species by distance, so spruce needles under spruce; acorns only near an oak, mast only near a beech.</li>
+<li><strong>Bark</strong>: Ips-style two-armed galleries along the grain fit only spruce and pine. <code>barkLand()</code> could take <code>{arms, axis}</code> per host: one mother gallery along the grain for elm (Scolytus), and a short one across the grain on oak (S. intricatus, which I'm working from memory on, so it's marked unverified). On a broadleaf with no entry, the hint says so instead of showing spruce under oak.</li>
+<li><strong>Leaf</strong>: <code>LEAFG</code> hard-codes a dicot epidermis and its colour. Feed it <code>sp.leaf.a/b</code> through one uniform, and add a needle branch for <code>leaf.t === 1 || 5</code>: stomata in rows within two pale wax bands, which the plot's close-detail needles already draw, so the scales agree.</li>
+</ul>
+<p>Build cost: one scan of <code>B.caps</code>, a few ms; nothing per frame.</p>
+<p><strong>4. The range is the plot's own range (≈600 B).</strong> The out-dive always lands at <code>tgt = [0,0,0]</code> on an unrelated range. Instead, seed <code>rangeLand</code> from the home seed, and once erosion is done (it's cached in <code>HIST</code>), pick the river cell nearest the centre whose flow runs roughly along +x, like <code>strm.zc</code> does in the plot, and point <code>tgt</code> there. The camera moves, not the land. On Earth, put the treeline at the height where the warmest month in <code>G.cl.T</code> reaches about 6.5 °C at a 6.5 °C/km lapse rate, replacing the fixed <code>tl = 460.</code> in fx.js ~761; likewise the snowline. Also, <code>uFor</code> (the range canopy colour) seems to be bound only in the <code>W.far</code> draw, so the range may get a leftover value; please check, and if so set it from the home stand. You'd rise out of the valley and land on a real river among real ridges, with the plot marked and the forest its own colour.</p>
+<p><strong>5. Dissolve from the spot, and a viewfinder (≈400 B).</strong> Two cheap ways to see the next world before the swap. First, swap the global opacity fade on <code>#snap</code> for an animated CSS radial mask centred on where <code>tgt</code> projects, so the new world opens outward from the point you chose. Second, in the last 40 % of the glide, draw a thin square of the next world's true extent at <code>tgt</code> (64 cm for the log, 6.4 cm for the moss), four projected corners stroked on a 2D overlay. Neither adds a draw call. Drawing the inner world's real ground inset at 1/F is the fuller version, but it needs two builds and a second land buffer in gl.js, so it goes in the queue.</p>
+<p><strong>6. The state you carry changes the small worlds (≈1.5 kB).</strong> Once #1 is in, give each small world one honest response to <code>night</code>, <code>f.wx</code> and season:</p>
+<ul>
+<li>Leaf: stomata close at night and in drought; <code>uSe.x</code> yellows the chloroplasts in autumn; in leaf fall, the dive lands on a fallen leaf with hyphae in it.</li>
+<li>Moss: dry haircap folds its leaves to the stem (lower <code>dr</code>); rain falls as drops about 3 units across.</li>
+<li>Soil: when dry, tardigrades curl into tuns (a resting mode in fx.js) and nematodes slow.</li>
+</ul>
+<p><strong>7. Things that cross scales (≈1.8 kB, queue).</strong></p>
+<ul>
+<li>Falling leaves (<code>uSe.y</code> particles) keep falling in the log world at true scale.</li>
+<li>A deer within 2 m of <code>tgt</code> sends one hoof, its own capsules ×100, stepping through the log world.</li>
+<li>The plot's springtail and mite density near <code>tgt</code> sets the moss world's counts.</li>
+<li><code>audio.fx</code> keeps the home key's birds, muffled, audible from the leaf.</li>
+</ul>
+<p>Ranked as numbered. Items 1, 2, 4 and 5 come to about 2 kB and one sitting. Where does this break on a phone?</p></section>
+<section class="turn rowan"><h2>Rowan</h2>
+<p>Ash, I checked each claim against the code. Most hold; three readings are wrong and two fixes would break things.</p>
+<p><strong>Confirmed.</strong> <code>zoom()</code> calls a bare <code>grow()</code> (main.js:346), which resets the day from <code>G.air.sun</code> (:144). The way back up resets <code>year = 1</code> and the tape (:141), calls <code>mkFire</code> (:139) and <code>mkLife</code> (:149), and rebuilds <code>world</code> (:133). You missed one: <code>zoom</code> sets <code>mut = 0</code> (:346), so a mutant comes home unmutated. For kind-1 capsules, <code>floor(id)</code> is the species index (grow.js:112, :210). But plain logs and stumps draw theirs at random (:248, :258), so acorns must follow live trees, not the log.</p>
+<p><strong>Corrected.</strong></p>
+<ul>
+<li>The range never reads <code>uFor</code>. The <code>tl = 460.</code> shader is FARD (fx.js:759), the valley round the plot. The range is RANGEG (fx.js:820), with fixed colours and <code>tl = 1.85</code> (heights ×10, so 1 unit is 1 km).</li>
+<li>The range already gets the home seed, since <code>seed</code> never changes in a dive. What it lacks is position.</li>
+<li><code>build()</code> already returns its wetness function as <code>B.trees.wet</code> (grow.js:230).</li>
+<li>Season and weather already carry (they're globals). What's lost is <code>G.cl</code>: snow falls back to <code>G.cl ? G.cl.snow : 1</code> (:267), so a tropical winter snows on the leaf, which is the better case for #1. With the clock running, <code>day</code> comes from <code>dayPh</code> every frame (:248), so the reset shows only when the clock is stopped.</li>
+<li>Treeline: about 6.5 °C is Körner's growing-season mean, not the warmest month. earth.js uses Köppen's 10 °C warmest month for ET (:61), and <code>G.cl.T</code> already includes the climb (:67). Use (Tmax − 10)/6.5 km above the plot so the shading agrees with the class.</li>
+</ul>
+<p><strong>Where it breaks.</strong></p>
+<ul>
+<li>The #1 hash must not overwrite the global <code>seed</code>, which regrows home and writes the URL (:162). And two dives at one log rarely share a 25 cm bin. Seed from the object: trees carry <code>sd</code> (grow.js:224); logs have their capsule index.</li>
+<li>The clock runs in small worlds. <code>pass(1)</code> (:250) and clock 3's <code>spool(); pass(5)</code> (:252) act on <code>stand</code>, now the log's oaklings, and push them onto the plot's tape. Parking must stop that, count the years away, and on return run <code>pass(n); LIFE.lapse(n)</code>. Otherwise we lie about time the other way.</li>
+<li>
+<h1>5: the dive pitch is ≥ 0.75 (:343), so <code>lookAt</code> centres <code>tgt</code> (:181) and the mask needs no projection. On phones, a full-screen masked layer is the risk: fall back to the fade when <code>ema &gt; 0.03</code>. Draw the viewfinder on <code>#snap</code>, which is empty during the glide.</h1>
+</li>
+</ul>
+<p><strong>Memory, measured</strong> (node, <code>build()</code> typed arrays): mixed plot 8.8 MB at Q 1, 5.0 MB at Q 0.5; boreal 10.7 / 6.2 MB; moss world 7.0 / 4.5 MB. A parked boreal plot plus the moss world is about 11 MB on a phone, which is fine. Park the JS arrays only and re-<code>R.load</code> on return: one upload, not a 430 ms build. <code>HIST</code> (range.js:10) never evicts, so keep site seeds out of the range.</p>
+<p><strong>Renderer and bytes.</strong> gl.js:259 asks only for <code>webgl2</code>; there is no WebGL1 path, so the phone risk is fill rate. Bytes are fine. Rule: after every change, rebuild all rungs; 0.2/2/20/200 kB must be byte-identical. Site data goes through G, never through a new <code>build()</code> or <code>grow()</code> parameter.</p>
+<p><strong>Honesty.</strong></p>
+<ul>
+<li>
+<h1>6: nothing records drought, so drought-closing stomata, haircap folding and tardigrade tuns need a wetness memory first. Stomata are built once (micro.js:133), so closing them at night per frame needs a CAPV branch.</h1>
+</li>
+<li>
+<h1>7: at true scale, leaf fall over 64 cm is about 10⁻⁴ of 600 particles, essentially none; a hoof made of capsules ×100 is a blob.</h1>
+</li>
+<li>A ×100 dive shows "a rotting log" even when none is in view.</li>
+</ul>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>Park the plot.</strong> Keep <code>{G, B, LIFE, stand, world, fire, year, yearF, tape, mut}</code> on leaving i=1; on return, <code>R.load(B, G)</code> and restore. No <code>pass</code>, <code>spool</code> or deep time in small worlds; catch up the years away on return.</li>
+<li><strong>Site record in G.</strong> Carry <code>cl</code>, <code>sp</code>, the home canopy colour and a seed from the object's <code>sd</code> or capsule index; leave the global <code>seed</code> alone. Skip the day reset when diving.</li>
+<li><strong>Dive at a real log.</strong> For ×100, glide <code>tgt</code> to the nearest kind-1 capsule (one pass over <code>B.caps</code>, about 1 ms) and say how far it was. The site species joins the log genome's <code>trees</code> with <code>n = 0</code> for a bark palette slot; log capsules use that index. Acorns only within 10 m of a live oak.</li>
+<li><strong>Range out-dive onto a headwater.</strong> <code>rangeLand</code> exposes <code>spot()</code>: the nearest cell with small drainage <code>A</code> (not a 600 km² river), flowing roughly along ±x; set <code>tgt</code> there after <code>grow()</code>. RANGEG takes <code>uFor</code> from home; on Earth, <code>tl = h_spot + (Tmax − 10)/6.5</code>.</li>
+<li><strong>Open from the centre.</strong> A radial mask replaces the fade; the viewfinder square is drawn on <code>#snap</code> over the last 40 % of the glide, with the <code>ema</code> fallback. Cut first if time runs short.</li>
+</ol>
+<p>After each item: lower rungs byte-identical, <code>grow_test</code> passes, a round-trip shot shows the plot unchanged.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>A wetness memory, then haircap folding, tardigrade tuns and stomata closing in the dry.</li>
+<li>Per-frame night closing of stomata; autumn yellowing in LEAFG for deciduous <code>sp</code>.</li>
+<li>A needle leaf: stomata in rows within wax bands, matching fx.js:652.</li>
+<li>Galleries by host in <code>barkLand</code>: Ips on conifers, Scolytus ratzeburgi on birch, S. intricatus on oak (to be checked), and "none modelled" for the rest.</li>
+<li>Plot seedlings and litter by distance in the log world; mite and springtail density sets the moss world.</li>
+<li>FARD treeline and snowline from <code>cl</code>.</li>
+<li>Park the whole stack of small worlds (at most about 13 MB on a phone).</li>
+<li>An inner-world inset at 1/F (second land buffer).</li>
+<li>Muffled home birds; rare true-scale leaf fall; a real hoof.</li>
+</ol></section>
+<section class="turn builder"><h2>Builder (the main Claude session), after building</h2>
+<p>Built all five, with these departures from the agreed list:</p>
+<ul>
+<li>
+<p><strong>Parking keeps less than Rowan asked.</strong> It keeps <code>G</code>, the animals, the stand, the fire, the dam, the year, the tape
+  and the mutant number, but not <code>B</code>'s arrays: on return the plot is rebuilt from the kept stand (<code>grow(1, 1)</code>, as the
+  clock already does each year). That costs one build, about 0.3 s, and none of the 5–11 MB Rowan measured. The years
+  away are counted rather than run (one a year on the slow clocks, five a stride on decades, 250 on millennia) and
+  lived on return, up to sixty at once; the chronicle says how many.</p>
+</li>
+<li>
+<p><strong>The log is found from the stand, not the capsules.</strong> Fallen trunks are <code>stand</code> records with <code>st === 2</code>, which
+  carry species, seed and direction, so the nearest point along each trunk is exact and the species comes free.</p>
+</li>
+<li>
+<p><strong>The seed rule.</strong> Only the small worlds (log, bark, moss, soil, leaf) take the log's seed. The range, lake and cave
+  keep the home seed, as Rowan warned (<code>HIST</code> never evicts).</p>
+</li>
+<li>
+<p><strong>No Earth treeline.</strong> <code>G.cl</code> holds the climate class, not the warmest month's temperature, so Rowan's
+  <code>(Tmax − 10)/6.5</code> can't be computed without more data. Left in the queue.</p>
+</li>
+<li>
+<p><strong>No viewfinder.</strong> The radial opening is in; the viewfinder square was cut, as agreed.</p>
+</li>
+<li><strong>Added: under the bark says whose log it is.</strong> Diving at a birch log went under the bark into a spruce engraver's
+  galleries, which was false. The blurb now names the log and says so on a broadleaf.</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>the 20 kB and 200 kB rungs are byte-identical to before;</li>
+<li><code>grow_test</code> is clean;</li>
+<li>renders:<ul>
+<li>plot (year 41) → log (oak, legend shows it) → plot (same view, year 41) → range → plot;</li>
+<li>beech plot → birch log (white bark) → under the bark → log → plot, year kept;</li>
+<li>a boreal plot's range, landing on a forested headwater;</li>
+<li>on the decades clock, five years counted in the log world and lived on return ("5 years went by while you were away").</li>
+</ul>
+</li>
+</ul>
+<p>Not seen: the radial opening (headless frames are too slow to catch it mid-dissolve), and anything on a phone.</p></section><p class="dim">After this round the 2 MB rung stood at 114,327 bytes.</p><nav class="pn"><span><a href="brief.html">← The brief</a></span><span><a href="./">All orders</a></span><span><a href="round-02.html">Measured ground and months →</a></span></nav>
+</main></body></html>
