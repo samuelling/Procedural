@@ -11,4 +11,11 @@
 - **Ground height: ETOPO 2022.** For each quarter-degree land cell, the mean and lowest height of the land. Source:
   NOAA National Centers for Environmental Information (2022), ETOPO 2022 15 Arc-Second Global Relief Model,
   doi:10.25921/fd45-gt74. It is a US government work, so no restrictions apply; please cite it.
+- **Tree genera: two range-map sources.** For each quarter-degree land cell, whether Quercus, Fagus, Picea, Pinus,
+  Betula, Abies, Larix, Acer or Tilia has a native range touching it:
+  - North America: Little, E. L. (1971–1978), *Atlas of United States Trees*, US Department of Agriculture Forest
+    Service. Public domain. Digitised versions are at https://github.com/wpetry/ustreeatlas, which warns of some
+    digitising errors.
+  - Europe: Caudullo, G., Welk, E. and San-Miguel-Ayanz, J. (2017), Chorological maps for the main European woody
+    species, *Data in Brief* 12, 662–666, doi:10.1016/j.dib.2017.05.007. CC BY 4.0.
 - **Climate classes:** see `source/src/kg.js` (kgcpy, BSD licence, after Rubel et al. 2017).

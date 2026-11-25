@@ -1,18 +1,24 @@
 # python3 tools/pack_data.py : packs the measured grids the 2 MB rung carries into src/data.js (one base64 string of
 # raw deflate, inflated in the page by the browser's own DecompressionStream). Inputs, downloaded once into tmp/data/:
+#   Tree genera: Little's range maps (USGS 1971-78, public domain, digitised at github.com/wpetry/ustreeatlas) and
+#     Caudullo et al. 2017 chorological maps (CC BY 4.0), rasterised by Rowan's tmp/rowan_scripts/genera.py to
+#     tmp/data/genera_15min_9_overlap.npy: a genus counts in a cell where any of its species' native range touches it
 #   ETOPO 2022 60-arc-second surface elevation (NOAA NCEI, doi:10.25921/fd45-gt74; US government work), read over
 #     OPeNDAP every 3 arc-minutes from .../ETOPO2022/60s/60s_surface_elev_netcdf/ETOPO_2022_v1_60s_N90W180_surface.nc
 #   CRU CL 2.0 10-arc-minute monthly normals 1961-90 (New et al. 2002, Climatic Research Unit, University of East
-#     Anglia; ODbL 1.0 with DbCL): tmp, pre, reh, dtr, rd0 (wet days), sunp (sunshine) and elv, from https://crudata.uea.ac.uk/cru/data/hrg/tmc/
+#     Anglia; ODbL 1.0 with DbCL): tmp, pre, reh, dtr, rd0 (wet days), sunp (sunshine), wnd (wind) and elv, from https://crudata.uea.ac.uk/cru/data/hrg/tmc/
 # Layout of the inflated bytes:
 #   1. CRU land mask, 720 x 360 half-degree cells from 90N and 180W, one bit each, high bit first (32,400 bytes)
 #   2. 24 planes over CRU land cells in row order: Jan-Dec temperature reduced to sea level at 6.5 C/km (half degrees
 #      from -60 C), then Jan-Dec rainfall (a log byte up to 2,500 mm), then Jan-Dec dew-point depression (the mean
 #      temperature less the dew point from CRU's relative humidity by the Magnus formula, whole degrees), then
 #      Jan-Dec diurnal temperature range (whole degrees), then Jan-Dec wet days (days with 0.1 mm or more, whole
-#      days), then Jan-Dec sunshine (per cent of daylight, in steps of 5; 255 where CRU has none); each value stored as the change from the month before, and
+#      days), then Jan-Dec sunshine (per cent of daylight, in steps of 5; 255 where CRU has none), then Jan-Dec wind
+#      speed at 10 m (half metres a second; 255 where CRU has none); each value stored as the change from the month before, and
 #      each plane as the change from the cell before, all mod 256; then CRU's own height for each cell (a square-root
 #      byte from -500 to 7,000 m, as the change from the cell before), the height its temperatures belong to
+#   4. nine planes over the Köppen land cells, one byte each: whether Quercus, Fagus, Picea, Pinus, Betula, Abies,
+#      Larix, Acer, Tilia are mapped there (after the heights)
 #   3. three planes over the Köppen grid's land cells (kg.js, quarter degrees, row order): the mean height of the land
 #      in each cell, its lowest point, then its highest, each as a square-root byte from -500 to 7,000 m, stored as the change from the
 #      cell to the west (sea counted as 0)
@@ -49,7 +55,7 @@ T, P, E, la, lo = pick(k1, T), pick(k2, P), pick(k3, E)[:, 0], pick(k1, la), pic
 def pickn(v):                                                                    # wet days and sunshine: not every cell has them
     a, b, X = load(v, 12); k = key(a, b); o = np.argsort(k); s = k[o]; ix = np.clip(np.searchsorted(s, kc), 0, len(s) - 1); ok = s[ix] == kc
     X = X[o][ix].astype(float); X[~ok] = np.nan; return X
-WD, SU = pickn('rd0'), pickn('sunp')
+WD, SU, WN = pickn('rd0'), pickn('sunp'), pickn('wnd')
 es = lambda t: 6.1094 * np.exp(17.625 * t / (t + 243.04)); lv = np.log(np.maximum(RH, 1) / 100 * es(T) / 6.1094); Dd = T - 243.04 * lv / (17.625 - lv)   # dew-point depression
 j = ((90 - la) * 2).astype(int); i = ((lo + 180) * 2).astype(int); u, inv, cnt = np.unique(j * 720 + i, return_inverse=True, return_counts=True)
 agg = lambda X: (lambda S: (np.add.at(S, inv, X), S / cnt.reshape((-1,) + (1,) * (X.ndim - 1)))[1])(np.zeros((len(u),) + X.shape[1:]))
@@ -62,10 +68,12 @@ def aggn(X):
     W = (~np.isnan(X)).astype(float); S = np.zeros((len(u),) + X.shape[1:]); N = np.zeros_like(S); np.add.at(S, inv, np.nan_to_num(X)); np.add.at(N, inv, W)
     with np.errstate(all='ignore'): return np.where(N > 0, S / np.maximum(N, 1e-9), np.nan)
 qW = np.nan_to_num(np.clip(np.round(aggn(WD)), 0, 31), nan=255).astype(np.int64); qS = np.nan_to_num(np.clip(np.round(aggn(SU) / 5), 0, 20), nan=255).astype(np.int64)
+qN = np.nan_to_num(np.clip(np.round(aggn(WN) * 2), 0, 60), nan=255).astype(np.int64)
 qE = np.round(255 * np.sqrt((np.clip(agg(E) * 1000, -500, 7000) + 500) / 7500)).astype(np.int64)
 qD = np.clip(np.round(agg(Dd)), 0, 255).astype(np.int64); qR = np.clip(np.round(agg(DT)), 0, 255).astype(np.int64)
-cru = b''.join(dc(dm(Q)[:, k]) for Q in (qT, qP, qD, qR, qW, qS) for k in range(12)) + dc(qE)
-raw = np.packbits(mk).tobytes() + cru + em + en + ex
+cru = b''.join(dc(dm(Q)[:, k]) for Q in (qT, qP, qD, qR, qW, qS, qN) for k in range(12)) + dc(qE)
+gen = np.load(D + 'genera_15min_9_overlap.npy'); assert gen.shape == (int(m.sum()), 9)
+raw = np.packbits(mk).tobytes() + cru + em + en + ex + b''.join(gen[:, k].astype(np.uint8).tobytes() for k in range(9))
 inner = zz.compress(raw, numiterations=15)[2:-4]
 open('src/data.js', 'w').write('// measured grids for the 2 MB rung: see tools/pack_data.py for what they are and where they come from\nexport const DATA = \'' + base64.b64encode(inner).decode() + '\';\n')
 print(f'CRU land cells {len(u)}, Köppen land cells {int(m.sum())}; {len(raw)} bytes raw -> {len(inner)} deflated -> {len(inner) * 4 // 3} base64')

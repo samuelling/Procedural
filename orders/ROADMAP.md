@@ -1,6 +1,6 @@
 # Filling the 2 MB rung
 
-The top rung holds about 1.61 MB, about 1.49 MB of it measured ground and climate of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
+The top rung holds about 1.74 MB, about 1.62 MB of it measured ground, climate and tree ranges of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
 guesses at packed bytes. Nothing here is padding: every track is rules, or tables of knowledge about real forests.
 
 | Track | Guess | State |
@@ -60,4 +60,11 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
 | The foot of the ladder a fallen leaf, aged from leaf fall; living leaves from a seedling | **Done** (round 5) |
 | Lapse from CRU's own heights | **Done** (round 5) |
 | The next world in a window before the swap (stencil, inner camera, second shadow map) | Designed in round 5; not built |
+| Tree genera by measured range (Little; Caudullo et al.), carried down to the log | **Done** (round 6) |
+| Measured wind: sway and calm-night dew | **Done** (round 6) |
+| The frozen frame keeps moving while the next world opens | **Done** (round 6) |
+| Building the next world during the glide (no stall before the opening) | Queued |
+| 10′ heights for mountain cells, for the range and horizon (85 kB measured) | Queued |
+| Shade at the dive spot from crowns; animals through the opening | Queued |
+| SoilGrids, if machine-learning predictions are allowed as data | Waiting on Sam |
 

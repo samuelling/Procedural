@@ -400,6 +400,21 @@ inflates when the page loads (about 0.1 s):
     between the cells, then a lace of veins. The guard cells are dead and brown and the bacteria thicker. The spider
     mites, which feed on living leaves, have gone. To reach a living leaf, dive in the log world at an oak seedling
     while its leaves are out. It goes straight there, a thousand times smaller, and back out to the log.
+- **Which trees, by their measured ranges (round 6).** Nine genera are shipped for each quarter-degree land cell,
+  together about 17 kB: oak, beech, spruce, pine, birch, fir, larch, maple and lime. Each counts where any of its
+  species' native range touches the cell, in Little's maps of North American trees (USGS, public domain) or the
+  chorological maps of European trees (Caudullo et al. 2017, CC BY 4.0). Where these maps cover a place, the
+  forest drops any species whose genus they do not put there, and the place's line says so. Tromsø loses its
+  spruce, which is not native there, and keeps birch and pine. Des Moines loses birch and pine and keeps oak and
+  maple. Where no map covers a place (Asia, Africa, South America, Australia), the trees are still the sketch, and
+  the line says that too. The choice reaches down the ladder: the log world has no oak seedlings, and no acorns,
+  where there are no oaks. Maples are named by region; those names are unverified.
+- **Wind (round 6).** CRU's monthly wind at 10 m, about 112 kB. The trees sway with the month's wind, and a windy
+  night (over about 5 m/s) does not cool a leaf below the air, so it brings no dew; the threshold is a sketch.
+- **The frozen frame moves (round 6).** While the next world opens from the spot, the last frame of the old one now
+  keeps coming toward you (going in) or falling away (going out), instead of hanging still. It is a 2D scaling of
+  a picture: exact at the centre of the view, off by parallax toward the edges. A true window, the next world drawn
+  inside the old one, is designed (`dialogue/round-05.md`) but not built.
 - **One sun, one year (round 3).** On Earth the sun is placed for true north (south is +z, east +x, as on the range)
   in every world you dive to. Its declination now runs smoothly through the year, not in four steps; the year starts
   on 1 March, at the start of spring. Snow lies when the month's measured temperature, interpolated between months,

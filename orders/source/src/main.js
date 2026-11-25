@@ -133,6 +133,7 @@ function grow(keepView, aged) {
   if (TIER > 3 && !aged && !G.span && !G.world) f.pk = null;                // a new forest of your own: nothing is waiting any more
   if (TIER > 3 && !aged && G.span && f.si) { const s = f.si, l = s.log; G = { ...G, cl: s.cl, sd: l && (LAD.indexOf(G.world) > 1 || G.world === 'bark') ? l[0].sd : 0, oak: s.oak, home: f.pk && f.pk.G };   // a world further in or out is made of where you went from
     if (l && G.world === 'log') G.trees.push({ ...s.sp, n: 0 });
+    if (G.world === 'log' && s.cl && s.cl.gen > 0 && !(s.cl.gen & 1)) G.trees[0] = { ...G.trees[0], n: 0, hide: 1 };   // no oak seedlings where the range maps put no oaks
     const sw = s.cl && s.cl.soil && s.cl.soil[cday()];                     // the soil's water today, from the place's months (a bucket: a rule, not a measurement)
     if (sw !== undefined && G.world === 'moss' && sw < 0.35) { G.trees = G.trees.map((t) => t.id === 'haircap' ? { ...t, leaf: { ...t.leaf, dr: -0.9, a: [0.16, 0.2, 0.06], b: [0.36, 0.34, 0.14] } } : t); G.blurb = (G.blurb || '') + ' It has been dry: the soil holds ' + round(sw * 100) + '% of the water it can, and the haircap has folded its leaves against the stem, as it does when dry.'; }
     if (sw !== undefined && G.world === 'soil') G.blurb = (G.blurb || '') + ' The soil here holds ' + round(sw * 100) + '% of the water it can today (a bucket filled by the measured rain and emptied by evaporation: a rule).';
@@ -166,7 +167,7 @@ function grow(keepView, aged) {
   if (TIER > 3 && G.span) $('l2').textContent = (G.blurb || 'A unit here is a millimetre: the same grammar, a thousand times smaller.') + ' ' + G.span + ' across.';
   const css = (c) => 'rgb(' + c.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
   if (TIER > 3) tol();
-  $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + (TIER > 3 ? (s.gone ? '<s>' + s.nm + '</s>' : s.nm) + (s.par ? ' <small>← ' + s.par.toLowerCase() + ', year ' + s.born + '</small>' : '') : s.nm) + '</li>').join('');
+  $('lg').innerHTML = (TIER > 3 ? G.trees.filter((s) => !s.hide) : G.trees).map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + (TIER > 3 ? (s.gone ? '<s>' + s.nm + '</s>' : s.nm) + (s.par ? ' <small>← ' + s.par.toLowerCase() + ', year ' + s.born + '</small>' : '') : s.nm) + '</li>').join('');
   for (const b of document.querySelectorAll('[data-g]')) b.setAttribute('aria-pressed', b.dataset.g === key);
   try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '') + (den !== 1 ? '-d' + round(den * 100) : '') + (TIER > 3 && key === 'earth' ? '@' + here.lat + ',' + here.lon + ',' + here.climb : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
 }
@@ -348,10 +349,10 @@ const glideStep = (now) => { if (!gl) return; const [t0, ra, rb, pa, pb, ms, the
 // are lived then. Going in, the site goes with you: the place and its sun, the log you dived at (its wood, its seed),
 // whether an oak stands near enough to drop acorns.
 // the new world opens out from the middle of the view, the spot you went toward, through the last frame of the old
-const opn = (sp) => {
+const opn = (sp, dir = 1) => {   // dir: going in, the frozen frame keeps coming toward you while it opens; going out, it falls away
   const m = (r) => { sp.style.webkitMaskImage = sp.style.maskImage = r < -20 ? '' : 'radial-gradient(circle, transparent ' + r + '%, #000 ' + (r + 20) + '%)'; }, t0 = performance.now();
   if (calm || ema > 0.03) { sp.style.transition = 'opacity .9s'; sp.style.opacity = 0; return; }
-  const st = (now) => { const u = min(1, (now - t0) / 1300), e = u * u * (3 - 2 * u); m(e * 100 - 20); if (u < 1) requestAnimationFrame(st); else { sp.style.opacity = 0; m(-99); } }; m(-20); requestAnimationFrame(st);
+  const st = (now) => { const u = min(1, (now - t0) / 1300), e = u * u * (3 - 2 * u); m(e * 100 - 20); sp.style.transform = 'scale(' + pow(dir > 0 ? 3 : 0.5, u) + ')'; if (u < 1) requestAnimationFrame(st); else { sp.style.opacity = 0; m(-99); sp.style.transform = ''; } }; m(-20); requestAnimationFrame(st);
 };
 const leave = () => {
   let b = null, d = 14; for (const t of stand) if (t.st === 2) { const c = cos(t.a), s = sin(t.a), u = clamp((tgt[0] - t.x) * c + (tgt[2] - t.z) * s, 0, t.H * 0.75), x = t.x + c * u, z = t.z + s * u, e = hypot(tgt[0] - x, tgt[2] - z); if (e < d) { d = e; b = [t, x, z, e]; } }
@@ -381,7 +382,7 @@ const zoom = (dir) => {
     setTimeout(() => {
       key = nb ? 'bark' : sl ? 'leafl' : j === 1 ? home : LAD[j]; mut = 0; const p0 = pitch; if (!(j === 1 && back())) grow(); const r1 = rad, p1 = pitch;
       rad = dir > 0 ? rEnd * F : rEnd / F; pitch = p0; glide(r1, p1, 2000, () => { dive = 0; });
-      requestAnimationFrame(() => requestAnimationFrame(() => { opn(sp); }));
+      requestAnimationFrame(() => requestAnimationFrame(() => { opn(sp, dir); }));
       $('hint').textContent = (nb ? '×1000: under the bark, 6.4 cm across' : sl ? '×100,000: a living leaf of the seedling, 0.64 mm across' : lv ? '×100: back on the log, 64 cm across' : ['÷10,000: a mountain range, 640 km across', '×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j]) + (L ? ' · the fallen ' + f.si.sp.nm.toLowerCase() + ' nearest where you looked, ' + max(1, round(L[3])) + ' m off' : '') + (nb ? ' · − back out' : j ? ' · + further in, − back out' : ' · + back in'); $('hint').hidden = false;
     }, 20);
   }; }, L && [L[1], tgt[1], L[2]]);
@@ -431,7 +432,8 @@ const wxDay = () => {
 const place2 = () => {
   const c = G.cl, d = cday(), ph = c.ph, dc = c.dec, inn = (a, b) => (a <= b ? d >= a && d < b : d >= a || d < b);
   if (ph) { f.se[0] = inn(ph[1], ph[2]) ? dc : 0; f.se[1] = inn(ph[2], ph[0]) ? dc : 0; f.se[3] = inn((ph[0] + 345) % 365, (ph[0] + 40) % 365) ? 1 : 0; }
-  if (c.D) { const x = ((yearF % 1) * 12 + (c.south ? 8 : 2) - 0.5 + 12) % 12, i = Math.floor(x), u = x - i, at = (A) => A[i] * (1 - u) + A[(i + 1) % 12] * u, T = mon(), Td = T - at(c.D), s = T - at(c.R) / 2 - 2 * (1 - f.wx[2]) - Td;
+  if (c.D) { const x = ((yearF % 1) * 12 + (c.south ? 8 : 2) - 0.5 + 12) % 12, i = Math.floor(x), u = x - i, at = (A) => A[i] * (1 - u) + A[(i + 1) % 12] * u, T = mon(), Td = T - at(c.D), w = c.N ? at(c.N) : 2, s = T - at(c.R) / 2 - 2 * (1 - f.wx[2]) * clamp((5 - w) / 3, 0, 1) - Td;   // a clear night cools the leaf a couple of degrees below the air, a windy one does not (both sketches)
+    if (c.N) G.air.wind = 0.08 * w;   // the trees sway with the month's measured wind
     f.cv[2] = sstep(1, -1, s); f.cv[3] = Td < 0 ? f.cv[2] : 0; }
 };
 const mon = () => { const T = G.cl.T, x = ((yearF % 1) * 12 + (G.cl.south ? 8 : 2) - 0.5 + 12) % 12, i = Math.floor(x), u = x - i; return T[i] * (1 - u) + T[(i + 1) % 12] * u; };
