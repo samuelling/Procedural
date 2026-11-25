@@ -4,7 +4,7 @@
 //   ground    meshes: the terrain, the plot's cut sides, and stones
 // Then light shafts are marched through the shadow map, and a last pass adds glow, depth of field and tone.
 /* global TIER */
-import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW, MICRO, LEAFD, BARKD, LITTER, STONED, FURD, MUSHD, FEATHD, FARD, CROWND, LEAFG, WOODG, RANGEG } from './fx.js';
+import { WX3, WATV, WATF, PTV, PTF, SEAV, SEAF, FLW, MICRO, LEAFD, BARKD, LITTER, STONED, FURD, MUSHD, FEATHD, FARD, CROWND, LEAFG, WOODG, RANGEG, ROCKF } from './fx.js';
 // below the 200 kB rung there is no weather: clouds cast no shadow and nothing changes a surface's colour
 // animals, flame and charcoal: what a limb is covered in. Q is a place on the animal's own hide, so its markings travel with it.
 const FUR = `if (kd > 3) {
@@ -138,6 +138,7 @@ void main() {
     float g = smoothstep(.45, .65, xx.y * .6 + vn(pw.xz * .7) * .5 + vn(pw.xz * 3.1) * .25 + uMoss * .62 - .5) * smoothstep(.7, .9, n.y);
     alb = mix(alb, mossc(pw) * (.55 + .7 * vn(pw.xz * 5.)), g);                                      // cushions of moss, darker in their hollows
     n = normalize(n + (vec3(vn(pw.xz * 9.), 0., vn(pw.xz * 9. + 7.)) - .5) * (.5 + .5 * g)); ao = xx.x;
+` + (TIER > 3 ? ROCKF : '') + `
 ` + (TIER > 3 ? FARD : '') + `  } else {                                                                  // the cut side of the plot: humus, soil, subsoil, stones and roots
     float dd = xx.x + (vn(vec2(pw.x + pw.z, pw.y) * 1.3) - .5) * .5;
     vec3 hum = vec3(.06, .04, .03), top = vec3(.2, .13, .08), sub = vec3(.36, .27, .17);
@@ -263,7 +264,7 @@ export function mkRenderer(canvas, low) {
     gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     const U = { p }; for (const n of [...COMMON, ...names]) U[n] = gl.getUniformLocation(p, n); return U;
   };
-  const PC = prog(CAPV, CAPF, ['uBA', 'uBB', 'uBP', ...(TIER > 3 ? ['uLB'] : [])]), PCS = prog(CAPV, CAPS), PM = prog(MSHV, MSHF, ['uMat', 'uRA', 'uRB', 'uLit', 'uLa', ...(TIER > 3 ? ['uNdl', 'uFor', 'uLeaf'] : [])]), PMS = prog(MSHV, NONE, ['uMat']);
+  const PC = prog(CAPV, CAPF, ['uBA', 'uBB', 'uBP', ...(TIER > 3 ? ['uLB'] : [])]), PCS = prog(CAPV, CAPS), PM = prog(MSHV, MSHF, ['uMat', 'uRA', 'uRB', 'uLit', 'uLa', ...(TIER > 3 ? ['uNdl', 'uFor', 'uLeaf', 'uStr'] : [])]), PMS = prog(MSHV, NONE, ['uMat']);
   const PK = prog(CRDV, CRDF, ['uLA', 'uLB']), PKS = prog(CRDV, CRDS), PSK = prog(QV, SKYF), PR = prog(QV, RAYF, ['uA']), PD = prog(QV, DOWN, ['uA', 'uP']), PP = prog(QV, POST, ['uA', 'uB', 'uC', 'uD', 'uG', 'uP', 'uO', 'uSC']);
   const tex = (f) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
   // shadow map
@@ -315,6 +316,7 @@ export function mkRenderer(canvas, low) {
         buf(m.i, gl.ELEMENT_ARRAY_BUFFER); return { v, n: m.i.length, k: instances ? instances.length / 12 : 0 };
       };
       W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
+      if (TIER > 3) W.str = B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // the rock bed a gorge cuts through
       if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const tot = G.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => G.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }
       gl.bindVertexArray(null);
     },
@@ -324,7 +326,7 @@ export function mkRenderer(canvas, low) {
       const G = W.G, pal = W.pal;
       const geometry = (PMx, PCx, PKx, view, K, R, or, nf, shadow) => {
         com(PMx, f, view, K, R, or, nf);
-        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : 0); if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
+        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : 0); gl.uniform3fv(PMx.uStr, W.str); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
         gl.bindVertexArray(W.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, W.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, W.land.n - W.nTop, gl.UNSIGNED_SHORT, W.nTop * 2); }
         if (TIER > 3 && !shadow && W.far) { gl.bindVertexArray(W.far.v); gl.uniform1f(PMx.uMat, 3); gl.uniform3fv(PMx.uFor, W.for); gl.drawElements(gl.TRIANGLES, W.far.n, gl.UNSIGNED_SHORT, 0); }

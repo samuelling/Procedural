@@ -7,10 +7,11 @@
 /* global TIER */
 import { fbm } from './noise.js';
 
-export function rangeLand(rnd, hs) {
+const HIST = new Map();   // each range's wearing-down, kept a stage at a time so it can be played back
+export function rangeLand(rnd, hs, stage = 10) {
   const { sin, cos, sqrt, max, min, abs, exp, PI } = Math, N = 256, C = 2 * hs / (N - 1), NN = N * N, U = 1;   // units per km of height
   const h = new Float32Array(NN), f = new Float32Array(NN), A = new Float32Array(NN), rc = new Int32Array(NN), ord = new Int32Array(NN);
-  const ox = rnd() * 99, oz = rnd() * 99, belts = [];
+  const ox = rnd() * 99, oz = rnd() * 99, belts = [], kh = ox + ',' + oz;
   for (let k = 0; k < 3; k++) belts.push([(rnd() - 0.5) * hs, (rnd() - 0.5) * hs, rnd() * PI, 6 + rnd() * 7, 2 + rnd() * 1.4, rnd() * 9]);   // centre, strike, half-width, height (km), phase
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const x = -hs + i * C, z = -hs + j * C, wx = x + 6 * fbm(x * 0.03 + ox, 0, z * 0.03, 3), wz = z + 6 * fbm(x * 0.03, 5, z * 0.03 + oz, 3);
@@ -28,12 +29,16 @@ export function rangeLand(rnd, hs) {
     while (hp.length) { const [v, q] = pop(); ord[n++] = q; const i = q % N; for (let k = 0; k < 8; k++) { const p = q + nb[k], pi = i + (k === 0 || k === 4 || k === 6 ? -1 : k === 1 || k === 5 || k === 7 ? 1 : 0); if (p < 0 || p >= NN || pi < 0 || pi >= N || f[p] >= 0) continue; f[p] = max(h[p], v + 1e-5); rc[p] = q; push(p, f[p]); } }
     return n;
   };
-  for (let it = 0; it < 30; it++) {                                          // the rivers wear the land down
+  const st = HIST.get(kh) || [];
+  if (!st.length) for (let it = 0; it < 30; it++) {                                          // the rivers wear the land down
+    if (it % 3 === 0) st.push(h.slice());
     const n = fill(); A.fill(1);
     for (let k = n - 1; k > 0; k--) { const q = ord[k]; if (rc[q] >= 0) A[rc[q]] += A[q]; }   // highest first: each cell passes on what drains through it
     for (let k = 1; k < n; k++) { const q = ord[k], r = rc[q]; if (r < 0) continue; const s = (f[q] - f[r]) / (C * 10), e = min(0.035 * sqrt(A[q]) * s, max(0, h[q] - f[r] - 0.002)); h[q] -= e; }
     const g = h.slice(); for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) { const q = i + j * N; h[q] += 0.06 * ((g[q - 1] + g[q + 1] + g[q - N] + g[q + N]) / 4 - g[q]); }   // creep
+    if (it === 29) { st.push(h.slice()); HIST.set(kh, st); }
   }
+  h.set(st[Math.max(0, Math.min(10, stage))]);
   fill(); A.fill(1); for (let k = NN - 1; k > 0; k--) { const q = ord[k]; if (rc[q] >= 0) A[rc[q]] += A[q]; }
   const lake = new Uint8Array(NN); for (let q = 0; q < NN; q++) if (f[q] - h[q] > 0.1) lake[q] = 1; else h[q] = f[q];   // deep hollows hold lakes; the shallow ones silt up
   const at = (F, x, z) => { const u = (x + hs) / C, v = (z + hs) / C, i = max(0, min(N - 2, u | 0)), j = max(0, min(N - 2, v | 0)), a = min(1, max(0, u - i)), b = min(1, max(0, v - j)), q = i + j * N; return (F[q] * (1 - a) + F[q + 1] * a) * (1 - b) + (F[q + N] * (1 - a) + F[q + N + 1] * a) * b; };

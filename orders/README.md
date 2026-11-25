@@ -172,6 +172,35 @@ The two worlds are never drawn at once, so the dissolve is between matched views
 The sizes are right to within a factor of two or so; the shapes are simplified, and the soil is lit as if the litter
 above had been lifted away.
 
+## Deep time, and the tape (2 MB rung)
+
+**Rewind and Fast forward.** Before every stride of time (five years in decades, 250 in millennia) the forest, its
+species and their lineages, the beavers' dam and the cut ground are put on a tape, up to 400 strides. Rewind runs the
+tape backwards a stride every 0.6 s to where it began; Fast forward steps the stride rate ×3 and ×10, and from a still
+clock starts time running. The animals are not on the tape: they carry on as they are. Growing a new forest clears it.
+
+**Millennia: water carving the plot.** A fifth setting of Time, for forests with a stream. When it begins, the valley
+floor 68 m downstream of the plot's centre drops 16 m along a fault (a wavy line across the valley), as base level does
+when land is lifted or a river below cuts down; a bed of hard sandstone lies a metre or so under the stream, between
+shale and soil. Then, on a 1 m grid 256 m across, every 25 years: the hollows are filled to find where water goes
+(priority flood), every cell drains to its steepest neighbour, the area draining through each is summed with the
+stream's catchment (30 hectares, a guess) coming in upstream, and each cell is cut by the stream-power law E = K A^½ S,
+solved implicitly; K is ten times smaller in sandstone. Banks steeper than their rock allows give way (shale and soil
+at about 37°, sandstone near vertical) except in the stream's own bed, and soil creeps. The ground, the stream's water
+(each pool filled to its lip, following the deepest line through the gorge) and the valley around are drawn from the
+result; trees whose ground fell away or went under water are lost, and the forest lives 25 of each 250 years to fill
+the gaps. Gorge walls show the rock: finely layered grey shale, the sandstone in thicker pale beds. Water steep enough
+to fall is drawn white and streaming.
+
+What comes out, in node: the falls start at the fault, 15 m high, and walk upstream: to 46 m from the centre by 1,250
+years, 25 m by 2,500, about 8 m by 5,000, slowing as the gorge below them fills and the drop shrinks to 5 to 10 m,
+with a gorge 12 to 15 m deep left behind. The rates (falls moving a few centimetres a year) are set to the order of small
+sandstone falls and are not measured for any one: unverified.
+
+**The range** has its own version: Rewind and Fast forward step through eleven stages of its wearing-down, from the
+land as raised to the last pass. Over them its mean height falls from 1.25 to 1.18 km, the lakes in its hollows go
+from 6% of it to 1.4% as rivers cut outlets, and its rivers lengthen. The stages are stages of wear, not measured years.
+
 ## Anywhere on Earth (2 MB rung)
 
 Earth… opens a map of the world's climates. Click any land, choose how high to climb (0 to 5,000 m), and Grow here
@@ -237,6 +266,12 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Deep time: the falls' march and the gorge measured in node over 5,000 years; the gorge's layered walls and a sliver
+of white water seen in a render looking along it, but the falls have not been framed head-on in a render (the camera
+does not go down into a 10 m gorge well), and the valley's coarse rings around the plot do not show the gorge beyond the
+plot's edge. Rewinding the whole tape seen to return to year 1. With sound on, changing the weather or the time of day
+used to stop the page (an undefined variable); fixed and checked.
 
 Anywhere on Earth: sixteen places grown in node with nothing non-finite and their animals stepped (Boston, Manaus,
 Yakutsk, Cairo, the Serengeti, Rome, Perth, Seattle, Tromsø, Greenland, Nairobi, Boston at 2,500 m, Ulaanbaatar,

@@ -38,6 +38,7 @@ import { tl } from './fx.js';
 import { valley } from './valley.js';
 import { logLand, leafLand, barkLand, microBuild } from './micro.js';
 import { rangeLand } from './range.js';
+import { mkErosion } from './erosion.js';
 export function build(G, seed, q = 1, den = 1, stand) {
   let rnd = rng(seed); const rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
@@ -56,11 +57,15 @@ export function build(G, seed, q = 1, den = 1, stand) {
     wet = (x, z) => max(W0(x, z), 1 - max(0, dist(x, z)) / 6);
     // beavers (2 MB rung): a dam just below the pool holds the water back, and it spreads over the low ground behind
     const fl = TIER > 3 && stand && stand.world ? stand.world.dam : 0, xd = px + sr + 3, lvl = (x) => max(bed(x) - 0.1, fl > 0 && x < xd ? bed(xd) - 0.1 + fl * 0.9 : -1e9);
-    strm = { zc, wid, lvl, dist, xd, px, fl, deep: (x, z) => fl > 0 && dist(x, z) > 0 && lvl(x) - Hgt(x, z) > 0.12 };
+    strm = { zc, wid, lvl, dist, xd, px, fl, deep: (x, z) => fl > 0 && dist(x, z) > 0 && strm.lvl(x) - Hgt(x, z) > 0.12 };
+    if (TIER > 3 && G.ero) {                                                 // deep time: the ground as the stream has cut it, and the water on it
+      if (G.ero === 1) G.ero = mkErosion(Hgt, zc, bed, hs);
+      const e = G.ero, H1 = Hgt; Hgt = (x, z) => H1(x, z) - e.low(x, z); strm.lvl = (x) => Math.max(e.lvl(x), lvl(x) - e.low(x, zc(x)) + (fl > 0 && x < xd ? 0 : -1e9)); strm.ero = e;
+    }
   }
   let lg = null, lv = null; if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
   if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
-  if (TIER > 3 && G.world === 'range') { const l = rangeLand(rnd, hs); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
+  if (TIER > 3 && G.world === 'range') { const l = rangeLand(rnd, hs, G.stage ?? 10); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
   if (TIER > 3 && G.world === 'bark') { const l = barkLand(Hgt, rnd, hs); Hgt = l.Hgt; lv = l.bark; }   // beetle galleries cut into the wood, and the bark that is left
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
   const cap = (a, ra, b, rb, s0, s1, id, k) => caps.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, s0, s1, id, k);
@@ -276,7 +281,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
       for (let k = 0; k < 2; k++) card([x, y, z], sz, nrm([gs() * 0.1, 1, gs() * 0.1]), 4, 0.8, [cos(a + k * 1.6), 0, sin(a + k * 1.6)], 7, rnd());
     }
     const wv = [], wi = [], nx = 128, ny = strm.fl > 0 ? 16 : 8;
-    for (let i = 0; i <= nx; i++) { const x = -hs + S * i / nx, y = strm.lvl(x), ww = strm.wid(x) + 0.6 + (x < strm.xd ? strm.fl * 10 : 0); for (let j = 0; j <= ny; j++) { const z = min(hs, max(-hs, strm.zc(x) + (j / ny * 2 - 1) * ww)); wv.push(x, y, z, 0, 1, 0, y - Hgt(x, z), x); } }
+    for (let i = 0; i <= nx; i++) { const x = -hs + S * i / nx, y = strm.lvl(x), ww = strm.wid(x) + 0.6 + (x < strm.xd ? strm.fl * 10 : 0); for (let j = 0; j <= ny; j++) { const z = min(hs, max(-hs, strm.zc(x) + (TIER > 3 && strm.ero ? strm.ero.zo(x) : 0) + (j / ny * 2 - 1) * ww)); wv.push(x, y, z, 0, 1, 0, y - Hgt(x, z), x); } }
     for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const a = i * (ny + 1) + j; wi.push(a, a + 1, a + ny + 1, a + 1, a + ny + 2, a + ny + 1); }
     water = { v: new Float32Array(wv), i: new Uint16Array(wi) };
   }

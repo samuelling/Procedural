@@ -1,6 +1,6 @@
 # Filling the 2 MB rung
 
-The top rung holds about 101 kB of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
+The top rung holds about 104 kB of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
 guesses at packed bytes. Nothing here is padding: every track is rules, or tables of knowledge about real forests.
 
 | Track | Guess | State |
@@ -13,7 +13,7 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
 | **Close detail.** What a leaf, needle, bark, moss, litter, stone, fur, flower and water look like from a hand's breadth, appearing only when a pixel is small enough. | 60 kB | **Second pass.** Every surface, double-click to fly close, gills and pores, feathers, single needles, lichen colonies, three kinds of flower, dew, ants, ladybirds. Walking in first person (Ashland's controls) with floating to reach the canopy and caps. Cells in a leaf and soil animals now have worlds of their own (Leaf ×100,000, Soil ×10,000) rather than a third layer here. |
 | **Evolution.** Heritable traits, selection, speciation and extinction. | 30 kB | **Started.** Trees: two heritable traits (wetness, pace of life), local pollen, selection at establishment, new species named and drawn when a group drifts far enough, extinction, a tree of life. Animals still only drift in two genes within their kinds; no animal speciation, no hybrids, no traits beyond two. |
 | **Builders and minds.** Webs, nests, ant trails, a bee's dance, memory and teaching. | 200 kB | Beavers build; deer remember where wolves killed and avoid it (a landscape of fear, which also lightens browsing there); spiders string orb webs between trunks (frame, spokes, spiral); birds leave nests with eggs and woodpeckers leave holes in snags; jays plant oaks and beeches in mast years; animals have needs and two genes. No memory yet. |
-| **Real physics.** Water that erodes and meanders, light traced through the canopy, carbon budgets, wind-throw. | 150 kB | Fire spread, a dam and pond, a yearly gap model with mast years, nurse logs and gales that throw the tallest trees. |
+| **Real physics.** Water that erodes and meanders, light traced through the canopy, carbon budgets, wind-throw. | 150 kB | Fire spread, a dam and pond, a yearly gap model with mast years, nurse logs and gales that throw the tallest trees. **Water carving the land:** in deep time a stream cuts back from a fault, a waterfall retreats through the plot over thousands of years and leaves a gorge through layered rock; the range wears down by stream-power erosion in eleven stages; Rewind and Fast forward over a tape of the forest and ground. To do: caves (need true 3D rock, not a height field), an underwater world below the lake, and the valley drawn fine enough to show the gorge beyond the plot. |
 | **Other forests.** Mangrove, cloud forest, bamboo, redwoods, kelp. | 100 kB | Eleven forests: redwood grove and cloud forest added. Still all temperate or boreal. |
 
 ## Rules of the work

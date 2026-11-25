@@ -24,7 +24,7 @@ const f = { V, K, IV, cam: eye, SM, LV, LK: [1 / 58, 1 / 58], LNF: [1, 190], wd:
 const WXS = { clear: [0.3, 1, 0, 0], cloud: [0.76, 1.4, 0, 0], mist: [0.62, 4.5, 0, 0], rain: [1, 2.4, 1, 0], snow: [1, 2.6, 0, 1] }, WXN = Object.keys(WXS), SEA = ['Spring', 'Summer', 'Autumn', 'Winter'];
 // the 2 MB rung keeps time: a clock that can stand still, run in days, in seasons or in decades; a chronicle of what
 // happens; and an animal the camera can be told to follow
-const TIMES = ['still', 'days', 'seasons', 'decades'];
+const TIMES = ['still', 'days', 'seasons', 'decades', 'millennia'];
 let fire = null, world = null, smoke = 0, fireT = 0;
 const env = { get stand() { return stand; }, get world() { return world; }, get fire() { return fire; } };   // what the animals can see of the forest
 let fz = 0, fly = null, tap = [0, 0, 0], fp = 0, fd = 8;   // fp: walking in first person; fd: how far away the thing in the middle of the view is
@@ -44,6 +44,18 @@ const pass = (n) => {
   }
   return ev;
 };
+// the tape: before each stride the forest, its species, the dam and the cut ground are kept, so time can run backwards.
+// The animals are not kept: they carry on as they are.
+const tape = []; let rew = 0, ff = 0;
+const spool = () => { tape.push({ year, stand: structuredClone([...stand]), trees: structuredClone(G.trees), hist: G.hist && structuredClone(G.hist), dam: world.dam, E: G.ero && G.ero.E && G.ero.E.slice(), ey: G.ero && G.ero.years }); if (tape.length > 400) tape.shift(); };
+const unspool = (s) => { year = s.year; stand = s.stand; G.trees = s.trees; if (s.hist) G.hist = s.hist; world.dam = s.dam; if (s.E) { G.ero.E.set(s.E); G.ero.years = s.ey; G.ero.step(0); } grow(1, 1); };
+// deep time: 250 years a stride. The stream cuts; trees whose ground fell away or went under water are lost; the forest
+// lives 25 of those years, enough to fill the gaps
+const deep = () => {
+  const e = G.ero; spool(); const was = stand.map((t) => e.low(t.x, t.z)); e.step(250); e.years += 250;
+  const n0 = stand.length; for (let i = stand.length - 1; i >= 0; i--) { const t = stand[i]; if (e.low(t.x, t.z) - was[i] > 0.6 || B.strm.lvl(t.x) > B.Hgt(t.x, t.z) + 0.2) stand.splice(i, 1); }
+  if (stand.length < n0) say((n0 - stand.length) + ' trees went into the gorge'); year += 225; pass(25); grow(1, 1);
+};
 const strike = () => { const a = stand.filter((t) => !t.st && t.H > 8), t = a[(Math.random() * a.length) | 0]; if (!t) return; flash = 1; if (audio) audio.boom(); if (f.wx[0] < 0.5) { fire.light(t.x, t.z); fireT = 0; say('Lightning set ' + G.trees[t.si].nm.toLowerCase() + ' alight'); } else say('Lightning struck, but the wood was too wet to burn'); };
 // the tree of life: each species a line from the year it arose to the year it was lost; a branch joins it to its parent
 const tol = () => {
@@ -57,7 +69,7 @@ const tol = () => {
       + (h.gone && !h.to ? '<text x="' + (x1 + 2) + '" y="' + (Y(i) + 3) + '">†</text>' : '') + '<text x="' + (L - 4) + '" y="' + (Y(i) + 3) + '" text-anchor="end"' + (h.gone ? ' opacity=".5"' : '') + '>' + h.nm + '</text>'; }).join('')
     + '<text x="' + L + '" y="' + (rows.length * 13 + 11) + '">0</text><text x="' + (W - 6) + '" y="' + (rows.length * 13 + 11) + '" text-anchor="end">year ' + year + '</text>';
 };
-const say = (s) => { if (TIER < 4) return; const li = document.createElement('li'), L = $('log'); li.textContent = 'Year ' + year + (clock === 3 ? '' : ', ' + SEA[season].toLowerCase()) + ' · ' + s; L.prepend(li); while (L.children.length > 4) L.lastChild.remove(); };
+const say = (s) => { if (TIER < 4) return; const li = document.createElement('li'), L = $('log'); li.textContent = 'Year ' + year.toLocaleString() + (clock >= 3 ? '' : ', ' + SEA[season].toLowerCase()) + ' · ' + s; L.prepend(li); while (L.children.length > 4) L.lastChild.remove(); };
 const snd = (k) => { if (TIER > 3 && audio && sound) audio.ev(k); };
 let flash = 0, wx = 'clear', season = 1, LIFE = null, fogK = 1, night = 0, rainA = 0, snowA = 0;
 if (TIER > 2) for (const k in MORE) { GENOMES[k].land.stream = MORE[k].stream; GENOMES[k].life = MORE[k].life; if (TIER > 3) GENOMES[k].floor.flower = MORE[k].flower; }
@@ -122,7 +134,7 @@ function grow(keepView, aged) {
   B = build(G, seed, Q, den, TIER > 3 && aged ? stand : undefined); R.load(B, G);
   if (TIER > 3 && !aged) fire = mkFire(B.S, B.strm);
   if (TIER > 3) { col = B.trees.filter((t) => t.st < 2 && t.H > 1.5).map((t) => [t.x, t.z, 0.05 + 0.011 * t.H, B.Hgt(t.x, t.z) + t.H]); for (const a of B.rocks) for (let i = 0; i < a.length; i += 12) if (a[i + 3] > 0.35) col.push([a[i], a[i + 2], a[i + 3] * 0.8, a[i + 1] + a[i + 3] * 0.7]); }
-  if (TIER > 3) { stand = B.trees; if (!aged) { year = 1; fol = null; $('log').textContent = ''; $('b-fol').textContent = 'Follow'; } }
+  if (TIER > 3) { stand = B.trees; if (!aged) { year = 1; tape.length = 0; rew = 0; fol = null; $('log').textContent = ''; $('b-fol').textContent = 'Follow'; } }
   f.fog = [G.air.fog, 0.07, 0]; f.moss = G.floor.moss; f.wd = [0.8, 0.6, G.air.wind * 0.18];
   if (!keepView) {
     day = asin(pow((G.air.sun[0] - 6) / 62, 1 / 1.2)) / PI; $('day').value = round(day * 1000);
@@ -223,7 +235,9 @@ function frame(now) {
       const YL = clock === 1 ? 480 : 64, y0 = Math.floor(yearF); yrs = dt / YL; dayPh = (dayPh + dt * 8 / YL) % 1; day = dayPh < 0.75 ? -0.12 + dayPh / 0.75 * 1.24 : 1.12; $('day').value = round(day * 1000); moved = 1;
       yearF += yrs; const se = Math.floor((yearF % 1) * 4); if (se !== season) setSea(se);
       if (Math.floor(yearF) > y0) { if (pass(1)) grow(1, 1); }                   // the trees are a year older too
-    } else if (clock === 3 && (decT += dt) > 3) { decT = 0; pass(5); LIFE.lapse(5); grow(1, 1); }   // five years at a stride, for the animals too
+    } else if (rew) { if ((decT += dt) > 0.6) { decT = 0; const s = tape.pop(); if (s) unspool(s); if (!tape.length) { rew = 0; $('b-rw').setAttribute('aria-pressed', 'false'); say('Back at the start of the tape'); } } }   // running the tape backwards
+    else if (clock === 3 && (decT += dt) > [3, 0.8, 0.25][ff]) { decT = 0; spool(); pass(5); LIFE.lapse(5); grow(1, 1); }   // five years at a stride, for the animals too
+    else if (clock === 4 && (decT += dt) > [2.5, 0.9, 0.35][ff]) { decT = 0; deep(); }
     if (fol) { if (fol.mode === 9 && fol.dead > 12) { fol = null; $('b-fol').textContent = 'Follow'; } else { tgt[0] = clamp(fol.x, -B.S / 2, B.S / 2); tgt[2] = clamp(fol.z, -B.S / 2, B.S / 2); idle = 0; } }
     if (LIFE.dirty) { LIFE.dirty = 0; grow(1, 1); }                         // a beaver felled something
     if (fire.n) {                                                          // fire: it runs on the wind until rain, water or burnt ground stops it
@@ -354,7 +368,16 @@ if (TIER > 2) $('b-wx').addEventListener('click', () => setWx(WXN[(WXN.indexOf(w
 if (TIER > 3) {
   $('b-sea').addEventListener('click', () => { const v = (season + 1) % 4; if (!v) year++; yearF = Math.floor(yearF) + (v ? 0 : 1) + v / 4 + 0.01; setSea(v); });
   $('day').min = -120; $('day').max = 1120;
-  $('b-time').addEventListener('click', () => { clock = (clock + 1) % 4; $('b-time').textContent = 'Time: ' + TIMES[clock]; if (clock === 3) { setSea(1); yearF = Math.floor(yearF) + 0.3; } if (!clock) { day = 0.3; $('day').value = 300; setSun(); } });
+  $('b-rw').addEventListener('click', () => {
+    if (G.world === 'range') { GENOMES.range.stage = max(0, (G.stage ?? 10) - 1); grow(1); return; }
+    rew = tape.length ? 1 - rew : 0; $('b-rw').setAttribute('aria-pressed', !!rew); if (!tape.length) say('Nothing on the tape yet: let some time pass first');
+  });
+  $('b-ff').addEventListener('click', () => {
+    if (G.world === 'range') { GENOMES.range.stage = min(10, (G.stage ?? 10) + 1); grow(1); return; }
+    rew = 0; $('b-rw').setAttribute('aria-pressed', 'false'); if (clock < 3) $('b-time').click(); else ff = (ff + 1) % 3; $('b-ff').textContent = ['Fast forward', 'Fast forward ×3', 'Fast forward ×10'][ff]; $('b-ff').setAttribute('aria-pressed', !!ff);
+  });
+  $('b-time').addEventListener('click', () => { clock = (clock + 1) % 5; if (clock === 4 && (!B.strm || G.world)) clock = 0;
+    if (clock === 4 && !G.ero) { G.ero = 1; grow(1, 1); say('Deep time. Downstream, the valley floor has dropped 16 m along a fault, and the stream has begun to cut back toward the plot'); } $('b-time').textContent = 'Time: ' + TIMES[clock]; if (clock >= 3) { setSea(1); yearF = Math.floor(yearF) + 0.3; } if (!clock) { day = 0.3; $('day').value = 300; setSun(); } });
   $('b-fire').addEventListener('click', strike);
   $('b-walk').addEventListener('click', () => walking(!fp)); $('b-in').addEventListener('click', () => zoom(1)); $('b-out').addEventListener('click', () => zoom(-1));
   $('b-evo').addEventListener('click', () => { const e = $('evo'), on = e.toggleAttribute('hidden'); $('b-evo').setAttribute('aria-pressed', !on); tol(); });
@@ -394,6 +417,6 @@ if (TIER > 3) $('hint').textContent += coarse ? ' · double-tap anything to look
 const HO = TIER > 3 && $('hint').textContent, HW = coarse ? 'Walking: left thumb to walk (push far to run) · drag on the right to look · double-tap to go closer' : 'Walking: WASD · click to look with the mouse (Esc frees it) · Shift run · Z sneak · Space hop · F float · double-click to go closer · O to leave';
 grow();
 // for tests and screenshots
-window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { pass(o.years); LIFE.lapse(o.years); grow(1, 1); } if (TIER > 3 && o.strike) strike(); if (TIER > 3 && o.see !== undefined) fol = LIFE.herd.find((d) => d.kind === o.see && d.mode !== 9) || null; if (TIER > 3 && o.burn) { for (let i = 0; i < o.burn; i++) fire.step(0.5, f.wd, 0, Math.random, stand, G); grow(1, 1); } if (TIER > 3 && o.wolves) LIFE.pack(1); if (TIER > 3 && o.look) look(o.look[0], o.look[1]); if (TIER > 3 && o.at) { fz = 1; fly = [o.at, o.r || 0.35, o.yaw ?? yaw, o.pitch ?? max(0.02, pitch)]; } if (TIER > 3 && o.dam) { world.dam = o.dam; grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
+window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { pass(o.years); LIFE.lapse(o.years); grow(1, 1); } if (TIER > 3 && o.strike) strike(); if (TIER > 3 && o.see !== undefined) fol = LIFE.herd.find((d) => d.kind === o.see && d.mode !== 9) || null; if (TIER > 3 && o.burn) { for (let i = 0; i < o.burn; i++) fire.step(0.5, f.wd, 0, Math.random, stand, G); grow(1, 1); } if (TIER > 3 && o.wolves) LIFE.pack(1); if (TIER > 3 && o.deep) { if (!G.ero) { G.ero = 1; grow(1, 1); } for (let i = 0; i < o.deep; i++) deep(); } if (TIER > 3 && o.back) for (let i = 0; i < o.back && tape.length; i++) unspool(tape.pop()); if (TIER > 3 && o.look) look(o.look[0], o.look[1]); if (TIER > 3 && o.at) { fz = 1; fly = [o.at, o.r || 0.35, o.yaw ?? yaw, o.pitch ?? max(0.02, pitch)]; } if (TIER > 3 && o.dam) { world.dam = o.dam; grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
 if (TIER > 3) Object.defineProperty(window.sylva, 'cam', { get: () => ({ tgt, rad, yaw, pitch, fz, fly, eye, fp, wp, ong, noise: LIFE.noise }) });   // for the headless checks
 requestAnimationFrame(frame);

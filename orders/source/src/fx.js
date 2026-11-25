@@ -52,6 +52,11 @@ export const WATD2 = `
 export const WATD3 = `
   if (FP < .006) { vec3 sk = vor((pw.xz - vec2(uT * .25, 0.)) * 40.); float m = step(sk.z, .04) * smoothstep(.16, .08, sk.x) * vis(.004); c = mix(c, mix(vec3(.75, .65, .2), vec3(.3, .2, .1), step(.02, sk.z)) * (amb(vec3(0., 1., 0.), 1.) + uSunC * .6), m); }
 `;
+// water steep enough to fall: white, streaming down
+export const FALLS = `
+  { vec3 gn = cross(dFdx(pw), dFdy(pw)); float st = dot(gn, gn) > 1e-12 ? smoothstep(.85, .35, abs(normalize(gn).y)) : 0.;
+    c = mix(c, vec3(.86, .9, .92) * (amb(n, 1.) + uSunC * sh * .6) * (.75 + .35 * vn(vec2(pw.x * 4. + pw.z * 4., pw.y * 1.5 + uT * 5.))), st * .9); }
+`;
 export const WATF = `
 in vec3 pw; in vec2 xx; in float vz; out vec4 o;
 float wv(vec2 p) {
@@ -75,7 +80,7 @@ void main() {
   vec3 rf = mix(vec3(.015, .03, .015) + amb(vec3(0., 1., 0.), .22) * vec3(.3, .5, .2), skyc(rd), smoothstep(.2, .75, rd.y + .25 * vn(pw.xz * 1.3)) * (.35 + .65 * sh));   // in shade it mirrors the canopy, in the open the sky
   vec3 c = mix(bed + vec3(.02, .05, .04) * (1. - exp(-d * 4.)), rf, fr) + uSunC * sh * cs * pow(max(dot(rd, uSun), 0.), 260.) * 4.;
   c = mix(c, vec3(.75, .8, .8) * (amb(n, 1.) + uSunC * sh * cs * .3), smoothstep(.07, .0, d) * smoothstep(.35, .65, vn(pw.xz * 14. - vec2(uT * 1.2, 0.))) * .8);   // a line of foam at the edge
-` + (TIER > 3 ? WATD3 : '') + `
+` + (TIER > 3 ? WATD3 + FALLS : '') + `
   c = mix(c, vec3(.78, .84, .92) * (amb(n, 1.) + uSunC * sh * .5), smoothstep(.72, .98, uWx.y) * .92);              // deep winter: ice
   o = vec4(fogc(c, pw), vz / 300.);
 }`;
@@ -557,7 +562,7 @@ export const FLW = `
 // a few pixels across, so from afar it costs nothing and never shimmers; walk up to a trunk, a leaf or a stone and more
 // of it appears, the way a microscope's fine focus brings up one layer after another.
 export const MICRO = `
-uniform float uNdl, uLeaf; uniform vec3 uFor;
+uniform float uNdl, uLeaf; uniform vec3 uFor, uStr;
 float FP = 1., GL = 0.; vec4 LF = vec4(-1.);
 float vis(float s) { return smoothstep(1.5, 4., s / max(FP, 1e-6)); }
 vec3 vor(vec2 p) {
@@ -737,6 +742,13 @@ export const CROWND = `
     }
 `;
 
+// where the stream has cut down through the plot in deep time, the gorge walls show the rock: grey shale finely
+// layered, and the bed of pale sandstone in thicker beds, holding its cliff
+export const ROCKF = `
+    if (uStr.z > .5) { float k = smoothstep(.82, .55, normalize(nw).y), hd = step(uStr.y, pw.y) * step(pw.y, uStr.x);
+      vec3 rk = mix(vec3(.3, .28, .27) * (.82 + .22 * sin(pw.y * 31. + vn(pw.xz * 2.) * 3.)), vec3(.64, .52, .37) * (.86 + .18 * sin(pw.y * 6.3 + vn(pw.xz * .6) * 3.)), hd);
+      alb = mix(alb, rk * (.8 + .4 * vn3(pw * vec3(1.5, 7., 1.5))), k); n = normalize(mix(n, normalize(nw), k * .6)); ao = mix(ao, 1., k * .5); }
+`;
 // a mountain range from far above: forest up to a treeline that sits higher on sunny slopes, then alpine meadow, then
 // scree and rock where it is steep, snow above a line that comes down in winter, green valley floors, dark lakes
 export const RANGEG = `
