@@ -298,6 +298,7 @@ export function mkRenderer(canvas, low) {
     x.inner = (R, B, G) => { const W0 = W; W = x.W2; free(); W = null; R.load(B, G); x.W2 = W; W = W0; };   // upload the next world beside this one
     x.swap = () => { free(); W = x.W2; x.W2 = null; };                    // hand over to it
     x.drop = () => { const W0 = W; W = x.W2; free(); W = W0; x.W2 = null; };   // or let it go
+    x.keep = () => { if (x.W2) x.drop(); x.W2 = W; W = null; };          // going out: this world stays, beside, while the next is loaded
   }
   // above the 20 kB rung: water, things in the air, and a buffer of limbs that is rewritten every frame
   const PW = TIER > 2 && prog(PRE + WATV, PRE + WATF), PPT = TIER > 2 && prog(PRE + PTV, PRE + PTF, ['uPt']), lv = TIER > 2 && gl.createVertexArray(), lb = TIER > 2 && gl.createBuffer(); let ln = 0;
@@ -398,7 +399,7 @@ export function mkRenderer(canvas, low) {
         gl.useProgram(x.PDK.p); gl.uniformMatrix4fv(x.PDK.uV, false, f.V); gl.uniform2f(x.PDK.uK, f.K[0], f.K[1]); gl.uniform2f(x.PDK.uNF, nf[0], nf[1]); gl.uniform4f(x.PDK.uDm, c[0], f.win.gy, c[2], f.win.rho); gl.bindVertexArray(x.vD); gl.drawArrays(gl.TRIANGLE_FAN, 0, 66);
         gl.disable(gl.POLYGON_OFFSET_FILL); gl.depthMask(true); gl.stencilFunc(gl.EQUAL, 1, 255); gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.depthFunc(gl.ALWAYS); gl.depthRange(1, 1); gl.useProgram(x.PDC.p); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3);   // there, the depth goes back to the far plane
         gl.colorMask(true, true, true, true); gl.depthRange(0, 1); gl.depthFunc(gl.LESS); gl.stencilFunc(gl.EQUAL, 1, 255); gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
-        gl.disable(gl.DEPTH_TEST); com(PSK, fi, fi.V, f.K, R, 0, fi.nf); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST);
+        // (no sky of its own in the window: where a look through it runs past that world's patch, this world's ground, already drawn, shows on, so the patch has no edge)
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, x.sm2); gl.activeTexture(gl.TEXTURE0);
         f.win.geo(PM, PC, PK, fi, fi.V, f.K, R, 0, fi.nf, 0);
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, sm); gl.activeTexture(gl.TEXTURE0); gl.disable(gl.STENCIL_TEST);

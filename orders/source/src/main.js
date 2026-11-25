@@ -359,9 +359,10 @@ const glideStep = (now) => { if (!gl) return; const [t0, ra, rb, pa, pb, ms, the
 // whether an oak stands near enough to drop acorns.
 // the new world opens out from the middle of the view, the spot you went toward, through the last frame of the old
 const opn = (sp, dir = 1) => {   // dir: going in, the frozen frame keeps coming toward you while it opens; going out, it falls away
-  const m = (r) => { sp.style.webkitMaskImage = sp.style.maskImage = r < -20 ? '' : 'radial-gradient(circle, transparent ' + r + '%, #000 ' + (r + 20) + '%)'; }, t0 = performance.now();
+  let m = (r) => { sp.style.webkitMaskImage = sp.style.maskImage = r < -20 ? '' : 'radial-gradient(circle, transparent ' + r + '%, #000 ' + (r + 20) + '%)'; }, t0 = performance.now();
   if (calm || ema > 0.03) { sp.style.transition = 'opacity .9s'; sp.style.opacity = 0; return; }
-  const st = (now) => { const u = min(1, (now - t0) / 1300), e = u * u * (3 - 2 * u); m(e * 100 - 20); sp.style.transform = 'scale(' + pow(dir > 0 ? 3 : 0.5, u) + ')'; if (u < 1) requestAnimationFrame(st); else { sp.style.opacity = 0; m(-99); sp.style.transform = ''; } }; m(-20); requestAnimationFrame(st);
+  if (dir < 0) m = (r) => { sp.style.webkitMaskImage = sp.style.maskImage = r < -20 ? '' : 'radial-gradient(ellipse closest-side, #000 ' + r + '%, transparent ' + (r + 25) + '%)'; };   // going out, the old frame is a soft oval sinking into the new one, so its edges never show
+  const st = (now) => { const u = min(1, (now - t0) / 1300), e = u * u * (3 - 2 * u); m(dir < 0 ? 75 - e * 100 : e * 100 - 20); sp.style.transform = 'scale(' + pow(dir > 0 ? 3 : 0.3, u) + ')'; if (u < 1) requestAnimationFrame(st); else { sp.style.opacity = 0; m(-99); sp.style.transform = ''; } }; m(dir < 0 ? 75 : -20); requestAnimationFrame(st);
 };
 const leave = () => {
   let b = null, d = 14; for (const t of stand) if (t.st === 2) { const c = cos(t.a), s = sin(t.a), u = clamp((tgt[0] - t.x) * c + (tgt[2] - t.z) * s, 0, t.H * 0.75), x = t.x + c * u, z = t.z + s * u, e = hypot(tgt[0] - x, tgt[2] - z); if (e < d) { d = e; b = [t, x, z, e]; } }
@@ -383,14 +384,16 @@ const under = (k) => { if (dive) return; walking(0); const sp = $('snap'); snapN
 // is exactly where it was. Nothing of this world's animals is in the window until then.
 const turn = (v, th) => [v[0] * cos(th) - v[2] * sin(th), v[1], v[0] * sin(th) + v[2] * cos(th)];   // about the vertical: the next world's axes into this one's
 const winIn = (p) => { const w = f.win, d = turn([p[0] - w.co[0], p[1] - w.co[1], p[2] - w.co[2]], -w.th); return [w.ci[0] + d[0] * w.F, w.ci[1] + d[1] * w.F, w.ci[2] + d[2] * w.F]; };
+const gIn = (B2, ci, F) => { let g = 1e9; for (let a = 0; a < 6.28; a += 0.39) g = min(g, B2.Hgt(cos(a) * B2.S * 0.35, sin(a) * B2.S * 0.35)); return (ci[1] - g) / F; };   // how far the log's top stands above its ground, in the bigger world's units
+const gTop = (x, z, r) => { let g = B.Hgt(x, z); for (let a = 0; a < 6.28; a += 0.52) g = max(g, B.Hgt(x + cos(a) * r, z + sin(a) * r)); return g + r * 0.02; };   // the disc lies level at the highest ground under its rim, so a slope never cuts a straight edge across it
 const winGo = (nk, F, L, ht) => {
   let G2 = GENOMES[nk]; G2 = { ...G2, trees: G2.trees.map((s) => ({ ...s })) }; if (G2.span && f.si) G2 = siteG(G2, nk);
   const th = L ? L[0].a : 0; G2.air = { ...G2.air, sun: [G.air.sun[0], G.air.sun[1] + th / RAD] }; G2.rot = th;   // one sky
   const B2 = build(G2, G2.sd || seed, Q, den);
   let ci = [0, B2.Hgt(0, 0), 0]; if (G2.world === 'log') { let bz = 0, bh = -1e9; for (let z = -30; z <= 30; z += 0.5) { const h = B2.Hgt(0, z); if (h > bh) { bh = h; bz = z; } } ci = [0, bh, bz]; }   // the inner log's top, under the outer trunk's
-  const co = L ? [L[1], B.Hgt(L[1], L[2]) + 1.6 * (0.05 + 0.011 * L[0].H), L[2]] : [tgt[0], B.Hgt(tgt[0], tgt[2]), tgt[2]];
+  const rho = B2.S / 2 / F * (G2.world === 'leaf' ? 0.6 : 0.9), cx = L ? L[1] : tgt[0], cz = L ? L[2] : tgt[2], gy = gTop(cx, cz, rho), co = [cx, gy + (G2.world === 'log' ? gIn(B2, ci, F) : 0), cz];   // the log's ground on this ground, so a look through the window never runs past its edge into empty sky
   canvas.win.inner(R, B2, G2);
-  f.win = { F, th, co, ci, G2, B2, nk, ht, gy: B.Hgt(co[0], co[2]), rho: B2.S / 2 / F * (G2.world === 'leaf' ? 0.6 : 0.9), sh: 1,   /* (a leaf is warped: keep the disc well inside it) */ V: new Float32Array(16), IV: new Float32Array(9), LV: new Float32Array(16), SM: new Float32Array(16) };
+  f.win = { F, th, co, ci, G2, B2, nk, ht, gy, rho, sh: 1,   /* (a leaf is warped: keep the disc well inside it) */ V: new Float32Array(16), IV: new Float32Array(9), LV: new Float32Array(16), SM: new Float32Array(16) };
   fz = 1; glide(rad / F, max(pitch, 0.75), 2600 * (f.winS || 1), winEnd, [co[0], co[1] + 1.5 / F, co[2]]);
 };
 const winFrame = () => {
@@ -401,7 +404,27 @@ const winFrame = () => {
     w.fi = { ...f, skyC: f.skyC.map((v, i) => v * G2.air.sky[i] / max(0.05, G.air.sky[i])), horC: f.horC.map((v, i) => v * G2.air.haze[i] / max(0.05, G.air.haze[i])), V: w.V, IV: w.IV, cam: e2, sun: sn, SM: S, LV: L, fog: [f.fog[0] / w.F + (G2.air.fog * fogK - f.fog[0] / w.F) * (w.k || 0) ** 2, 0.07, 0], moss: G2.floor.moss, wd: [0.8, 0.6, G2.air.wind * 0.18], nf: [0.05, 600] };
   const c = w.co, inn = (u, v) => { const a = (u * 2 - 1) / K[0], b = (v * 2 - 1) / K[1], d = [0, 1, 2].map((i) => IV[i] * a + IV[i + 3] * b - IV[i + 6]); if (d[1] > -1e-4) return 0; const t = (w.gy - eye[1]) / d[1]; return hypot(eye[0] + d[0] * t - c[0], eye[2] + d[2] * t - c[2]) < w.rho; };
   w.k = [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]].filter(([u, v]) => inn(u, v)).length / 4;   // how much of the view it has
-  if (!f.winDbg && inn(0, 0) && inn(1, 0) && inn(0, 1) && inn(1, 1)) winEnd();       // it fills the view: hand over
+  if (!f.winDbg && !w.out && inn(0, 0) && inn(1, 0) && inn(0, 1) && inn(1, 1)) winEnd();       // it fills the view: hand over
+};
+// Going out is the same window run backwards. The world you are in is kept beside, the bigger one is grown around it,
+// and the camera is carried out into the bigger world's units, so the first frame is the one you were looking at, all
+// window. Then the camera pulls back and that world shrinks to the patch of ground (or the log, the moss) it is.
+const winBack = (nk, F, j, ht) => {
+  const Bi = B; let ci = [0, Bi.Hgt(0, 0), 0]; if (G.world === 'log') { let bz = 0, bh = -1e9; for (let z = -30; z <= 30; z += 0.5) { const h = Bi.Hgt(0, z); if (h > bh) { bh = h; bz = z; } } ci = [0, bh, bz]; }
+  fz = 1; glide(Bi.S * 0.3, max(pitch, 1.0), 1000 * (f.winS || 1), () => { const sp = $('snap'); snapNext = () => {   // the last frame laid over the first of the window, and let go, so the seam never shows
+    sp.width = canvas.width; sp.height = canvas.height; sp.getContext('2d').drawImage(canvas, 0, 0); sp.style.webkitMaskImage = sp.style.maskImage = ''; sp.style.transform = ''; sp.style.transition = 'none'; sp.style.opacity = 1;
+    winOut(nk, F, j, ht, ci); requestAnimationFrame(() => requestAnimationFrame(() => { sp.style.transition = 'opacity .8s'; sp.style.opacity = 0; }));
+  }; }, ci);   // first down over the spot the window will open from, as going in ends
+};
+const winOut = (nk, F, j, ht, ci) => {
+  const Gi = G, Bi = B, e0 = [...eye], t0 = [...tgt], th = Gi.rot || 0, L = j === 1 && f.si && f.si.log;
+  canvas.win.keep(); key = nk; mut = 0; if (!(j === 1 && back())) grow();
+  const tD = [...tgt], rD = rad, pD = pitch, c0 = L ? [L[1], L[2]] : [tD[0], tD[2]], rho = Bi.S / 2 / F * (Gi.world === 'leaf' ? 0.5 : 0.7), gy = gTop(c0[0], c0[1], rho), co = [c0[0], gy + (Gi.world === 'log' ? gIn(Bi, ci, F) : 0), c0[1]];
+  f.win = { F, th, co, ci, G2: Gi, B2: Bi, nk, gy, rho, sh: 1, out: 1, k: 1, V: new Float32Array(16), IV: new Float32Array(9), LV: new Float32Array(16), SM: new Float32Array(16) };
+  const wo = (q) => { const d = turn([(q[0] - ci[0]) / F, (q[1] - ci[1]) / F, (q[2] - ci[2]) / F], th); return [co[0] + d[0], co[1] + d[1], co[2] + d[2]]; }, eO = wo(e0), tO = wo(t0);
+  const dx = eO[0] - tO[0], dy = eO[1] - tO[1], dz = eO[2] - tO[2]; tgt = tO; rad = hypot(dx, dy, dz); yaw = Math.atan2(dx, dz); pitch = asin(clamp(dy / rad, -1, 1)); fz = 1;
+  $('hint').textContent = ht; $('hint').hidden = false;
+  glide(rD, max(pD, 0.75), 2800 * (f.winS || 1), () => { canvas.win.drop(); f.win = null; glide(rD, pD, 900, () => { dive = 0; fz = 0; }); }, tD);   // looking down until the window has shrunk away, then up
 };
 const winEnd = () => {
   const w = f.win; if (!w) return; gl = null;
@@ -413,7 +436,7 @@ const winEnd = () => {
 const zoom = (dir) => {
   if (TIER > 3 && (key === 'lake' || key === 'cave')) { if (dir < 0) under(home); return; }
   if (dive) return; const i = key === 'bark' ? 3 : G.world ? LAD.indexOf(G.world) : key === 'moss' ? 3 : 1, lv = key === 'leafl'; let j = clamp(i + dir, 0, 5); if (i === j || (key === 'bark' && dir > 0)) return;
-  const nb = i === 2 && dir > 0 && B.Hgt(tgt[0], tgt[2]) > 6;                // diving at the log itself goes under its bark; anywhere else, into the moss
+  const nb = i === 2 && dir > 0 && B.Hgt(tgt[0], tgt[2]) > 6 && !(TIER > 3 && canvas.lt > 3);   /* (not when the scale is taking you further down: the bark is a side room) */                // diving at the log itself goes under its bark; anywhere else, into the moss
   const ph = f.si && f.si.cl && f.si.cl.ph, on = !ph || (ph[0] <= ph[2] ? cday() >= ph[0] && cday() < ph[2] : cday() >= ph[0] || cday() < ph[2]);
   const sl = i === 2 && dir > 0 && !nb && on && stand.some((t) => !t.st && G.trees[t.si].id === 'oakling' && hypot(t.x - tgt[0], t.z - tgt[2]) < 6);   // diving at a seedling in leaf goes straight to a living leaf, a thousand times smaller
   if (sl) j = 5; if (lv && dir < 0) j = 2;
@@ -421,6 +444,7 @@ const zoom = (dir) => {
   if (i === 1) { home = key; leave(); } walking(0); dive = 1; fly = null; fz = 0; idle = 0;
   const L = i === 1 && dir > 0 && f.si.log;
   if (TIER > 3 && dir > 0 && j > 1 && !calm && (ema < 0.034 || f.winF) && canvas.win) { winGo(nb ? 'bark' : sl ? 'leafl' : LAD[j], F, L, (nb ? '×1000: under the bark, 6.4 cm across' : sl ? '×100,000: a living leaf of the seedling, 0.64 mm across' : ['', '', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j]) + (L ? ' · the fallen ' + f.si.sp.nm.toLowerCase() + ' you dived at' : '') + ' · + further in, − back out'); return; }   // the window
+  if (TIER > 3 && dir < 0 && i > 1 && !calm && (ema < 0.034 || f.winF) && canvas.win) { winBack(j === 1 ? home : LAD[j], F, j, (lv ? '×100: back on the log, 64 cm across' : ['', '×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across'][j]) + ' · + further in, − back out'); return; }   // the window, backwards
   const r0 = rad, rEnd = i + j === 1 ? (dir > 0 ? 0.25 : 2500) : dir > 0 ? r0 / F : r0, sp = $('snap'), a = dir > 0 ? r0 / rEnd : rEnd / r0;   // how far the old world carries the zoom: in, all the way; out, not at all, except that the plot pulls back to show its valley first
   glide(rEnd, dir > 0 ? max(pitch, 0.75) : pitch, a > 1.5 ? 1600 : 1, () => { snapNext = () => {
     sp.width = canvas.width; sp.height = canvas.height; sp.getContext('2d').drawImage(canvas, 0, 0); sp.style.transition = 'none'; sp.style.opacity = 1;
