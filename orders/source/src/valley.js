@@ -53,7 +53,7 @@ export function valley({ G, Hgt, strm, hs, seed, cap, low }) {
   // the nearest band of forest: a trunk and a crown or a stack of them, chosen as the plot chooses its trees
   const rnd = rng(seed ^ 0xfa11), rr = (a, b) => a + (b - a) * rnd(), tot = G.trees.reduce((s, t) => s + t.n, 0);
   let n = 0;
-  for (let tries = 0, want = low ? 600 : 1300; n < want && tries < want * 4; tries++) {
+  for (let tries = 0, want = G.trees.length ? (low ? 600 : 1300) : 0; n < want && tries < want * 4; tries++) {
     const x = rr(-hs - 110, hs + 110), z = rr(-hs - 110, hs + 110), d = out(x, z); if (d < 1.5) continue;
     if ((strm && strm.dist(x, z) < 1.2) || inLake(x, z) < 1.15) continue;
     const wet = strm ? max(0, 1 - max(0, strm.dist(x, z)) / 12) : 0.3 + 0.4 * fbm(x * 0.05, 1, z * 0.05, 2);

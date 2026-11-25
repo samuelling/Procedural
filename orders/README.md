@@ -172,6 +172,41 @@ The two worlds are never drawn at once, so the dissolve is between matched views
 The sizes are right to within a factor of two or so; the shapes are simplified, and the soil is lit as if the litter
 above had been lifted away.
 
+## Anywhere on Earth (2 MB rung)
+
+Earth… opens a map of the world's climates. Click any land, choose how high to climb (0 to 5,000 m), and Grow here
+grows a forest for that place. What is measured, computed, modelled and guessed is kept apart:
+
+- **Measured:** the Köppen-Geiger climate class at the point, from a quarter-degree grid (1440 × 720, about 35 kB of
+  the page once packed), downsampled from the 100-arc-second map distributed with kgcpy (Yu et al., Case Western
+  Reserve University, BSD licence; after Rubel et al.). Each cell takes the commonest land class in it; on a sample
+  of 200,000 land points the quarter-degree grid gives the full map's class 95.4% of the time and calls 0.7% of land
+  sea. A point at sea snaps to the nearest coast within 3°. The map is that grid, coloured by class; the coastline
+  is its own.
+- **Computed:** the sun's path for the latitude and the season (declination ±23.44° at the solstices, the usual
+  solar-elevation and azimuth formulas); the Time of day slider runs from 3 in the morning to 9 at night, so the
+  Arctic summer keeps its sun up and the winter keeps it down. Day lengths at both solstices are shown.
+- **Modelled:** twelve monthly temperatures and rainfalls. A zonal sketch (warmth by latitude; a yearly swing that
+  grows with latitude and with distance from the sea upwind, west in the westerlies and east in the trades; a
+  warmer oceanic west coast in the north; rain belts by latitude, less inland) is nudged as little as possible until
+  the Köppen rules (Kottek et al. 2006) give the measured class. So the numbers belong to the class, made plausible
+  for the place: Yakutsk comes out −9 °C a year with −38 to 20 by month (close to the station), London 9.8 °C with
+  3 to 17 (cooler than it is), Boston 12 °C and 780 mm (rain about 30% short), Cairo 77 mm (three times too wet).
+- **Rules:** climbing cools 6.5 °C a kilometre and adds a little rain, and the class is worked out again, so Boston
+  at 2,500 m is tundra.
+- **Unverified tables:** soils by class (podzol, brown earth, terra rossa, ferralsol, chernozem, desert soil, gley
+  over permafrost and so on, each with its colour on the ground), and which trees grow by class and region, with
+  regional names. Eight species were added for places the temperate pool could not cover: holm oak (live oak,
+  African olive), stone pine, eucalyptus, acacia (umbrella thorn, wattle), juniper, a rainforest emergent (kapok,
+  mahogany or dipterocarp by region), a rainforest canopy tree (fig in Asia), a palm, and dwarf birch for the tundra.
+  Southern beech stands in for Nothofagus. Heights shrink with a short or dry growing season; stems thin with less
+  rain; deserts get a handful of trees or none; ice gets none.
+- The climate also sets the floor (grass that goes tawny where summers are dry, ferns and moss with rain), snow only
+  where winters freeze, leaf fall and autumn colour only where the class is seasonal (none in the rainforest, a
+  little in the Mediterranean and tropical savanna), fog, and the aurora above 58°.
+
+The address keeps the place: `#earth-4821@42.625,-71.125,0`.
+
 ## The valley (2 MB rung)
 
 The plot is no longer an island. The same height field carries on past its edge and, beyond, is lifted into a valley:
@@ -202,6 +237,11 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 400 steps of its animals stay finite; fourteen simulated years of births, hunts and deaths and three centuries of
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
+
+Anywhere on Earth: sixteen places grown in node with nothing non-finite and their animals stepped (Boston, Manaus,
+Yakutsk, Cairo, the Serengeti, Rome, Perth, Seattle, Tromsø, Greenland, Nairobi, Boston at 2,500 m, Ulaanbaatar,
+Borneo, Hobart, and a point in the Atlantic, which is refused as sea); the map panel, the Amazon and Rome seen in
+renders. The palms have not been picked out in a render.
 
 Worlds of other scales: all five seen in renders (the range from above and low over it, and after zooming out from a
 forest and back in; under the bark from above and close in, and after zooming in at the log and back out; the soil also after diving into it from the moss, the leaf from above and

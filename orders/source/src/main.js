@@ -5,6 +5,7 @@ import { rng } from './noise.js';
 import { mkRenderer, pick } from './gl.js';
 import { mkAudio } from './audio.js';
 import { mkLife, MORE, succeed, mkFire } from './fx.js';
+import { place, earthGenome, kg, KCOL } from './earth.js';
 
 const { sin, cos, tan, asin, min, max, round, exp, hypot, pow, PI } = Math, RAD = PI / 180, $ = (id) => document.getElementById(id);
 const canvas = $('c'), clamp = (x, a, b) => min(b, max(a, x)), mix3 = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -62,7 +63,10 @@ let flash = 0, wx = 'clear', season = 1, LIFE = null, fogK = 1, night = 0, rainA
 if (TIER > 2) for (const k in MORE) { GENOMES[k].land.stream = MORE[k].stream; GENOMES[k].life = MORE[k].life; if (TIER > 3) GENOMES[k].floor.flower = MORE[k].flower; }
 if (TIER > 3) { Object.assign(GENOMES, extra()); GENOMES.boreal.air.aur = GENOMES.larch.air.aur = 1; }
 
-const m = /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?$/.exec(location.hash);
+const m = (TIER > 3 ? /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?(?:@(-?[\d.]+),(-?[\d.]+),(\d+))?$/ : /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?$/).exec(location.hash);
+let here = null;   // the place on Earth, once one is chosen
+const earthAt = (lat, lon, climb) => { here = place(lat, lon, climb); if (here) GENOMES.earth = earthGenome(here, GENOMES, extra.pool); return here; };
+if (TIER > 3 && m && m[1] === 'earth' && m[5]) earthAt(+m[5], +m[6], +m[7]);
 if (m && GENOMES[m[1]]) { key = m[1]; seed = +m[2]; mut = +(m[3] || 0); den = clamp(+(m[4] || 100) / 100, 0.25, 2); }
 
 function lookAt(M, e, t) {
@@ -75,6 +79,10 @@ function lookAt(M, e, t) {
 function sun3() {
   const A = G.air, t0 = asin(pow((A.sun[0] - 6) / 62, 1 / 1.2)) / PI, dc = clamp(day, 0, 1), oc = TIER > 2 ? sstep(0.5, 1, f.wx[2]) : 0;
   let el = 6 + 62 * pow(sin(PI * dc), 1.2) - Math.abs(day - dc) * 160, az = (A.sun[1] + (day - t0) * 170) * RAD;   // past either end of the day the sun goes under
+  if (TIER > 3 && G.cl) {                                                   // on Earth: the real sun for this latitude and season, the slider running from 3 in the morning to 9 at night
+    const la = G.cl.lat * RAD, dl = [0, 23.44, 0, -23.44][season] * (G.cl.south ? -1 : 1) * RAD, H = (day * 18 + 3 - 12) * 15 * RAD, se = sin(la) * sin(dl) + cos(la) * cos(dl) * cos(H);
+    el = asin(clamp(se, -1, 1)) / RAD; az = A.sun[1] * RAD + Math.atan2(sin(H), cos(H) * sin(la) - Math.tan(dl) * cos(la));
+  }
   const k = sstep(5, 38, el), grey = (c) => c.map((v) => v * (0.3 + 0.7 * k));
   night = TIER > 3 ? sstep(3, -7, el) : 0;
   if (night > 0.5) { el = 40; az += PI; }                                  // after dark the light is the moon's, from the other side
@@ -102,7 +110,7 @@ function setSun() {
   for (let c = 0; c < 4; c++) { SM[c * 4] = LV[c * 4] * 0.5 / E; SM[c * 4 + 1] = LV[c * 4 + 1] * 0.5 / E; SM[c * 4 + 2] = -LV[c * 4 + 2] / d; SM[c * 4 + 3] = 0; }
   SM[12] += 0.5; SM[13] += 0.5; SM[14] -= n / d; SM[15] = 1;
   dirty = 1;
-  if (audio) audio.set(A.wind, k);
+  if (audio) audio.set(A.wind, f.sun[1]);   // birds sing more the higher the sun
 }
 
 // ---- grow a plot from the current genome
@@ -127,12 +135,13 @@ function grow(keepView, aged) {
   $('l2').textContent = JSON.stringify(GENOMES[key]).length.toLocaleString() + ' bytes of genome → ' + B.st.trees + ' trees · ' + (B.st.wood / 1000).toFixed(1) + ' km of wood · '
     + (B.cards.length / 12).toLocaleString() + ' leaf clusters, fronds and tufts · ' + B.st.rocks + ' stones'
     + (TIER > 2 ? ' · ' + Object.entries(LIFE.counts).filter((e) => e[1]).map((e) => e[1] + ' ' + e[0]).join(' · ') : '') + ' · grown in ' + round(performance.now() - t0) + ' ms';
+  if (TIER > 3 && G.cl) $('l2').textContent = G.cl.txt + ' · ' + B.st.trees + ' trees';
   if (TIER > 3 && G.span) $('l2').textContent = (G.blurb || 'A unit here is a millimetre: the same grammar, a thousand times smaller.') + ' ' + G.span + ' across.';
   const css = (c) => 'rgb(' + c.map((v) => round(255 * pow(clamp(v * 1.6, 0, 1), 0.4545))).join(' ') + ')';
   if (TIER > 3) tol();
   $('lg').innerHTML = G.trees.map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + (TIER > 3 ? (s.gone ? '<s>' + s.nm + '</s>' : s.nm) + (s.par ? ' <small>← ' + s.par.toLowerCase() + ', year ' + s.born + '</small>' : '') : s.nm) + '</li>').join('');
   for (const b of document.querySelectorAll('[data-g]')) b.setAttribute('aria-pressed', b.dataset.g === key);
-  try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '') + (den !== 1 ? '-d' + round(den * 100) : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
+  try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '') + (den !== 1 ? '-d' + round(den * 100) : '') + (TIER > 3 && key === 'earth' ? '@' + here.lat + ',' + here.lon + ',' + here.climb : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
 }
 
 // ---- camera: orbits a point that walks on the ground
@@ -228,7 +237,7 @@ function frame(now) {
   view();
   if (TIER > 2) {                                                          // weather moves toward what was asked for; rain wets, snow settles, both pass slowly
     const w = WXS[wx], go = (i, to, r) => { const d = to - f.wx[i]; f.wx[i] += clamp(d, -r * dt, r * dt); return Math.abs(d) > 1e-3; };
-    let ch = go(2, w[0], 0.12); ch = go(0, w[2], w[2] ? 0.3 : 0.04) || ch; ch = go(1, max(w[3], season === 3 ? 0.95 : 0), w[3] ? 0.08 : 0.03) || ch;
+    let ch = go(2, w[0], 0.12); ch = go(0, w[2], w[2] ? 0.3 : 0.04) || ch; ch = go(1, max(w[3], season === 3 ? 0.95 * (TIER > 3 && G.cl ? G.cl.snow : 1) : 0), w[3] ? 0.08 : 0.03) || ch;
     const d = w[1] - fogK; if (Math.abs(d) > 1e-3) { fogK += clamp(d, -dt * 0.7, dt * 0.7); ch = 1; } f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke); if (smoke > 0.01) ch = 1;
     rainA += clamp(w[2] - rainA, -dt * 0.5, dt * 0.5); snowA += clamp(w[3] - snowA, -dt * 0.5, dt * 0.5); f.wx[3] = rainA;
     if (TIER > 3) { if (rainA > 0.8 && Math.random() < dt * 0.09) { flash = 1; if (audio) audio.boom(); } if (flash > 0.01) { flash *= Math.exp(-dt * 7) * (Math.random() < 0.3 ? 1.6 : 1); flash = min(flash, 1); ch = 1; } }
@@ -321,10 +330,25 @@ const act = {
   },
 };
 for (const b of document.querySelectorAll('[data-g]')) b.addEventListener('click', () => { key = b.dataset.g; mut = 0; grow(); });
+if (TIER > 3) {   // anywhere on Earth: a map of the measured climate classes; click a place, choose how high to climb, grow it
+  const mp = $('map'), cx = mp.getContext('2d'), pk = here ? [here.lat, here.lon] : null, draw = (p) => {
+    const g = kg(), im = cx.createImageData(1440, 720), C = KCOL.map((h) => [...h].map((d) => parseInt(d, 16) * 17));
+    for (let i = 0; i < g.length; i++) { const c = g[i] ? C[g[i] - 1] : [22, 34, 44]; im.data.set([c[0] * 0.8, c[1] * 0.8, c[2] * 0.8, 255], i * 4); }
+    cx.putImageData(im, 0, 0); cx.strokeStyle = 'rgba(255,255,255,.18)'; cx.beginPath(); for (let a = -150; a <= 150; a += 30) { cx.moveTo((a + 180) * 4, 0); cx.lineTo((a + 180) * 4, 720); } for (let a = -60; a <= 60; a += 30) { cx.moveTo(0, (90 - a) * 4); cx.lineTo(1440, (90 - a) * 4); } cx.stroke();
+    if (p) { cx.strokeStyle = '#fff'; cx.lineWidth = 3; cx.beginPath(); cx.arc((p[1] + 180) * 4, (90 - p[0]) * 4, 14, 0, 7); cx.stroke(); cx.lineWidth = 1; }
+  };
+  let pick2 = pk; const show = () => { const c = +$('climb').value; $('climb-l').textContent = 'Climb ' + c.toLocaleString() + ' m'; if (!pick2) return; const p = place(pick2[0], pick2[1], c); if (!p) { $('here').textContent = 'That is open sea. Choose land.'; return; } pick2 = [p.lat, p.lon]; draw(pick2);
+    $('here').textContent = earthGenome(p, GENOMES, extra.pool).cl.txt + (p.fit ? '' : ' · (no fit found: numbers are the plain sketch)'); };
+  mp.addEventListener('click', (e) => { const r = mp.getBoundingClientRect(); pick2 = [90 - (e.clientY - r.top) / r.height * 180, (e.clientX - r.left) / r.width * 360 - 180]; show(); });
+  $('climb').addEventListener('input', show);
+  $('b-earth').addEventListener('click', () => { $('earth').hidden = false; draw(pick2); if (pick2) show(); });
+  $('b-shut').addEventListener('click', () => { $('earth').hidden = true; });
+  $('b-grow').addEventListener('click', () => { if (pick2 && earthAt(pick2[0], pick2[1], +$('climb').value)) { $('earth').hidden = true; key = 'earth'; mut = 0; grow(); } });
+}
 for (const k in act) $('b-' + k).addEventListener('click', act[k]);
 const setWx = (v) => { wx = v; $('b-wx').textContent = 'Weather: ' + v; }, setSea = (v) => {
   if (v === 0 && season !== 0 && LIFE) LIFE.spring();
-  season = v; $('b-sea').textContent = SEA[v]; f.se[0] = v === 2 ? 1 : 0; f.se[1] = v === 3 ? 1 : v === 2 ? 0.35 : 0; f.se[3] = v === 0 ? 1 : 0; dirty = 1;
+  season = v; $('b-sea').textContent = SEA[v]; const dc = TIER > 3 && G.cl ? G.cl.dec : 1; f.se[0] = v === 2 ? dc : 0; f.se[1] = (v === 3 ? 1 : v === 2 ? 0.35 : 0) * dc; f.se[3] = v === 0 ? 1 : 0; dirty = 1;
 };
 if (TIER > 2) $('b-wx').addEventListener('click', () => setWx(WXN[(WXN.indexOf(wx) + 1) % WXN.length]));
 if (TIER > 3) {

@@ -110,6 +110,7 @@ export const extra = () => {
   // further in: a hundred times smaller (a unit is a centimetre), and ten thousand times smaller (a tenth of a millimetre)
   const oakling = sp({ ...oak(0), id: 'oakling', nm: 'Oak seedling', sap: 0, H: [7, 18], cr: 5, clear: [0.25, 0.4], wet: 0.5, leaf: { ...oak(0).leaf, sz: 5.5, per: 3 } });
   const tinycap = sp({ ...haircap(0), id: 'tinycap', nm: 'Haircap moss', H: [1, 2.4], cr: 0.3, spo: 0, leaf: { ...haircap(0).leaf, sz: 0.12 } });
+  extra.pool = { oak, birch, pine, spruce, giant, hemlock, maple, aspen, beech, alder, willow, larch, redwood, sp };   // for forests grown anywhere on Earth
   return {
     log: { nm: 'Rotting log', world: 'log', span: '64 cm', size: 64, blurb: 'A unit here is a centimetre: a hundred times smaller.',
       land: { amp: 1.6, f: 0.05, tilt: 0.01, rock: [16, 1.4], peb: 160, log: 0, stump: 0, ra: [0.55, 0.52, 0.46], rb: [0.3, 0.28, 0.25] },
