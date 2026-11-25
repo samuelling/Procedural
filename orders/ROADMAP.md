@@ -59,7 +59,7 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
 | A soil-water bucket read by the moss and the soil | **Done** (round 5); tardigrade tuns and stomata still to do |
 | The foot of the ladder a fallen leaf, aged from leaf fall; living leaves from a seedling | **Done** (round 5) |
 | Lapse from CRU's own heights | **Done** (round 5) |
-| The next world in a window before the swap (stencil, inner camera, second shadow map) | Designed in round 5; not built |
+| The next world in a window before the swap (stencil, inner camera, second shadow map) | **Done** (after round 6): going in only; animals appear at hand-over |
 | Tree genera by measured range (Little; Caudullo et al.), carried down to the log | **Done** (round 6) |
 | Measured wind: sway and calm-night dew | **Done** (round 6) |
 | The frozen frame keeps moving while the next world opens | **Done** (round 6) |

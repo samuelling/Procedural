@@ -403,6 +403,27 @@ inflates when the page loads (about 0.1 s):
     between the cells, then a lace of veins. The guard cells are dead and brown and the bacteria thicker. The spider
     mites, which feed on living leaves, have gone. To reach a living leaf, dive in the log world at an oak seedling
     while its leaves are out. It goes straight there, a thousand times smaller, and back out to the log.
+- **The window (after the night).** Zooming in no longer cuts from one world to the next:
+  - **Before the camera moves:** the next world is grown and uploaded beside the current one.
+  - **On the way down:** as the camera comes down onto the spot, the next world is drawn inside a disc lying on the
+    ground there. The disc is that world's patch: 64 cm of log world in the plot, 6.4 cm of moss on the log, and
+    so on. Inside it, the camera is the same camera carried into the next world's units, a hundred or a thousand
+    times larger. It is turned to lie along the trunk you dived at, under the same sun.
+  - **What stays in front:** grass, stems and grains that stand in front of the disc keep hiding it until the
+    window has half the view. After that it takes the near field too, since the grass you are coming down through
+    would be a hundred times too big.
+  - **Hand-over:** when the disc covers every corner of the screen, the next world takes over with the camera
+    exactly where it was. Its haze thickens from what the window showed to its own over a second or two.
+  - **How it is drawn:** a stencil buffer, a second shadow map for the next world, and that world's own sky
+    colours inside the disc.
+  - **Limits:**
+    - Its animals appear only at the hand-over.
+    - The disc's rim is hard-edged.
+    - The fallen trunk in the plot is thicker than the log world's log, so they do not meet exactly.
+    - The window is used going in only. Going out still opens from the middle, and slow frames or reduced motion
+      fall back to that too.
+    - Seen in headless renders from log to moss, plot to log, and soil to leaf, at low resolution; not seen on a
+      phone.
 - **Which trees, by their measured ranges (round 6).** Nine genera are shipped for each quarter-degree land cell,
   together about 17 kB: oak, beech, spruce, pine, birch, fir, larch, maple and lime. Each counts where any of its
   species' native range touches the cell, in Little's maps of North American trees (USGS, public domain) or the

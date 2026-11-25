@@ -158,7 +158,7 @@ body = f'''
 <tr><td>Nine tree genera</td><td>Little (USGS); Caudullo et al. 2017</td><td>which trees are native, down to the log and its seedlings</td></tr></table>
 Each layer’s size was measured before it was shipped; Ash’s first guesses came in low almost every time. What the rules make of the data (the snowpack, the water bucket, the leaf thresholds) is labelled as a sketch on the page and in the README.</dd>
 <dt>Over the night</dt><dd><table><tr><th>Stage</th><th>Bytes</th></tr>{hist}</table>
-It stopped at 87% on purpose. The last candidates either need a ruling (is a machine-learning soil map data or a model?) or rendering work that should be watched as it is built: the true window, where the next world is drawn inside the old one before the cut.</dd>
+It stopped at 87% on purpose. The last candidates either needed a ruling (is a machine-learning soil map data or a model?) or rendering work that should be watched as it is built. The window, where the next world is drawn inside the old one before the cut, was built the next morning, once you could watch it: about 7 kB more program and no data.</dd>
 <dt>Note</dt><dd class="dim">The split is measured by compressing the page’s script with and without the grids (zlib at level 9; the page itself uses zopfli, a little smaller), so the program and class shares are approximate to a few kB.</dd>
 </dl></section>
 
@@ -180,7 +180,7 @@ It stopped at 87% on purpose. The last candidates either need a ruling (is a mac
 <ul>
 <li><b>Is a relief model a model?</b> ETOPO calls itself a Global Relief Model. It is a grid of measured heights, and the page uses it as data, but it is the borderline case under the "no stored models" rule.</li>
 <li><b>SoilGrids</b> is a machine-learning prediction of soil. It is left out until that is ruled on.</li>
-<li><b>The true window</b> is designed (round 5, Rowan’s turn) but not built.</li>
+<li><b>The window</b>, designed by Rowan in round 5, was built the morning after: going in, the next world now appears inside a disc on the ground where its patch lies, at true scale and under the same sun, and takes over when it fills the view. Going out still dissolves.</li>
 </ul>
 '''
 open(f'{S}/index.html', 'w').write(page('What’s happening: Orders of Magnitude', body))

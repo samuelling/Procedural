@@ -281,11 +281,24 @@ export function mkRenderer(canvas, low) {
       gl.texImage2D(gl.TEXTURE_2D, 0, hdr ? gl.RGBA16F : gl.RGBA8, x.w, x.h, 0, gl.RGBA, hdr ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE, null);
       gl.bindFramebuffer(gl.FRAMEBUFFER, x.f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, x.t, 0);
     }
-    gl.bindRenderbuffer(gl.RENDERBUFFER, rb); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, w, h);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, T[0].f); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, rb); gl.renderbufferStorage(gl.RENDERBUFFER, TIER > 3 ? gl.DEPTH24_STENCIL8 : gl.DEPTH_COMPONENT24, w, h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, T[0].f); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, TIER > 3 ? gl.DEPTH_STENCIL_ATTACHMENT : gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
   };
   const inst = (first) => { for (let i = 0; i < 3; i++) { gl.enableVertexAttribArray(first + i); gl.vertexAttribPointer(first + i, 4, gl.FLOAT, false, 48, i * 16); gl.vertexAttribDivisor(first + i, 1); } };
   const vQ = gl.createVertexArray(); let W = null;
+  // the window (2 MB): the next world in, uploaded beside this one and drawn inside a disc on the screen, with its own
+  // shadow map, until it fills the view and takes over
+  // (its state hangs on the canvas, so that nothing of it is left in the lower rungs' builds)
+  if (TIER > 3) {
+    const x = canvas.win = { W2: null, sm2: tex(gl.LINEAR), smf2: gl.createFramebuffer(), SM2: SMS >> 1, PDC: prog(QV, PRE + 'out vec4 o; void main() { o = vec4(0.); }'), vD: gl.createVertexArray(),
+      PDK: prog('#version 300 es\nin vec2 p; uniform mat4 uV; uniform vec2 uK, uNF; uniform vec4 uDm; void main() { vec4 v = uV * vec4(uDm.xyz + vec3(p.x, 0., p.y) * uDm.w, 1.); float zd = -v.z, n = uNF.x, f = uNF.y; gl_Position = vec4(uK * v.xy, ((f + n) * zd - 2. * f * n) / (f - n), zd); }', PRE + 'out vec4 o; void main() { o = vec4(0.); }', ['uDm']) };
+    { const d = [0, 0]; for (let i = 0; i <= 64; i++) d.push(Math.cos(i / 32 * Math.PI), Math.sin(i / 32 * Math.PI)); gl.bindVertexArray(x.vD); gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(d), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0); gl.bindVertexArray(null); }   // a disc lying on the ground: the next world's patch
+    gl.bindTexture(gl.TEXTURE_2D, x.sm2);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL); gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, x.SM2, x.SM2, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null); gl.bindFramebuffer(gl.FRAMEBUFFER, x.smf2); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, x.sm2, 0); gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE);
+    x.inner = (R, B, G) => { const W0 = W; W = x.W2; free(); W = null; R.load(B, G); x.W2 = W; W = W0; };   // upload the next world beside this one
+    x.swap = () => { free(); W = x.W2; x.W2 = null; };                    // hand over to it
+    x.drop = () => { const W0 = W; W = x.W2; free(); W = W0; x.W2 = null; };   // or let it go
+  }
   // above the 20 kB rung: water, things in the air, and a buffer of limbs that is rewritten every frame
   const PW = TIER > 2 && prog(PRE + WATV, PRE + WATF), PPT = TIER > 2 && prog(PRE + PTV, PRE + PTF, ['uPt']), lv = TIER > 2 && gl.createVertexArray(), lb = TIER > 2 && gl.createBuffer(); let ln = 0;
   if (TIER > 2) { gl.bindVertexArray(lv); gl.bindBuffer(gl.ARRAY_BUFFER, lb); gl.bufferData(gl.ARRAY_BUFFER, 1500 * 48, gl.DYNAMIC_DRAW); inst(0); gl.bindVertexArray(null); }
@@ -350,8 +363,26 @@ export function mkRenderer(canvas, low) {
         geometry(PMS, PCS, PKS, f.LV, f.LK, [SMS, SMS], 1, f.LNF, 1);
         gl.disable(gl.POLYGON_OFFSET_FILL);
       }
+      // the next world's shadows, in its own units, from the same sun turned as its world is turned
+      if (TIER > 3 && canvas.win.W2 && f.win) f.win.geo = (PMx, PCx, PKx, fi, view, K, R, or, nf, shadow) => {
+        const Wx = canvas.win.W2, G = Wx.G, pal = Wx.pal;
+        com(PMx, fi, view, K, R, or, nf);
+        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : 0); gl.uniform3fv(PMx.uStr, Wx.str); gl.uniform3fv(PMx.uFor, Wx.for); gl.uniform4fv(PMx.uTl, f.tl); gl.uniform1f(PMx.uNdl, 0); }
+        gl.bindVertexArray(Wx.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, Wx.nTop, gl.UNSIGNED_SHORT, 0);
+        if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, Wx.land.n - Wx.nTop, gl.UNSIGNED_SHORT, Wx.nTop * 2); }
+        gl.uniform1f(PMx.uMat, 0); for (const s of Wx.stones) if (s.k) { gl.bindVertexArray(s.v); gl.drawElementsInstanced(gl.TRIANGLES, s.n, gl.UNSIGNED_SHORT, 0, s.k); }
+        com(PCx, fi, view, K, R, or, nf); if (!shadow) { gl.uniform3fv(PCx.uBA, pal.ba); gl.uniform3fv(PCx.uBB, pal.bb); gl.uniform4fv(PCx.uBP, pal.bp); gl.uniform3fv(PCx.uLB, pal.lb); }
+        gl.bindVertexArray(Wx.caps.v); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, Wx.caps.n);
+        com(PKx, fi, view, K, R, or, nf); if (!shadow) { gl.uniform3fv(PKx.uLA, pal.la); gl.uniform3fv(PKx.uLB, pal.lb); }
+        gl.bindVertexArray(Wx.cards.v); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, Wx.cards.n);
+        if (!shadow && Wx.water) { com(PW, fi, view, K, R, or, nf); gl.bindVertexArray(Wx.water.v); gl.drawElements(gl.TRIANGLES, Wx.water.n, gl.UNSIGNED_SHORT, 0); }
+      };
+      if (TIER > 3 && canvas.win.W2 && f.win && (f.shadow || f.win.sh)) {
+        const x = canvas.win; f.win.sh = 0; gl.bindFramebuffer(gl.FRAMEBUFFER, x.smf2); gl.viewport(0, 0, x.SM2, x.SM2); gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4);
+        f.win.geo(PMS, PCS, PKS, f.win.fi, f.win.fi.LV, f.LK, [x.SM2, x.SM2], 1, f.LNF, 1); gl.disable(gl.POLYGON_OFFSET_FILL);
+      }
       const nf = TIER > 3 ? f.nf : [0.1, 600], R = [w, h];
-      gl.bindFramebuffer(gl.FRAMEBUFFER, T[0].f); gl.viewport(0, 0, w, h); gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, T[0].f); gl.viewport(0, 0, w, h); gl.clear(TIER > 3 ? gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT : gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST); com(PSK, f, f.V, f.K, R, 0, nf); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST);
       if (TIER > 3 && W.hz) { com(PM, f, f.V, f.K, R, 0, [300, 2e5]); { gl.uniform3fv(PM.uRA, G.land.ra); gl.uniform3fv(PM.uRB, G.land.rb); gl.uniform3fv(PM.uLit, G.floor.lit); gl.uniform1f(PM.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PM.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PM.uStr, W.str); gl.uniform3fv(PM.uFor, W.for); gl.uniform4fv(PM.uTl, f.tl); } if (TIER > 3) gl.uniform1f(PM.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); } gl.uniform1f(PM.uMat, 3); gl.bindVertexArray(W.hz.v); gl.drawElements(gl.TRIANGLES, W.hz.n, gl.UNSIGNED_SHORT, 0); gl.clear(gl.DEPTH_BUFFER_BIT); }   // the horizon, 3 to 120 km off, in a depth range of its own, behind everything
       geometry(PM, PC, PK, f.V, f.K, R, 0, nf, 0);
@@ -360,13 +391,25 @@ export function mkRenderer(canvas, low) {
         for (const p of f.pts) { gl.blendFuncSeparate(gl.SRC_ALPHA, p[0] === 3 ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE); gl.uniform4fv(PPT.uPt, p); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, p[3]); }
         gl.disable(gl.BLEND); gl.depthMask(true);
       }
+      if (TIER > 3 && canvas.win.W2 && f.win) {                         // the window: a disc where the next world's patch lies, cleared to the far plane, then that world drawn into it
+        const fi = f.win.fi, x = canvas.win, c = f.win.co; gl.enable(gl.STENCIL_TEST); gl.stencilFunc(gl.ALWAYS, 1, 255); gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+        gl.colorMask(false, false, false, false); gl.depthMask(false); gl.depthFunc((f.win.k || 0) < 0.5 ? gl.LEQUAL : gl.ALWAYS); gl.enable(gl.POLYGON_OFFSET_FILL);   // (once it has half the view, nothing of this world in front of it is kept: the grass you are coming down through would be a hundred times too big)
+        gl.polygonOffset(-2, -8);   // mark the disc where it is seen, behind whatever stands in front of it
+        gl.useProgram(x.PDK.p); gl.uniformMatrix4fv(x.PDK.uV, false, f.V); gl.uniform2f(x.PDK.uK, f.K[0], f.K[1]); gl.uniform2f(x.PDK.uNF, nf[0], nf[1]); gl.uniform4f(x.PDK.uDm, c[0], f.win.gy, c[2], f.win.rho); gl.bindVertexArray(x.vD); gl.drawArrays(gl.TRIANGLE_FAN, 0, 66);
+        gl.disable(gl.POLYGON_OFFSET_FILL); gl.depthMask(true); gl.stencilFunc(gl.EQUAL, 1, 255); gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP); gl.depthFunc(gl.ALWAYS); gl.depthRange(1, 1); gl.useProgram(x.PDC.p); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3);   // there, the depth goes back to the far plane
+        gl.colorMask(true, true, true, true); gl.depthRange(0, 1); gl.depthFunc(gl.LESS); gl.stencilFunc(gl.EQUAL, 1, 255); gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+        gl.disable(gl.DEPTH_TEST); com(PSK, fi, fi.V, f.K, R, 0, fi.nf); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, x.sm2); gl.activeTexture(gl.TEXTURE0);
+        f.win.geo(PM, PC, PK, fi, fi.V, f.K, R, 0, fi.nf, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, sm); gl.activeTexture(gl.TEXTURE0); gl.disable(gl.STENCIL_TEST);
+      }
       gl.disable(gl.DEPTH_TEST); gl.bindVertexArray(vQ);
       gl.useProgram(PD.p); gl.uniform1i(PD.uA, 0);
       for (let i = 1; i < 4; i++) { gl.bindFramebuffer(gl.FRAMEBUFFER, T[i].f); gl.viewport(0, 0, T[i].w, T[i].h); gl.bindTexture(gl.TEXTURE_2D, T[i - 1].t); gl.uniform2f(PD.uP, 1 / T[i - 1].w, 1 / T[i - 1].h); gl.drawArrays(gl.TRIANGLES, 0, 3); }
       gl.bindFramebuffer(gl.FRAMEBUFFER, T[4].f); gl.viewport(0, 0, T[4].w, T[4].h); com(PR, f, f.V, f.K, [T[4].w, T[4].h], 0, nf); gl.bindTexture(gl.TEXTURE_2D, T[2].t); gl.uniform1i(PR.uA, 0); gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.useProgram(PP.p);
       ['uA', 'uB', 'uC', 'uD', 'uG'].forEach((n, i) => { gl.activeTexture(gl.TEXTURE0 + (i ? i + 1 : 0)); gl.bindTexture(gl.TEXTURE_2D, T[i].t); gl.uniform1i(PP[n], i ? i + 1 : 0); });
-      gl.uniform2f(PP.uP, 1 / w, 1 / h); gl.uniform4f(PP.uO, f.focus, TIER > 3 ? 2.5 * Math.min(1, 0.25 + f.focus / 4) : 2.5, f.shafts, f.t); gl.uniform3fv(PP.uSC, f.sunC);
+      gl.uniform2f(PP.uP, 1 / w, 1 / h); gl.uniform4f(PP.uO, f.focus, TIER > 3 ? (f.win ? 0 : 2.5 * Math.min(1, 0.25 + f.focus / 4)) : 2.5, f.shafts, f.t); gl.uniform3fv(PP.uSC, f.sunC);
       gl.drawArrays(gl.TRIANGLES, 0, 3); gl.activeTexture(gl.TEXTURE0);
     },
   };
