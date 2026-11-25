@@ -152,11 +152,26 @@ export function site(G, a, sg, i, j) {
   const [b, c] = AX[a], fk = a * 2 + (sg > 0 ? 1 : 0), xb = (i + 0.15 + 0.7 * hs2(i, j, 40 + fk)) * TREE, xc = (j + 0.15 + 0.7 * hs2(i, j, 50 + fk)) * TREE, d = G.R * G.R - xb * xb - xc * xc;
   if (d <= 0) return null; const xa = sg * Math.sqrt(d); if (Math.abs(xa) < Math.max(Math.abs(xb), Math.abs(xc))) return null;
   const p = [0, 0, 0]; p[a] = xa; p[b] = xb; p[c] = xc;
-  const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W); if (hs2(i, j, 60 + fk) > F) return null;
+  const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)); if (hs2(i, j, 60 + fk) > F) return null;
   const w = speciesW(G, T, W), tot = w.reduce((x, y) => x + y, 0); if (tot < 1e-3) return null;
   let x = hs2(i, j, 70 + fk) * tot, s = 0; while (s < w.length - 1 && x > w[s]) x -= w[s++];
   return { p, h, sp: s, seed: hs2(i, j, 80 + fk) };
 }
+
+// ---- cities: on inhabited planets, a few towns and cities in each 60 km cell of the cube faces, where the land
+// suits them (low, not too steep, not desert or ice). rho is how built-up a place is (0..1): a city's core is 1.
+export const CITY = 60000, LOT = 30;
+export function cityRho(G, p) {
+  if (!G.cities) return 0;
+  const ab = p.map(Math.abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], fk = a * 2 + (p[a] > 0 ? 1 : 0), u = p[b] / CITY, v = p[c] / CITY;
+  let r = 0; for (let i = Math.floor(u) - 1; i <= Math.floor(u) + 1; i++) for (let j = Math.floor(v) - 1; j <= Math.floor(v) + 1; j++) {
+    if (hs2(i, j, 90 + fk) > 0.45) continue;
+    const cx = i + 0.2 + 0.6 * hs2(i, j, 91 + fk), cy = j + 0.2 + 0.6 * hs2(i, j, 92 + fk), R = (1500 + 10000 * hs2(i, j, 93 + fk) ** 3) / CITY, d = Math.hypot(u - cx, v - cy) / R;
+    if (d < 1) r = Math.max(r, (1 - d) ** 1.4);
+  }
+  return r;
+}
+export const citySuit = (h, T, W, sl) => ss(3, 12, h) * ss(900, 500, h) * ss(-4, 2, T) * ss(0.15, 0.3, W) * ss(0.25, 0.1, sl);
 
 // ---- the same, for the shaders ----------------------------------------------------------------------------------------
 // uOct: per octave one row of 7 texels: lattice offset at the camera's foot and the value there; the gradient and
@@ -229,8 +244,19 @@ vec3 climate(vec3 q, float h) {   // warmth (°C), wetness (0..1), latitude (rad
   float W = clamp(.5 + .3 * cos(lat * 6.3) + .9 * (clim(1, q) - .5) + uWet, 0., 1.);
   return vec3(T, W, lat);
 }
+uniform vec3 uFootP; uniform mat3 uFrm; uniform int uCities;
+// how built-up the place at q is (see cityRho); and whether the land suits a town
+float cityRho(vec3 q) {
+  if (uCities == 0) return 0.; vec3 p = uFootP + uFrm * q, ab = abs(p); int a = ab.x >= ab.y && ab.x >= ab.z ? 0 : ab.y >= ab.z ? 1 : 2, b = a == 0 ? 1 : a == 1 ? 2 : 0, c = a == 0 ? 2 : a == 1 ? 0 : 1, fk = a * 2 + (p[a] > 0. ? 1 : 0);
+  vec2 uv = vec2(p[b], p[c]) / ${CITY}.; ivec2 f = ivec2(floor(uv)); float r = 0.;
+  for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) { ivec2 cc = f + ivec2(i, j); if (hs2(cc, 90 + fk) > .45) continue;
+    vec2 ce = vec2(cc) + .2 + .6 * vec2(hs2(cc, 91 + fk), hs2(cc, 92 + fk)); float R = (1500. + 10000. * pow(hs2(cc, 93 + fk), 3.)) / ${CITY}., d = length(uv - ce) / R;
+    if (d < 1.) r = max(r, pow(1. - d, 1.4)); }
+  return r;
+}
+float citySuit(float h, float T, float W, float sl) { return smoothstep(3., 12., h) * smoothstep(900., 500., h) * smoothstep(-4., 2., T) * smoothstep(.15, .3, W) * smoothstep(.25, .1, sl); }
 float forestF(vec3 q, float h, float T, float W, float fp) {
   if (h < 2.) return 0.; float n = mix(clim(2, q), .5, smoothstep(200., 700., fp)) * .6 + mix(clim(3, q), .5, smoothstep(60., 200., fp)) * .4;
-  return smoothstep(.3, .55, W) * smoothstep(-9., -5., T) * clamp((n - .3 + .25 * (W - .5)) * 4., 0., 1.);
+  return smoothstep(.3, .55, W) * smoothstep(-9., -5., T) * clamp((n - .3 + .25 * (W - .5)) * 4., 0., 1.) * (1. - min(1., cityRho(q) * citySuit(h, T, W, 0.) * 2.5));
 }
 `;

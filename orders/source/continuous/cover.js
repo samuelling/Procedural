@@ -32,7 +32,8 @@ void main() {
   float dh; vec3 g; ground(q, uBand.x * .25, dh, g); float h = uG0 + dh;
   vec3 o = q + vec3(0., uH0 + dh, 0.) + q * (h / uR);
   vec3 cl = climate(q, h); float fo = forestF(q, h, cl.x, cl.y, 0.);
-  tA = vec4(o, .6 + .8 * hh(c, 4)); tB = vec4(hh(c, 3), hh(c, 5) * 6.2832, fo, cl.y); tC = vec4(cl.x, h, cn(c, 9), hh(c, 7));
+  float urb = cityRho(q) * citySuit(h, cl.x, cl.y, 0.);
+  tA = vec4(o, .6 + .8 * hh(c, 4)); tB = vec4(hh(c, 3), hh(c, 5) * 6.2832, fo, cl.x < -6. ? 0. : cl.y); tC = vec4(urb, h, cn(c, 9), hh(c, 7));
   gl_Position = vec4(0.);
 }`;
   const tfp = (() => {
@@ -50,14 +51,14 @@ uniform vec4 uBand; uniform float uFade;
 out vec3 vP, vN, vL; out float vW, vF, vSd, vT, vS;
 // this instance's cell, as placed: where it stands, size, seed, turn; the forest, wetness, warmth and height there; a
 // slow noise over the cells (for patches), and a spare seed
-void place(out vec3 o, out float sz, out float sd, out float ang, out float fo, out float W, out float T, out float h, out float pa) { o = iA.xyz; sz = iA.w; sd = iB.x; ang = iB.y; fo = iB.z; W = iB.w; T = iC.x; h = iC.y; pa = iC.z; }`;
+void place(out vec3 o, out float sz, out float sd, out float ang, out float fo, out float W, out float T, out float h, out float pa) { o = iA.xyz; sz = iA.w; sd = iB.x; ang = iB.y; fo = iB.z; W = iB.w; T = 10.; h = iC.y; pa = iC.z; if (iC.x > .12) W = 0.; }`;
   const mk = (body, frag) => prog(PRE + VS + body, PRE + `
 in vec3 vP, vN, vL; in float vW, vF, vSd, vT, vS; uniform float uCy;
 uniform vec3 uGrass, uDry, uSoil, uRock, uSand, uLitter;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 ` + LEAFFACE + `
 bool gone(float f) { return h1(gl_FragCoord.xy + fract(vSd * 13.7) * 91.) > f; }
-vec3 lite(vec3 alb, vec3 n) { return alb * (uSunC * max(dot(n, uSun), 0.) * .8 + uSky * (.4 + .3 * n.y)); }
+vec3 lite(vec3 alb, vec3 n) { return alb * (uSunC * max(dot(n, uSun), 0.) * .8 * shadow(vP) + uSky * (.4 + .3 * n.y)); }
 void main() { if (gone(vF)) discard; float fp = vW * uPix; vec3 col; ` + frag + `
   col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW); }`);
   const END = `vec4 Q = uVP * vec4(vP, 1.); vW = Q.w; gl_Position = vec4(Q.xy, 0., Q.w); }`;
@@ -65,7 +66,7 @@ void main() { if (gone(vF)) discard; float fp = vW * uPix; vec3 col; ` + frag + 
   // fallen leaves: a flat blade on the ground, a little cupped, faced like a living leaf, in the dead leaf's colour
   const litter = mk(`
 void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, W, T, h, pa); ${edge}
-  if (fo < .3 || sd < .25 || h < 0.) vF = 0.;
+  if (fo < .3 || sd < .25 || h < 0. || W <= 0.) vF = 0.;
   float L = .07 * sz; vec2 u = aP.xz; vL = vec3(u.x * L, u.y * L, L); float c = cos(a), s = sin(a);
   vec3 p = vec3(u.x * L, (u.y * u.y) * L * .12 + .002 + sd * .004, u.y * L); vP = o + vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z); vN = vec3(0, 1, 0); vSd = sd; vT = iC.w; ${END}`,
   `float L = vL.z, s = vL.x, w = vL.y; float hw = L * .33 * pow(max(sin(3.1416 * clamp(s / L, 0., 1.)), 0.), .8);
@@ -88,7 +89,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
     if (al > wl) discard;                                                 // a fern's fronds, notched into leaflets
     float pin = al / wl; sh = (.75 + .35 * (1. - pin)) * (1. - .45 * smoothstep(.06, 0., al) * step(.5, 1. - fp * 200.)); }
   float tr = max(dot(-n, uSun), 0.) * .5;
-  alb *= .7 + .4 * vL.x; col = (lite(alb, n) + alb * uSunC * tr * 1.2) * sh * (.6 + .4 * vL.x);`);
+  alb *= .7 + .4 * vL.x; col = (lite(alb, n) + alb * uSunC * tr * 1.2 * shadow(vP)) * sh * (.6 + .4 * vL.x);`);
   // stones, grains and specks: the same rough shape at three sizes, in the planet's rock, soil and sand
   const grains = mk(`
 uniform vec3 uKind;

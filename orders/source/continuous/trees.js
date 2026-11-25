@@ -93,7 +93,7 @@ in vec3 vP, vN; in vec2 vU; in float vW, vF, vSd, vR; flat in int vSp; uniform f
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 float vor(vec2 u) { vec2 i = floor(u), f = u - i; float d = 9.; for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 o = vec2(x, y), r = o + vec2(h1(i + o), h1(i + o + 7.3)) - f; d = min(d, dot(r, r)); } return sqrt(d); }
 void main() {
-  if (gone(vF)) discard;
+  if (gone(vF)) discard; CAST
   float fp = vW * uPix; vec2 u = vU + vec2(0., vSd * 31.); vec4 bk = uBark[vSp];
   // bark at every scale it has: ridges and furrows (centimetres), plates, lichen (millimetres), cork cells (tens of micrometres)
   float rid = n2(vec2(u.x * 9., u.y * 1.6)) * .6 + n2(vec2(u.x * 23., u.y * 5.)) * .4, fur = smoothstep(.35, .62, rid) * bk.w + (1. - bk.w) * .8;
@@ -101,7 +101,7 @@ void main() {
   if (bk.w < .45) alb = mix(alb, bk.rgb * .25, smoothstep(.72, .75, n2(vec2(u.x * 3., u.y * 11.))) * .8);   // smooth barks: lenticels, dark bands
   float li = smoothstep(.7, .76, n2(u * 11. + 9.)) * smoothstep(.3, 1., vR); alb = mix(alb, vec3(.3, .34, .25), li * .4 * (.7 + .3 * n2(u * 300.)));
   if (fp < 3e-4) { float c = vor(u * vec2(3000., 1800.)); alb *= mix(1., .7 + .5 * smoothstep(.15, .5, c), smoothstep(3e-4, 6e-5, fp)); }
-  vec3 n = normalize(vN); float dif = max(dot(n, uSun), 0.), am = .45 + .35 * n.y;
+  vec3 n = normalize(vN); float dif = max(dot(n, uSun), 0.) * shadow(vP), am = .45 + .35 * n.y;
   vec3 col = alb * (uSunC * dif * .8 + uSky * am * .5) * (.55 + .45 * clamp(vR / 14., 0., 1.));
   ${OUT}
 }`);
@@ -135,12 +135,12 @@ void main() {
     vec2 d = normalize(vec2(.5, side)), r = q - vec2(t, 0.); float s = dot(r, d), w = dot(r, vec2(-d.y, d.x)), L = lf.x * (1. - .4 * q.x / vL);
     if (s > 0. && s < L && abs(w) < .0008 * (1. - .4 * s / L) && q.x < vL * .95) { inside = 1.; lp = vec2(s, w); ll = L; }
   }
-  if (inside < .5 && stem < .5) discard;
+  if (inside < .5 && stem < .5) discard; CAST
   vec3 base = uLeafC[vSp].rgb * (.85 + .3 * h1(vec2(vSd * 9.1, 1.)));
   vec3 alb = stem > .5 && inside < .5 ? uBark[vSp].rgb * .5 : base;
   if (inside > .5 && far < 1.) alb = leafFace(alb, lp, ll, fp);
   vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n;
-  float dif = max(dot(n, uSun), 0.), tr = max(dot(-n, uSun), 0.) * .6;
+  float sh = shadow(vP + n * .05), dif = max(dot(n, uSun), 0.) * sh, tr = max(dot(-n, uSun), 0.) * .6 * sh;
   float occ = .35 + .65 * clamp(vY / 20., 0., 1.);
   vec3 col = alb * (uSunC * (dif + tr * (.6 + .6 * normalize(alb + .01))) * .85 + uSky * (.35 + .25 * n.y)) * occ;
   ${OUT}
@@ -166,10 +166,10 @@ void main() {
   else if (form < 6.5) { wdt = sqrt(max(0., 1. - pow((c.y - .5) / .5, 2.))) * .8; bot = 0.; }
   else { wdt = (1. - y) * .35 + .03; bot = -.4; }
   float rag = form > 2.5 && form < 3.5 ? 0. : n2(c * 9. + vSd * 40.) * .25; bool trunk = abs(c.x) < .035 && c.y < bot + .05;
-  if ((form < 2.5 && form > 1.5) ? wdt < .5 && !trunk : (abs(c.x) > wdt - rag * wdt || c.y < bot) && !trunk) discard;
+  if ((form < 2.5 && form > 1.5) ? wdt < .5 && !trunk : (abs(c.x) > wdt - rag * wdt || c.y < bot) && !trunk) discard; CAST
   vec3 n = normalize(uRt * c.x / max(wdt, .1) * .8 + vec3(0., .5 + .5 * c.y, 0.) - normalize(vP) * sqrt(max(0., 1. - c.x * c.x)));
   vec3 alb = trunk || form > 2.5 && form < 3.5 ? uBark[vSp].rgb * .6 : uLeafC[vSp].rgb * (.75 + .5 * n2(c * 14. + vSd * 9.));
-  float dif = max(dot(n, uSun), 0.);
+  float dif = max(dot(n, uSun), 0.) * shadow(vP + uSun * 2.);
   vec3 col = alb * (uSunC * dif * .8 + uSky * .45) * (.6 + .4 * y);
   ${OUT}
 }`);
@@ -239,7 +239,7 @@ void main() {
       T.forEach((o) => { if (!o.cnt || !o.ln) return; gl.bindVertexArray(o.lv); gl.drawElementsInstanced(gl.TRIANGLES, o.ln, gl.UNSIGNED_INT, 0, o.cnt); });
       if (far.length) {
         const d = [cos(cam.pitch) * sin(cam.yaw), sin(cam.pitch), cos(cam.pitch) * cos(cam.yaw)], rl = hypot(d[0], d[2]) || 1;
-        gl.useProgram(crown.p); dw(crown); gl.uniform3f(crown.uRt, -d[2] / rl, 0, d[0] / rl);
+        gl.useProgram(crown.p); dw(crown); if (S.cast()) gl.uniform3fv(crown.uRt, S.shR()); else gl.uniform3f(crown.uRt, -d[2] / rl, 0, d[0] / rl);
         gl.bindBuffer(gl.ARRAY_BUFFER, cib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(far), gl.DYNAMIC_DRAW); gl.bindVertexArray(quad); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, far.length / 8);
       }
       gl.bindVertexArray(null); void H; void sqrt;
