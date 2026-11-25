@@ -23,14 +23,15 @@ import { KG } from './kg.js';
 import { DATA } from './data.js';
 
 // the measured grids (see tools/pack_data.py), inflated by the browser once the page has loaded
-let ELM = null, ELN = null, ELX = null, CI = null, CT = null, CP = null, CD = null, CR = null;
+let ELM = null, ELN = null, ELX = null, CI = null, CT = null, CP = null, CD = null, CR = null, CW = null, CS = null, CE = null;
 const hq = (q) => (q / 255) ** 2 * 7500 - 500;
 export const ready = TIER > 3 && new Response(new Blob([Uint8Array.from(atob(DATA), (c) => c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer().then((b) => {
   const u = new Uint8Array(b), g = kg(), E = Math.expm1, L = Math.log1p(2500); let o = 32400, n = 0;
   CI = new Int32Array(259200).fill(-1); for (let q = 0; q < 259200; q++) if ((u[q >> 3] >> (7 - (q & 7))) & 1) CI[q] = n++;
-  const Q = new Uint8Array(n * 48); for (let k = 0; k < 48; k++) for (let c = 0, v = 0; c < n; c++) { v = (v + u[o++]) & 255; Q[c * 48 + k] = v; }
-  CT = new Float32Array(n * 12); CP = new Float32Array(n * 12); CD = new Uint8Array(n * 12); CR = new Uint8Array(n * 12);
-  for (let c = 0; c < n; c++) for (let k = 0, t = 0, p = 0, d = 0, r = 0, b = c * 48; k < 12; k++) { t = (t + Q[b + k]) & 255; p = (p + Q[b + 12 + k]) & 255; d = (d + Q[b + 24 + k]) & 255; r = (r + Q[b + 36 + k]) & 255; CT[c * 12 + k] = t / 2 - 60; CP[c * 12 + k] = E(p / 255 * L); CD[c * 12 + k] = d; CR[c * 12 + k] = r; }
+  const Q = new Uint8Array(n * 72); for (let k = 0; k < 72; k++) for (let c = 0, v = 0; c < n; c++) { v = (v + u[o++]) & 255; Q[c * 72 + k] = v; }
+  CT = new Float32Array(n * 12); CP = new Float32Array(n * 12); CD = new Uint8Array(n * 12); CR = new Uint8Array(n * 12); CW = new Uint8Array(n * 12); CS = new Uint8Array(n * 12); CE = new Float32Array(n);
+  for (let c = 0; c < n; c++) for (let k = 0, t = 0, p = 0, d = 0, r = 0, w = 0, s = 0, b = c * 72; k < 12; k++) { t = (t + Q[b + k]) & 255; p = (p + Q[b + 12 + k]) & 255; d = (d + Q[b + 24 + k]) & 255; r = (r + Q[b + 36 + k]) & 255; w = (w + Q[b + 48 + k]) & 255; s = (s + Q[b + 60 + k]) & 255; CT[c * 12 + k] = t / 2 - 60; CP[c * 12 + k] = E(p / 255 * L); CD[c * 12 + k] = d; CR[c * 12 + k] = r; CW[c * 12 + k] = w; CS[c * 12 + k] = s; }
+  for (let c = 0, v = 0; c < n; c++) { v = (v + u[o++]) & 255; CE[c] = hq(v); }   // CRU's own height for each cell
   const pl = () => { const q = new Uint8Array(1036800); for (let j = 0; j < 720; j++) for (let i = 0, P = 0; i < 1440; i++) { const x = j * 1440 + i; if (g[x]) { P = (P + u[o++]) & 255; q[x] = P; } else P = 0; } return q; };
   ELM = pl(); ELN = pl(); ELX = pl();
 });
@@ -80,13 +81,13 @@ export function place(lat, lon, climb = 0) {
   lat = 90 - (j + 0.5) / 4; lon = (i + 0.5) / 4 - 180;
   const code = KC[k - 1], south = lat < 0, al = abs(lat), ck = cos(lat * RAD) * 27.8;
   const hf = ELN ? hq(ELN[j * 1440 + i]) : null, hm = ELM ? hq(ELM[j * 1440 + i]) : null;
-  let mT = null, mP = null, nud = null, mD = null, mR = null;
+  let mT = null, mP = null, nud = null, mD = null, mR = null, mW = null, mS = null;   // (wet days and sunshine are missing for a few cells)
   if (CT) {                                                                  // the measured months of the nearest half-degree cell
     const j2 = j >> 1, i2 = i >> 1; let c = CI[j2 * 720 + i2];
     for (let r = 1; c < 0 && r < 4; r++) for (let a = -r; a <= r && c < 0; a++) for (const [y, x] of [[j2 - r, i2 + a], [j2 + r, i2 + a], [j2 + a, i2 - r], [j2 + a, i2 + r]]) if (y >= 0 && y < 360 && CI[y * 720 + ((x % 720) + 720) % 720] >= 0) { c = CI[y * 720 + ((x % 720) + 720) % 720]; break; }
     if (c >= 0) {                                                            // from sea level down to the floor: up to the cell's mean height at 6.5 °C a km, then down to the floor at a lapse rate that is weaker in winter (valley inversions; a sketch after Rolland 2003, unverified)
-      const g0 = max(hf, 0) / 1000, gm = max(hm, hf, 0) / 1000, a = min(1, abs(lat) / 30) * (south ? -1 : 1);
-      mT = [...CT.subarray(c * 12, c * 12 + 12)].map((t, m) => t - 6.5 * gm + (5.4 - 1.2 * a * cos(2 * PI * m / 12)) * (gm - g0)); mP = [...CP.subarray(c * 12, c * 12 + 12)]; mD = [...CD.subarray(c * 12, c * 12 + 12)]; mR = [...CR.subarray(c * 12, c * 12 + 12)];
+      const g0 = max(hf, 0) / 1000, gm = max(CE[c], 0) / 1000, a = min(1, abs(lat) / 30) * (south ? -1 : 1);
+      mT = [...CT.subarray(c * 12, c * 12 + 12)].map((t, m) => t - 6.5 * gm + (5.4 - 1.2 * a * cos(2 * PI * m / 12)) * (gm - g0)); mP = [...CP.subarray(c * 12, c * 12 + 12)]; mD = [...CD.subarray(c * 12, c * 12 + 12)]; mR = [...CR.subarray(c * 12, c * 12 + 12)]; const w = [...CW.subarray(c * 12, c * 12 + 12)], s = [...CS.subarray(c * 12, c * 12 + 12)]; if (w[0] < 255) mW = w; if (s[0] < 255) mS = s.map((v) => v * 5);
     }
   }
   let dn = 61; for (let r = 1; r < 61 && dn > 60; r++) for (let a = -r; a <= r; a++) if (!at(j - r, i + a) || !at(j + r, i + a) || !at(j + a, i - r) || !at(j + a, i + r)) { dn = r; break; }   // to the nearest sea
@@ -119,14 +120,21 @@ export function place(lat, lon, climb = 0) {
   // measured diurnal range; and the deciduous leaves: out once the warmth above 5 °C since the coldest day sums to 150
   // degree-days, colouring after midsummer below 10 °C, bare below 5 °C (thresholds a sketch, unverified)
   const Rg = mR || T.map(() => 8), dy = (A, d) => { const x = (d / 365 * 12 - 0.5 + 12) % 12, i = Math.floor(x), u = x - i; return A[i] * (1 - u) + A[(i + 1) % 12] * u; };
-  const swe = new Float32Array(365); let sw = 0;
-  for (let y = 0; y < 3; y++) for (let d = 0; d < 365; d++) { const t = dy(T, d), a = dy(Rg, d) / 2, p = dy(P, d) * 12 / 365; let sn = 0, ml = 0; for (let q = 0; q < 8; q++) { const v = t + a * Math.sin(2 * PI * (q + 0.5) / 8); if (v < 1) sn += 1 / 8; ml += max(0, v) / 8; } sw = max(0, sw + p * sn - 3 * ml); swe[d] = sw; }
+  // and the water in the soil: a bucket holding 150 mm (a sketch), filled by rain and snowmelt, emptied by Thornthwaite's
+  // evaporation (1948: from the month's temperature and day length), less as the soil dries
+  const swe = new Float32Array(365), soil = new Float32Array(365), TI = T.reduce((s, t) => s + (t > 0 ? (t / 5) ** 1.514 : 0), 0) || 1, ae = 6.75e-7 * TI ** 3 - 7.71e-5 * TI ** 2 + 1.792e-2 * TI + 0.49239; let sw = 0, bw = 75;
+  for (let y = 0; y < 3; y++) for (let d = 0; d < 365; d++) {
+    const t = dy(T, d), a = dy(Rg, d) / 2, p = dy(P, d) * 12 / 365, dc = 23.44 * Math.sin(2 * PI * (d - 80) / 365) * RAD, x = -Math.tan(lat * RAD) * Math.tan(dc), L = x >= 1 ? 0 : x <= -1 ? 24 : 24 / PI * acos(x);
+    let sn = 0, ml = 0; for (let q = 0; q < 8; q++) { const v = t + a * Math.sin(2 * PI * (q + 0.5) / 8); if (v < 1) sn += 1 / 8; ml += max(0, v) / 8; }
+    const m = min(sw + p * sn, 3 * ml); sw = max(0, sw + p * sn - m); swe[d] = sw;
+    const pet = t > 0 ? 16 * (L / 12) * (10 * t / TI) ** ae / 30 : 0; bw = min(150, max(0, bw + p * (1 - sn) + m - pet * min(1, bw / 75))); soil[d] = bw / 150;
+  }
   let ph = null; if (min(...T) < 5) { let d0 = 0, d1 = 0; for (let d = 0; d < 365; d++) { if (dy(T, d) < dy(T, d0)) d0 = d; if (dy(T, d) > dy(T, d1)) d1 = d; }
     let g = 0, lo = -1, co = -1, ba = -1; for (let k = 0; k < 365; k++) { const d = (d0 + k) % 365, t = dy(T, d); g += max(0, t - 5); if (lo < 0 && g >= 150) lo = d; }
     for (let k = 0; k < 365; k++) { const d = (d1 + k) % 365, t = dy(T, d); if (co < 0 && t < 10) co = d; if (ba < 0 && t < 5) { ba = d; break; } }
     if (lo >= 0 && co >= 0 && ba >= 0) ph = [lo, co, ba]; }
   const tm = (max(...T) - 10) / 6.5, sm = max(0.3, (max(...T) - 1) / 6.5), g0 = (max(hf, 0) + climb) / 1000;   // the treeline where the warmest month falls to 10 °C; the snowline, roughly, where it falls to 1 °C
-  return { lat, lon, climb, code, now, fit, T, P, D: mD && mD.map((d, m) => d), R: mR, swe, ph, elev: hf, mean: hm, src: mT ? 'CRU' : 0, nud, tl: hf === null ? null : [tm * 1000, g0 + tm, sm * 1000, g0 + sm], Ta: T.reduce((a, b) => a + b) / 12, Pa: P.reduce((a, b) => a + b), c, south, day: [day(south ? 23.44 : -23.44), day(south ? -23.44 : 23.44)] };
+  return { lat, lon, climb, code, now, fit, T, P, D: mD && mD.map((d, m) => d), R: mR, W: mW, S: mS, swe, soil, ph, elev: hf, mean: hm, src: mT ? 'CRU' : 0, nud, tl: hf === null ? null : [tm * 1000, g0 + tm, sm * 1000, g0 + sm], Ta: T.reduce((a, b) => a + b) / 12, Pa: P.reduce((a, b) => a + b), c, south, day: [day(south ? 23.44 : -23.44), day(south ? -23.44 : 23.44)] };
 }
 
 // soils, by class and rainfall (unverified sketch): a name, and the colour of the soil and its litter

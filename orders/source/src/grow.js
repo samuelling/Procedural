@@ -97,7 +97,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
     const ey = Hgt(ex, ez); for (let k = 0; k < 9; k++) rock(k % 3, ex - 2.4 - rr(0, 1.2), ez + (k - 4) * 0.85, rr(1.2, 2.3), rr(0.75, 1), 0.35);
     cap([ex - 1.5, ey + 0.1, ez - 0.9], 1, [ex - 1.5, ey + 0.1, ez + 0.9], 1, 0, 0, 0.5, 18); placed.push({ x: ex - 1.5, z: ez, cr: 4 }); lv = { mouth: [ex - 1.5, ez] };
   }
-  if (TIER > 3 && G.world) (G.world === 'lake' || G.world === 'cave' ? underBuild : microBuild)(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks, vein: lv, stomata: [], bark: lv, cave: lv, sea: G.sea, ls: G.trees.length > 2 ? 2.5 : 0.5, oak: G.oak });   // the worlds further in, and under
+  if (TIER > 3 && G.world) (G.world === 'lake' || G.world === 'cave' ? underBuild : microBuild)(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks, vein: lv, stomata: [], bark: lv, cave: lv, sea: G.sea, ls: G.trees.length > 2 ? 2.5 : 0.5, oak: G.oak, age: G.age });   // the worlds further in, and under
   if (TIER > 2 && strm) for (let n = low ? 30 : 56; n > 0; n--) {                       // stones in and along the stream
     const x = rr(-hs + 1, hs - 1), z = strm.zc(x) + gs() * (strm.wid(x) * 0.7 + 0.4); if (abs(z) < hs - 1) rock((rnd() * 4) | 0, x, z, rr(0.12, 0.5) * (rnd() < 0.15 ? 2.2 : 1), rr(0.5, 0.9), rr(0.3, 1));
   }

@@ -1,6 +1,6 @@
 # Filling the 2 MB rung
 
-The top rung holds about 1.31 MB, about 1.19 MB of it measured ground and climate of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
+The top rung holds about 1.61 MB, about 1.49 MB of it measured ground and climate of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
 guesses at packed bytes. Nothing here is padding: every track is rules, or tables of knowledge about real forests.
 
 | Track | Guess | State |
@@ -55,4 +55,9 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
 | Winter inversions in valleys | First pass (round 4); Innsbruck still too warm in January |
 | Phenology on the Growing Season Index (dry-season leaf drop) | Queued |
 | The litter's age and the fallen-leaf case in the small worlds | Queued |
+| Wet days and sunshine: a daily weather chain while time runs | **Done** (round 5) |
+| A soil-water bucket read by the moss and the soil | **Done** (round 5); tardigrade tuns and stomata still to do |
+| The foot of the ladder a fallen leaf, aged from leaf fall; living leaves from a seedling | **Done** (round 5) |
+| Lapse from CRU's own heights | **Done** (round 5) |
+| The next world in a window before the swap (stencil, inner camera, second shadow map) | Designed in round 5; not built |
 

@@ -382,6 +382,24 @@ inflates when the page loads (about 0.1 s):
     in summer (4.2 against 6.6 °C a km at mid-latitudes), for the inversions that fill Alpine valleys. The numbers
     are a sketch after Rolland 2003 and unverified. Innsbruck's January comes out −0.2 °C; the station is colder,
     about −1.5 (from memory). So its valley floor still has no lasting snow in January, which is likely wrong.
+- **Weather, water and the foot of the ladder (round 5).** More of CRU CL 2.0 is shipped. The extra data comes to
+  290 kB: wet days a month (whole days), sunshine (per cent of daylight, in steps of 5) and CRU's own height for
+  each half-degree cell. Temperatures are now lapsed from that height rather than from a 15′ cell's mean, a 211 m rms
+  difference.
+  - **Weather follows the place while time runs.** Each day is drawn wet or dry from the month's measured wet days;
+    a wet day is more likely after a wet one (persistence 0.3, a sketch). A wet day brings rain, or snow below
+    1 °C. A dry day is cloudy as often as the sunshine falls short of the daylight. CRU filled some sunshine gaps
+    from cloud cover, so this is partly circular, and there is no sunshine figure in the polar night.
+  - **A water bucket.** The soil holds up to 150 mm, a sketch. It is filled by rain and snowmelt and emptied by
+    Thornthwaite's (1948) evaporation from the month's temperature and day length. It is a rule on measured
+    inputs. Diving into the moss on a dry day, the haircap has folded its leaves against the stem, as it does when
+    dry. The soil world says how full the soil is today. Manaus's soil falls to about a quarter in October; Calama's
+    stays near empty.
+  - **The foot of the ladder is a fallen leaf.** Diving into the soil and then further in now lands on a leaf in the
+    litter. Its age is the days since the place's leaf fall: fresh and browning, then brown with fungal threads
+    between the cells, then a lace of veins. The guard cells are dead and brown and the bacteria thicker. The spider
+    mites, which feed on living leaves, have gone. To reach a living leaf, dive in the log world at an oak seedling
+    while its leaves are out. It goes straight there, a thousand times smaller, and back out to the log.
 - **One sun, one year (round 3).** On Earth the sun is placed for true north (south is +z, east +x, as on the range)
   in every world you dive to. Its declination now runs smoothly through the year, not in four steps; the year starts
   on 1 March, at the start of spring. Snow lies when the month's measured temperature, interpolated between months,

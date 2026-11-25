@@ -318,7 +318,7 @@ export function mkRenderer(canvas, low) {
       };
       W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
       if (TIER > 3) { W.xm = B.xm && B.xm.map((m) => mesh(m)); W.hz = B.hz && mesh(B.hz); }
-      if (TIER > 3) W.str = B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // the rock bed a gorge cuts through
+      if (TIER > 3) W.str = G.age ? [G.age, 0, 2] : B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // (in a fallen leaf: its age)   // the rock bed a gorge cuts through
       if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const H = G.home || G, tot = H.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => H.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }   // the range's forest is the colour of the forest you came from
       gl.bindVertexArray(null);
     },

@@ -73,7 +73,7 @@ const say = (s) => { if (TIER < 4) return; const li = document.createElement('li
 const snd = (k) => { if (TIER > 3 && audio && sound) audio.ev(k); };
 let flash = 0, wx = 'clear', season = 1, LIFE = null, fogK = 1, night = 0, rainA = 0, snowA = 0;
 if (TIER > 2) for (const k in MORE) { GENOMES[k].land.stream = MORE[k].stream; GENOMES[k].life = MORE[k].life; if (TIER > 3) GENOMES[k].floor.flower = MORE[k].flower; }
-if (TIER > 3) { Object.assign(GENOMES, extra()); GENOMES.boreal.air.aur = GENOMES.larch.air.aur = 1; }
+if (TIER > 3) { Object.assign(GENOMES, extra()); GENOMES.boreal.air.aur = GENOMES.larch.air.aur = 1; GENOMES.leafl = { ...GENOMES.leaf, nm: 'A living leaf', blurb: 'A unit here is ten micrometres: a hundred thousand times smaller, on the underside of a living leaf of the oak seedling you dived at.' }; }
 
 const m = (TIER > 3 ? /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?(?:@(-?[\d.]+),(-?[\d.]+),(\d+))?$/ : /^#?([a-z]+)-(\d+)(?:-m(\d+))?(?:-d(\d+))?$/).exec(location.hash);
 let here = null;   // the place on Earth, once one is chosen
@@ -133,6 +133,11 @@ function grow(keepView, aged) {
   if (TIER > 3 && !aged && !G.span && !G.world) f.pk = null;                // a new forest of your own: nothing is waiting any more
   if (TIER > 3 && !aged && G.span && f.si) { const s = f.si, l = s.log; G = { ...G, cl: s.cl, sd: l && (LAD.indexOf(G.world) > 1 || G.world === 'bark') ? l[0].sd : 0, oak: s.oak, home: f.pk && f.pk.G };   // a world further in or out is made of where you went from
     if (l && G.world === 'log') G.trees.push({ ...s.sp, n: 0 });
+    const sw = s.cl && s.cl.soil && s.cl.soil[cday()];                     // the soil's water today, from the place's months (a bucket: a rule, not a measurement)
+    if (sw !== undefined && G.world === 'moss' && sw < 0.35) { G.trees = G.trees.map((t) => t.id === 'haircap' ? { ...t, leaf: { ...t.leaf, dr: -0.9, a: [0.16, 0.2, 0.06], b: [0.36, 0.34, 0.14] } } : t); G.blurb = (G.blurb || '') + ' It has been dry: the soil holds ' + round(sw * 100) + '% of the water it can, and the haircap has folded its leaves against the stem, as it does when dry.'; }
+    if (sw !== undefined && G.world === 'soil') G.blurb = (G.blurb || '') + ' The soil here holds ' + round(sw * 100) + '% of the water it can today (a bucket filled by the measured rain and emptied by evaporation: a rule).';
+    if (G.world === 'leaf' && key === 'leaf') { const ph = s.cl && s.cl.ph, a = ph ? ((cday() - ph[2] + 365) % 365) / 365 : 0.5;   // below the soil's surface the leaf is a fallen one, as old as the days since the leaves came down
+      G = { ...G, age: 0.15 + 0.85 * a, life: { deer: 0, birds: 0 }, nm: 'A fallen leaf', blurb: 'A unit here is ten micrometres: the underside of a leaf in the litter, ' + (a < 0.25 ? 'fallen this autumn, its cells browning, fungal threads entering at the stomata.' : a < 0.6 ? 'fallen last autumn, brown, fungal threads running between the cells.' : 'nearly a year in the litter, the soft tissue rotted to a lace of veins.') + ' The spider mites that fed on it alive have left. A living leaf is reached by diving at a seedling in the log world.' + (ph ? '' : ' (No leaf fall here by the months; the age is a guess.)') }; }
     if (l && G.world === 'bark') { const n = s.sp.nm.toLowerCase(); G.blurb = 'A unit here is a millimetre: a thousand times smaller, where the bark has come away from the fallen ' + n + ' you dived at.' + ([1, 5].includes(s.sp.leaf.t) ? '' : ' The galleries are drawn as a spruce engraver beetle cuts them; a ' + n + '’s own bark beetles cut theirs differently, and that is not drawn yet.'); } }        // this log's own wood and bark
   const t0 = performance.now(); if (TIER > 3 && !aged) world = { dam: 0, char: (x, z) => (fire ? fire.at(x, z) : 0) };
   if (TIER > 3 && aged) stand.world = world;                                 // the regrowth is told where it has burnt and how high the dam stands
@@ -249,7 +254,7 @@ function frame(now) {
   let yrs = 0, moved = 0;
   if (TIER > 3) {
     if (clock === 1 || clock === 2) {                                      // a day is an eighth of a year: the sun crosses, night falls, seasons turn
-      const YL = clock === 1 ? 480 : 64, y0 = Math.floor(yearF); yrs = dt / YL; dayPh = (dayPh + dt * 8 / YL) % 1; day = dayPh < 0.75 ? -0.12 + dayPh / 0.75 * 1.24 : 1.12; $('day').value = round(day * 1000); moved = 1;
+      const YL = clock === 1 ? 480 : 64, y0 = Math.floor(yearF); yrs = dt / YL; const p0 = dayPh; dayPh = (dayPh + dt * 8 / YL) % 1; if (dayPh < p0 && G.cl && G.cl.W) wxDay(); day = dayPh < 0.75 ? -0.12 + dayPh / 0.75 * 1.24 : 1.12; $('day').value = round(day * 1000); moved = 1;
       yearF += yrs; const se = Math.floor((yearF % 1) * 4); if (se !== season) setSea(se);
       if (Math.floor(yearF) > y0) { if (f.pk) year++; else if (pass(1)) grow(1, 1); }                   // the trees are a year older too
     } else if (rew) { if ((decT += dt) > 0.6) { decT = 0; const s = tape.pop(); if (s) unspool(s); if (!tape.length) { rew = 0; $('b-rw').setAttribute('aria-pressed', 'false'); say('Back at the start of the tape'); } } }   // running the tape backwards
@@ -363,18 +368,21 @@ const under = (k) => { if (dive) return; walking(0); const sp = $('snap'); snapN
   setTimeout(() => { if (k === 'lake' || k === 'cave') { home = G.world ? home : key; leave(); } key = k; mut = 0; if (!back()) grow(); requestAnimationFrame(() => requestAnimationFrame(() => { opn(sp); })); $('hint').textContent = k === 'lake' ? 'Under the lake · − back up' : k === 'cave' ? 'In the cave, with a lamp · walk with WASD · − back out' : '×1: the plot, 64 m across'; $('hint').hidden = false; }, 20); }; };
 const zoom = (dir) => {
   if (TIER > 3 && (key === 'lake' || key === 'cave')) { if (dir < 0) under(home); return; }
-  if (dive) return; const i = key === 'bark' ? 3 : G.world ? LAD.indexOf(G.world) : key === 'moss' ? 3 : 1, j = clamp(i + dir, 0, 5); if (i === j || (key === 'bark' && dir > 0)) return;
+  if (dive) return; const i = key === 'bark' ? 3 : G.world ? LAD.indexOf(G.world) : key === 'moss' ? 3 : 1, lv = key === 'leafl'; let j = clamp(i + dir, 0, 5); if (i === j || (key === 'bark' && dir > 0)) return;
   const nb = i === 2 && dir > 0 && B.Hgt(tgt[0], tgt[2]) > 6;                // diving at the log itself goes under its bark; anywhere else, into the moss
-  const F = nb ? 10 : STEP[min(i, j)];
+  const ph = f.si && f.si.cl && f.si.cl.ph, on = !ph || (ph[0] <= ph[2] ? cday() >= ph[0] && cday() < ph[2] : cday() >= ph[0] || cday() < ph[2]);
+  const sl = i === 2 && dir > 0 && !nb && on && stand.some((t) => !t.st && G.trees[t.si].id === 'oakling' && hypot(t.x - tgt[0], t.z - tgt[2]) < 6);   // diving at a seedling in leaf goes straight to a living leaf, a thousand times smaller
+  if (sl) j = 5; if (lv && dir < 0) j = 2;
+  const F = nb ? 10 : sl || lv ? 1000 : STEP[min(i, j)];
   if (i === 1) { home = key; leave(); } walking(0); dive = 1; fly = null; fz = 0; idle = 0;
   const L = i === 1 && dir > 0 && f.si.log, r0 = rad, rEnd = i + j === 1 ? (dir > 0 ? 0.25 : 2500) : dir > 0 ? r0 / F : r0, sp = $('snap'), a = dir > 0 ? r0 / rEnd : rEnd / r0;   // how far the old world carries the zoom: in, all the way; out, not at all, except that the plot pulls back to show its valley first
   glide(rEnd, dir > 0 ? max(pitch, 0.75) : pitch, a > 1.5 ? 1600 : 1, () => { snapNext = () => {
     sp.width = canvas.width; sp.height = canvas.height; sp.getContext('2d').drawImage(canvas, 0, 0); sp.style.transition = 'none'; sp.style.opacity = 1;
     setTimeout(() => {
-      key = nb ? 'bark' : j === 1 ? home : LAD[j]; mut = 0; const p0 = pitch; if (!(j === 1 && back())) grow(); const r1 = rad, p1 = pitch;
+      key = nb ? 'bark' : sl ? 'leafl' : j === 1 ? home : LAD[j]; mut = 0; const p0 = pitch; if (!(j === 1 && back())) grow(); const r1 = rad, p1 = pitch;
       rad = dir > 0 ? rEnd * F : rEnd / F; pitch = p0; glide(r1, p1, 2000, () => { dive = 0; });
       requestAnimationFrame(() => requestAnimationFrame(() => { opn(sp); }));
-      $('hint').textContent = (nb ? '×1000: under the bark, 6.4 cm across' : ['÷10,000: a mountain range, 640 km across', '×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j]) + (L ? ' · the fallen ' + f.si.sp.nm.toLowerCase() + ' nearest where you looked, ' + max(1, round(L[3])) + ' m off' : '') + (nb ? ' · − back out' : j ? ' · + further in, − back out' : ' · + back in'); $('hint').hidden = false;
+      $('hint').textContent = (nb ? '×1000: under the bark, 6.4 cm across' : sl ? '×100,000: a living leaf of the seedling, 0.64 mm across' : lv ? '×100: back on the log, 64 cm across' : ['÷10,000: a mountain range, 640 km across', '×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j]) + (L ? ' · the fallen ' + f.si.sp.nm.toLowerCase() + ' nearest where you looked, ' + max(1, round(L[3])) + ' m off' : '') + (nb ? ' · − back out' : j ? ' · + further in, − back out' : ' · + back in'); $('hint').hidden = false;
     }, 20);
   }; }, L && [L[1], tgt[1], L[2]]);
 };
@@ -412,6 +420,14 @@ for (const k in act) $('b-' + k).addEventListener('click', act[k]);
 const cday = () => Math.floor(((yearF % 1) * 365 + (G.cl.south ? 243 : 59)) % 365);   // today, as a day of the calendar year
 // on Earth the leaves follow the place: out, colouring, bare on the days its months give; and dew and rime at dawn only
 // when the leaf, cooled by a clear night, falls to the measured dew point
+// while time runs on Earth, each day's weather is drawn from the place's measured month: rain (or snow below 1 °C) on as
+// many days as CRU counts wet, a wet day more likely after a wet day (persistence 0.3, a sketch); a dry day cloudy as
+// often as the measured sunshine falls short of the daylight
+const wxDay = () => {
+  const c = G.cl, x = ((yearF % 1) * 12 + (c.south ? 8 : 2) + 12) % 12 | 0, p = min(0.97, c.W[x] / [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][x]), r = 0.3;
+  const wet = Math.random() < (wx === 'rain' || wx === 'snow' ? p + r * (1 - p) : p * (1 - r) / (1 - p * r || 1));
+  setWx(wet ? (mon() < 1 ? 'snow' : 'rain') : c.S && Math.random() > (c.S[x] || 40) / 100 ? 'cloud' : 'clear');   // (no sunshine figure in the polar night: an even chance)
+};
 const place2 = () => {
   const c = G.cl, d = cday(), ph = c.ph, dc = c.dec, inn = (a, b) => (a <= b ? d >= a && d < b : d >= a || d < b);
   if (ph) { f.se[0] = inn(ph[1], ph[2]) ? dc : 0; f.se[1] = inn(ph[2], ph[0]) ? dc : 0; f.se[3] = inn((ph[0] + 345) % 365, (ph[0] + 40) % 365) ? 1 : 0; }

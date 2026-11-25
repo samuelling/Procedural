@@ -862,5 +862,9 @@ export const LEAFG = `
     vec3 ch = vor(p * 1.1 + cv.z * 30.);                                                                      // chloroplasts, seen through the cell
     alb = mix(vec3(.16, .3, .08), vec3(.34, .55, .16), .3 + .5 * cv.z) * (.82 + .3 * smoothstep(.45, .1, ch.x) * (1. - onv * .6));
     alb = mix(vec3(.08, .14, .05), alb, wall); alb = mix(alb, alb * vec3(1.15, 1.1, .9), onv * .5);
-    float hh2 = dome * .6 - (1. - wall) * .4; BUMP(n, pw, hh2) ao = .75 + .25 * dome; GL = .05 * dome;
+    float hh2 = dome * .6 - (1. - wall) * .4;
+    if (uStr.z > 1.5) { float ag = uStr.x, hy = smoothstep(.5, .9, vn(p * .35 + 4.) * vn(p * 2.1)) * smoothstep(.1, .5, ag);   // a fallen leaf: browning with age, fungal threads, at last only the veins
+      alb = mix(alb, mix(vec3(.36, .22, .1), vec3(.22, .13, .06), cv.z) * (.8 + .3 * wall), smoothstep(0., .3, ag)); alb = mix(alb, vec3(.8, .78, .7), hy * .7);
+      float gone = smoothstep(.55, .9, ag) * (1. - onv) * smoothstep(.2, .6, vn(p * .05 + 9.)); alb = mix(alb, vec3(.05, .035, .02), gone * dome); hh2 -= gone * 1.5; }
+    BUMP(n, pw, hh2) ao = .75 + .25 * dome; GL = .05 * dome * (1. - uStr.x);
 `;

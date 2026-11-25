@@ -133,8 +133,8 @@ export function microBuild(world, c) {
     for (let i = 0, n = low ? 18 : 32; i < n; i++) {                       // stomata: two kidney-shaped guard cells round a dark pore
       const x = rr(-hs + 3, hs - 3), z = rr(-hs + 3, hs - 3); if (abs(z - c.vein(x)) < 9) { i--; continue; }
       const a = rnd() * TAU, ca = cos(a), sa = sin(a), y = surf(x, z), P = (u, v, h) => [x + ca * u - sa * v, y + h, z + sa * u + ca * v];
-      cap(P(-1.4, 0, 0.15), 0.35, P(1.4, 0, 0.15), 0.35, 0, 0, 0.5, 13);
-      for (const e of [-1, 1]) { cap(P(-1.7, e * 0.25, 0.3), 0.45, P(-0.6, e * 0.85, 0.55), 0.62, 0, 1, 0.5, 12); cap(P(-0.6, e * 0.85, 0.55), 0.62, P(0.6, e * 0.85, 0.55), 0.62, 0, 1, 0.5, 12); cap(P(0.6, e * 0.85, 0.55), 0.62, P(1.7, e * 0.25, 0.3), 0.45, 0, 1, 0.5, 12); }
+      cap(P(-1.4, 0, 0.15), 0.35, P(1.4, 0, 0.15), 0.35, 0, 0, 0.5, 13); const gk = c.age ? 3 : 12, gi = c.age ? 0.6 : 0.5;   // on a fallen leaf the guard cells are dead and brown
+      for (const e of [-1, 1]) { cap(P(-1.7, e * 0.25, 0.3), 0.45, P(-0.6, e * 0.85, 0.55), 0.62, 0, 1, gi, gk); cap(P(-0.6, e * 0.85, 0.55), 0.62, P(0.6, e * 0.85, 0.55), 0.62, 0, 1, gi, gk); cap(P(0.6, e * 0.85, 0.55), 0.62, P(1.7, e * 0.25, 0.3), 0.45, 0, 1, gi, gk); }
       c.stomata.push([x, z]);
     }
     for (let i = 0; i < (low ? 6 : 11); i++) {                            // hairs: a few cells end to end, tapering, curving over
@@ -154,7 +154,7 @@ export function microBuild(world, c) {
       cap([x, surf(x, z) + 1.3, z], 1.3, [x + 1.5, surf(x, z) + 1.3, z + 0.6], 1.2, 0, 0, 0.7, 3);
       for (let k = 0; k < 120; k++) { const dx = st[0] - x, dz = st[1] - z, d = hypot(dx, dz); if (d < 0.6) break; const a = atan2s(dz, dx) + gs() * 0.6, nx = x + Math.cos(a) * 0.9, nz = z + Math.sin(a) * 0.9; cap([x, surf(x, z) + 0.35, z], 0.28, [nx, surf(nx, nz) + (hypot(st[0] - nx, st[1] - nz) < 1 ? -0.4 : 0.35), nz], 0.28, 0, 1, 0.2, 8); x = nx; z = nz; }
     }
-    for (let i = 0; i < (low ? 120 : 260); i++) {                         // bacteria: short rods, in loose colonies
+    for (let i = 0; i < (low ? 120 : 260) * (1 + 2 * (c.age || 0)); i++) {   // bacteria: short rods, in loose colonies (more on a rotting leaf)
       const cx = rr(-hs, hs), cz = rr(-hs, hs); for (let k = 0; k < 6; k++) { const x = cx + gs() * 0.8, z = cz + gs() * 0.8, a = rnd() * TAU, y = surf(x, z) + 0.12; cap([x, y, z], 0.1, [x + cos(a) * 0.35, y, z + sin(a) * 0.35], 0.1, 0, 0, 0.5, 9); }
       i += 5;
     }
