@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sylva, continuous</title>
+<style>
+:root { --ink: #eef0e2; --amber: #e8b25a; --lichen: #a8c99a; --glass: rgba(14, 20, 13, .62); --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#hud { position: fixed; left: 14px; top: 14px; padding: 10px 14px 12px; border-radius: 12px; background: var(--glass); color: var(--ink); font: 400 13px/1.4 system-ui, sans-serif; backdrop-filter: blur(8px); min-width: 210px; pointer-events: none; }
+#hud h1 { margin: 0 0 6px; font: italic 600 22px/1 var(--serif); }
+#scale { font: 600 20px/1.1 var(--serif); color: var(--amber); } #what { font: italic 400 15px/1.2 var(--serif); color: var(--lichen); }
+#track { margin-top: 8px; height: 4px; border-radius: 2px; background: rgba(238,240,226,.15); } #bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--lichen), var(--amber)); width: 50%; }
+#ends { display: flex; justify-content: space-between; font-size: 11px; opacity: .7; margin-top: 3px; } #alt { opacity: .75; font-size: 12px; margin-top: 4px; }
+#hint { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; background: var(--glass); color: var(--ink); font: italic 400 14px/1.3 var(--serif); backdrop-filter: blur(8px); white-space: nowrap; pointer-events: none; }
+#err[hidden] { display: none; } #err { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink); font: 16px system-ui; background: #111; }
+@media (max-width: 560px) { #hud { min-width: 0; } #hint { white-space: normal; width: calc(100% - 40px); text-align: center; } }
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"><h1>Sylva</h1><div id="scale">—</div><div id="what"></div><div id="track"><div id="bar"></div></div><div id="ends"><span>1 µm</span><span>1000 km</span></div><div id="alt"></div></div>
+<p id="hint">Scroll or pinch toward anything to go in, as far as you like · drag to look · WASD to move</p>
+<div id="err" hidden>This needs WebGL 2 with float render targets.</div>
+<script>(()=>{var Qe=2.39996323,yt=e=>2**(19-e),Je=9,ye=[[19,.004],[17,.01],[15,.03],[13,.06],[12,.07],[11,.06],[9,.045],[7,.035],[5,.03],[2,.028],[-1,.03],[-4,.048],[-7,.058],[-10,.04],[-18,.03]],bt=e=>{let r=19-e;for(let o=1;o<ye.length;o++)if(r>=ye[o][0]){let[n,a]=ye[o-1],[i,c]=ye[o];return 2**r*(c+(a-c)*(r-i)/(n-i))}return 2**r*.03},Ne=Array.from({length:37},(e,r)=>bt(r)),At=700,Y=(e,r,o)=>{let n=Math.imul(e+17*o&255,374761393)+Math.imul(r+91*o&255,668265263)|0;return n=Math.imul(n^n>>>13,1274126177),n^=n>>>16,(n&16777215)/16777215},je=e=>e*e*e*(e*(e*6-15)+10),be=(e,r,o)=>{let n=Math.floor(e),a=Math.floor(r),i=e-n,c=r-a,s=je(i),x=je(c),p=Y(n,a,o),d=Y(n+1,a,o),v=Y(n,a+1,o),m=Y(n+1,a+1,o);return p+(d-p)*s+(v-p)*x+(p-d-v+m)*s*x},ee=e=>(e%256+256)%256,Ze=(e,r,o)=>{let n=e*Qe,a=Math.cos(n),i=Math.sin(n),c=yt(e);return[ee((a*r-i*o)/c),ee((i*r+a*o)/c)]},et=(e,r)=>e<Je?1-Math.abs(2*r-1):r,wt=(e,r,o)=>{let[n,a]=Ze(e,r,o);return et(e,be(n,a,e))};function K(e,r,o=37){let n=At;for(let a=0;a<o;a++)n+=Ne[a]*(wt(a,e,r)-.5);return n}function tt(e,r,o){let[n,a]=Ze(e,r,o),i=(m,h)=>et(e,be(m,h,e)),c=1e-4,s=i(n,a),x=i(n+c,a),p=i(n-c,a),d=i(n,a+c),v=i(n,a-c);return[n,a,s,(x-p)/(2*c),(d-v)/(2*c),(x-2*s+p)/(c*c),(i(n+c,a+c)-i(n+c,a-c)-i(n-c,a+c)+i(n-c,a-c))/(4*c*c),(d-2*s+v)/(c*c)]}var Ue=(e,r,o)=>{let n=be(ee(e/900+31.7),ee(r/900+12.9),5)*.6+be(ee(e/260+7.3),ee(r/260+3.1),6)*.4;return Math.min(1,Math.max(0,(n-.34)*4))*Math.min(1,Math.max(0,(o-3)/6))*Math.min(1,Math.max(0,(1900-o)/250))},Z=7;function ot(e,r){let o=Y(e,r,40),n=Y(e,r,41),a=(e+.15+.7*o)*Z,i=(r+.15+.7*n)*Z,c=K(a,i,24);return Y(e,r,42)>Ue(a,i,c)?null:[a,i,Y(e,r,43)<.45+.4*Math.min(1,Math.max(0,(c-900)/700))?1:0,Y(e,r,44),c]}var se=`
+uniform vec4 uA[37];   // per octave: where the camera is in its lattice (x, y), its value there, its amplitude
+uniform vec4 uB[37];   // its gradient and curvature there (gx, gy, hxx, hxy)
+uniform float uC[37];  // (hyy)
+float hsh(ivec2 c, int k) { uint x = uint((c.x + 17 * k) & 255), y = uint((c.y + 91 * k) & 255); uint h = x * 374761393u + y * 668265263u; h = (h ^ (h >> 13u)) * 1274126177u; h ^= h >> 16u; return float(h & 16777215u) / 16777215.; }
+vec3 vnd(vec2 u, int k) {
+  vec2 i = floor(u), f = u - i, w = f * f * f * (f * (f * 6. - 15.) + 10.), dw = 30. * f * f * (f * (f - 2.) + 1.);
+  ivec2 c = ivec2(i); float a = hsh(c, k), b = hsh(c + ivec2(1, 0), k), d = hsh(c + ivec2(0, 1), k), e = hsh(c + ivec2(1, 1), k), m = a - b - d + e;
+  return vec3(a + (b - a) * w.x + (d - a) * w.y + m * w.x * w.y, dw * vec2(b - a + m * w.y, d - a + m * w.x));
+}
+float sOf(int k) { return exp2(float(19 - k)); }
+float forest(vec2 w, float h, float fp) { vec2 a = mod(w / 900. + vec2(31.7, 12.9), 256.), b = mod(w / 260. + vec2(7.3, 3.1), 256.); float n = mix(vnd(a, 5).x, .5, smoothstep(200., 700., fp)) * .6 + mix(vnd(b, 6).x, .5, smoothstep(60., 200., fp)) * .4; return clamp((n - .34) * 4., 0., 1.) * clamp((h - 3.) / 6., 0., 1.) * clamp((1900. - h) / 250., 0., 1.); }
+float forest(vec2 w, float h) { return forest(w, h, 0.); }
+// octave k's contribution at p (metres from the camera, on the ground plane): its height relative to under the
+// camera, and its slope. Near the camera (within a five-hundredth of its cell) it is the octave's own Taylor series,
+// so no octave ever has to resolve a millimetre against a mountain's coordinates.
+vec3 oct(int k, vec2 p) {
+  float s = sOf(k), a = float(k) * ${Qe}, cs = cos(a), sn = sin(a); vec2 du = vec2(cs * p.x - sn * p.y, sn * p.x + cs * p.y) / s;
+  vec4 A = uA[k]; float n; vec2 g;
+  if (dot(du, du) < 4e-6) { vec4 B = uB[k]; float c = uC[k]; n = dot(B.xy, du) + .5 * (B.z * du.x * du.x + 2. * B.w * du.x * du.y + c * du.y * du.y); g = B.xy + vec2(B.z * du.x + B.w * du.y, B.w * du.x + c * du.y); }
+  else { vec3 q = vnd(A.xy + du, k); if (k < ${Je}) { float sg = sign(2. * q.x - 1.); n = 1. - abs(2. * q.x - 1.) - A.z; g = -2. * sg * q.yz; } else { n = q.x - A.z; g = q.yz; } }
+  return vec3(n, vec2(cs * g.x + sn * g.y, -sn * g.x + cs * g.y) / s) * A.w;
+}
+`;var Ft=`
+float vor2(vec2 u, out vec2 c) { vec2 i = floor(u), f = u - i; float d = 9., d2 = 9.; c = vec2(0.); for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 o = vec2(x, y), r = o + vec2(h1(i + o), h1(i + o + 7.3)) * .8 + .1 - f; float e = dot(r, r); if (e < d) { d2 = d; d = e; c = r; } else if (e < d2) d2 = e; } return sqrt(d2) - sqrt(d); }
+`,Ae=Ft+`
+vec3 leafFace(vec3 alb, vec2 lp, float ll, float fp) {
+float mid = smoothstep(.0011, .0004, abs(lp.y)) * smoothstep(1.5e-3, 4e-4, fp);
+float sv = abs(fract((lp.x - abs(lp.y) * 1.2) / (ll * .12)) - .5) * ll * .12, side = smoothstep(.0006, .0002, sv) * smoothstep(8e-4, 2e-4, fp);
+vec2 cc; float net = vor2(lp / .0012, cc), tert = smoothstep(.08, .02, net) * smoothstep(2.5e-4, 8e-5, fp);
+alb = mix(alb, alb * 1.45 + .015, max(mid, max(side * .8, tert * .5)));
+if (fp < 2e-5) {
+vec2 c2, wq = lp / 4e-5 + vec2(n2(lp / 2e-5), n2(lp / 2e-5 + 5.)) * .35; float e = vor2(wq, c2), k = smoothstep(2e-5, 4e-6, fp);
+alb = mix(alb, alb * (.85 + .25 * smoothstep(.03, .12, e)) - .02 * smoothstep(.04, .0, e), k);
+vec2 sc; vor2(lp / 1.1e-4 + 17.3, sc); float st = step(.78, h1(floor(lp / 1.1e-4 + 17.3 + sc)));
+vec2 g = sc * vec2(1., 1.6); float gd = length(g), guard = smoothstep(.22, .18, gd) * smoothstep(.04, .07, abs(g.x)), pore = smoothstep(.06, .03, abs(g.x)) * smoothstep(.2, .15, gd);
+alb = mix(alb, alb * 1.25 + vec3(.01, .02, 0.), guard * st * k); alb = mix(alb, alb * .25, pore * st * k * smoothstep(1e-5, 3e-6, fp));
+}
+return alb;
+}`;var Et=e=>()=>{e=e+1831565813|0;let r=Math.imul(e^e>>>15,1|e);return r=r+Math.imul(r^r>>>7,61|r)^r,((r^r>>>14)>>>0)/4294967296},{sin:we,cos:Fe,PI:Ee,sqrt:Vt,hypot:Se,min:Re,max:Te,floor:te}=Math,I=e=>{let r=Se(...e)||1;return e.map(o=>o/r)},fe=(e,r)=>[e[1]*r[2]-e[2]*r[1],e[2]*r[0]-e[0]*r[2],e[0]*r[1]-e[1]*r[0]],B=(e,r,o=1)=>[e[0]+r[0]*o,e[1]+r[1]*o,e[2]+r[2]*o];function Rt(e,r){let o=Et(r*7919+e*131),n=[],a=[],i=[],c=[],s=(d,v,m,h,E)=>{let w=I([v[0]-d[0],v[1]-d[1],v[2]-d[2]]),y=I(fe(w,Math.abs(w[1])<.9?[0,1,0]:[1,0,0])),A=fe(y,w),b=m>.15?10:m>.04?7:5,u=n.length/8,l=Se(v[0]-d[0],v[1]-d[1],v[2]-d[2]);for(let f=0;f<2;f++)for(let T=0;T<=b;T++){let P=T/b*2*Ee,U=B([0,0,0],y,Fe(P)),L=f?h:m,_=B(U,A,0),F=B(_,A,we(P)),N=B(f?v:d,F,L),M=I(F);n.push(N[0],N[1],N[2],M[0],M[1],M[2],P*(m+h)*.5,E+(f?l:0))}for(let f=0;f<b;f++){let T=u+f,P=u+b+1+f;a.push(T,P,T+1,T+1,P,P+1)}},x=(d,v,m,h,E)=>{let w=I(B(B([0,1,0],[d[0],0,d[2]],.4),[o()-.5,o()-.5,o()-.5],.8)),y=I(fe(v,w)),A=I(fe(y,v)),b=i.length/10;for(let[u,l]of[[0,-.5],[1,-.5],[0,.5],[1,.5]]){let f=B(B(d,v,u*m),y,l*h);i.push(f[0],f[1],f[2],A[0],A[1],A[2],u,l,m,E)}c.push(b,b+1,b+2,b+2,b+1,b+3)},p=e?24+o()*6:20+o()*6;if(e===0){let d=(h,E,w,y,A,b)=>{let u=B(h,E,w);if(s(h,u,y,y*.68,b),A===0||y<.012){for(let f=0;f<8;f++){let T=I(B(E,[o()-.5,o()*.6-.15,o()-.5],1.3));x(B(h,E,w*(.25+.75*o())),T,.32+o()*.12,.24,o())}return}let l=A>2?3:2+(o()<.5?1:0);for(let f=0;f<l;f++){let T=o()*2*Ee,P=.35+o()*.45,U=I(B(E,[Fe(T)*P,.15+o()*.2,we(T)*P],1.6));d(B(h,E,w*(.55+.45*o())),U,w*(.62+o()*.15),y*.62,A-1,b+w)}},v=p*(.32+o()*.08),m=.22+o()*.1;s([0,-.4,0],[0,v,0],m,m*.82,0);for(let h=0;h<4;h++){let E=h*Ee/2+o(),w=I([Fe(E)*.55,1,we(E)*.55]);d([0,v*(.85+.15*o()),0],w,p*.26,m*.55,4,v)}}else{let d=.25+o()*.08;s([0,-.4,0],[0,p*.5,0],d,d*.55,0),s([0,p*.5,0],[0,p,0],d*.55,.02,p*.5);for(let v=p*.18;v<p-.4;v+=.55+o()*.25){let m=(p-v)/p,h=.6+m*4.8,E=4+te(o()*3);for(let w=0;w<E;w++){let y=w/E*2*Ee+o(),A=I([Fe(y),-.25-.3*m+o()*.1,we(y)]),b=[0,v,0],u=B(b,A,h);s(b,u,.03+m*.05,.008,v);for(let l=.12;l<1;l+=.1){let f=B(b,A,h*l),T=I(fe(A,[0,1,0]));for(let P of[-1,1])x(f,I(B(B(A,T,P*.9),[0,-.15,0])),.25+.25*(1-l)*m+.15,.16,o())}}}}return{wood:new Float32Array(n),wi:new Uint32Array(a),leaf:new Float32Array(i),li:new Uint32Array(c),h:p}}function rt(e,r,o){let i=`
+layout(location = 4) in vec4 iP;
+layout(location = 5) in vec4 iS;
+uniform float uWd;
+vec3 place(vec3 p) { float c = cos(iS.y), s = sin(iS.y); p *= iS.x; float h = max(p.y, 0.) / 20.; p.xz += vec2(sin(uT * .9 + iS.z * 40.), cos(uT * .7 + iS.z * 23.)) * h * h * .25 * uWd; return vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z) + iP.xyz; }
+vec3 turn(vec3 n) { float c = cos(iS.y), s = sin(iS.y); return vec3(c * n.x - s * n.z, n.y, s * n.x + c * n.z); }`,c="bool gone(float f) { return h1(gl_FragCoord.xy + fract(f * 13.7) * 91.) > f; }",s=r(o+i+`
+layout(location = 0) in vec3 aP; layout(location = 1) in vec3 aN; layout(location = 2) in vec2 aU;
+out vec3 vP, vN; out vec2 vU; out float vW, vF, vSd, vR;
+void main() { vP = place(aP); vN = turn(aN); vU = aU * iS.x; vF = iP.w; vSd = iS.z; vR = aP.y * iS.x; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`,o+c+`
+in vec3 vP, vN; in vec2 vU; in float vW, vF, vSd, vR; uniform float uCy;
+layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
+float vor(vec2 u) { vec2 i = floor(u), f = u - i; float d = 9.; for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 o = vec2(x, y), r = o + vec2(h1(i + o), h1(i + o + 7.3)) - f; d = min(d, dot(r, r)); } return sqrt(d); }
+void main() {
+if (gone(vF)) discard;
+float fp = vW * uPix; vec2 u = vU + vec2(0., vSd * 31.);
+float rid = n2(vec2(u.x * 9., u.y * 1.6)) * .6 + n2(vec2(u.x * 23., u.y * 5.)) * .4, fur = smoothstep(.35, .62, rid);
+vec3 alb = mix(vec3(.08, .065, .05), vec3(.27, .24, .2), fur) * (.85 + .3 * n2(u * 40.));
+float li = smoothstep(.7, .76, n2(u * 11. + 9.)) * smoothstep(.3, 1., vR); alb = mix(alb, vec3(.3, .34, .25), li * .6 * (.7 + .3 * n2(u * 300.)));
+if (fp < 3e-4) { float c = vor(u * vec2(3000., 1800.)); alb *= mix(1., .7 + .5 * smoothstep(.15, .5, c), smoothstep(3e-4, 6e-5, fp)); }
+vec3 n = normalize(vN); float dif = max(dot(n, uSun), 0.), am = .45 + .35 * n.y;
+vec3 col = alb * (uSunC * dif * .8 + uSky * am * .5) * (.55 + .45 * clamp(vR / 14., 0., 1.));
+col = air(col, normalize(vP), length(vP), uCy, uCy + vP.y);
+oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW);
+}`),x=r(o+i+`
+layout(location = 0) in vec3 aP; layout(location = 1) in vec3 aN; layout(location = 2) in vec2 aU; layout(location = 3) in vec2 aX;
+out vec3 vP, vN; out vec2 vU; out float vW, vF, vL, vSd, vK, vY;
+void main() { vP = place(aP); vN = turn(aN); vU = aU; vL = aX.x * iS.x; vSd = aX.y; vK = iS.w; vF = iP.w; vY = aP.y * iS.x; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`,o+c+`
+in vec3 vP, vN; in vec2 vU; in float vW, vF, vL, vSd, vK, vY; uniform float uCy;
+layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
+`+Ae+`
+void main() {
+if (gone(vF)) discard;
+vec2 q = vU * vL; float fp = vW * uPix;
+bool conifer = vK > .5; vec2 lp = vec2(0.); float inside = 0., stem = smoothstep(.0035, .002, abs(q.y)) * step(q.x, vL * .92), ll = 0.;
+float far = smoothstep(.004, .012, fp);
+if (far > 0.) { float e = length(vec2(vU.x * 2. - 1., vU.y * 2.)); if (e < .95 - .3 * n2(vU * 7. + vSd * 30.) && h1(gl_FragCoord.xy + vSd) < far * .9) { inside = 1.; lp = vec2(.04, 0.); ll = .08; } }
+if (inside < .5 && !conifer) {
+for (int i = 0; i < 8; i++) {
+float fi = float(i), t = (.08 + fi * .115) * vL, side = mod(fi, 2.) * 2. - 1., a = side * (.8 - fi * .05), L = (.085 + .02 * h1(vec2(vSd, fi))) * min(1., vL / .3);
+vec2 d = vec2(cos(a), sin(a)), r = q - vec2(t, 0.); float s = dot(r, d), w = dot(r, vec2(-d.y, d.x));
+if (s > 0. && s < L) { float hw = L * .32 * pow(sin(3.1416 * s / L), .8) * (1. - .25 * s / L); if (abs(w) < hw) { inside = 1.; lp = vec2(s, w); ll = L; } }
+}
+} else if (inside < .5) {
+float k = floor(q.x / .006), t = (k + .5) * .006, side = mod(k, 2.) * 2. - 1.;
+vec2 d = normalize(vec2(.5, side)), r = q - vec2(t, 0.); float s = dot(r, d), w = dot(r, vec2(-d.y, d.x)), L = .022 * (1. - .4 * q.x / vL);
+if (s > 0. && s < L && abs(w) < .0008 * (1. - .4 * s / L) && q.x < vL * .95) { inside = 1.; lp = vec2(s, w); ll = L; }
+}
+if (inside < .5 && stem < .5) discard;
+vec3 base = conifer ? vec3(.035, .085, .045) : mix(vec3(.07, .15, .035), vec3(.12, .2, .045), h1(vec2(vSd * 9.1, 1.)));
+vec3 alb = stem > .5 && inside < .5 ? vec3(.12, .09, .05) : base;
+if (inside > .5 && far < 1.) alb = leafFace(alb, lp, ll, fp);
+vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n;
+float dif = max(dot(n, uSun), 0.), tr = max(dot(-n, uSun), 0.) * .6;
+float occ = .35 + .65 * clamp(vY / 20., 0., 1.);
+vec3 col = alb * (uSunC * (dif + tr * vec3(.9, 1.1, .5)) * .85 + uSky * (.35 + .25 * n.y)) * occ;
+col = air(col, normalize(vP), length(vP), uCy, uCy + vP.y);
+oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW);
+}`),p=r(o+`
+layout(location = 0) in vec2 aC; layout(location = 4) in vec4 iP; layout(location = 5) in vec4 iS;
+uniform vec3 uR, uU;
+out vec2 vC; out vec3 vP; out float vW, vF, vK, vSd;
+void main() { float h = iS.x * (iS.w > .5 ? 26. : 22.), w = h * (iS.w > .5 ? .22 : .36); vec3 c = iP.xyz + vec3(0., h * .55, 0.); vP = c + uR * aC.x * w + vec3(0., 1., 0.) * aC.y * h * .55; vC = aC; vF = iP.w; vK = iS.w; vSd = iS.z; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`,o+c+`
+in vec2 vC; in vec3 vP; in float vW, vF, vK, vSd; uniform float uCy; uniform vec3 uR;
+layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
+void main() {
+if (gone(vF)) discard;
+vec2 c = vC; float y = c.y * .5 + .5;
+float wdt = vK > .5 ? (1. - y) * .95 + .05 : sqrt(max(0., 1. - pow(abs(c.y - .25) / .75, 2.))) * .95;
+float rag = n2(c * 9. + vSd * 40.) * .25; bool trunk = abs(c.x) < .035 && c.y < -.4;
+if (abs(c.x) > wdt - rag * wdt && !trunk) discard;
+if (vK < .5 && c.y < -.45 && !trunk) discard;
+vec3 n = normalize(uR * c.x / max(wdt, .1) * .8 + vec3(0., .5 + .5 * c.y, 0.) - normalize(vP) * sqrt(max(0., 1. - c.x * c.x)));
+vec3 alb = trunk ? vec3(.1, .08, .06) : (vK > .5 ? vec3(.035, .085, .04) : vec3(.07, .14, .04)) * (.75 + .5 * n2(c * 14. + vSd * 9.));
+float dif = max(dot(n, uSun), 0.);
+vec3 col = alb * (uSunC * dif * .8 + uSky * .45) * (.6 + .4 * y);
+col = air(col, normalize(vP), length(vP), uCy, uCy + vP.y);
+oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW);
+}`),d=[];for(let b=0;b<2;b++)for(let u=0;u<3;u++){let l=Rt(b,u+1),f={h:l.h};f.wv=e.createVertexArray(),e.bindVertexArray(f.wv),e.bindBuffer(e.ARRAY_BUFFER,e.createBuffer()),e.bufferData(e.ARRAY_BUFFER,l.wood,e.STATIC_DRAW),e.enableVertexAttribArray(0),e.vertexAttribPointer(0,3,e.FLOAT,!1,32,0),e.enableVertexAttribArray(1),e.vertexAttribPointer(1,3,e.FLOAT,!1,32,12),e.enableVertexAttribArray(2),e.vertexAttribPointer(2,2,e.FLOAT,!1,32,24),e.bindBuffer(e.ELEMENT_ARRAY_BUFFER,e.createBuffer()),e.bufferData(e.ELEMENT_ARRAY_BUFFER,l.wi,e.STATIC_DRAW),f.wn=l.wi.length,f.lv=e.createVertexArray(),e.bindVertexArray(f.lv),e.bindBuffer(e.ARRAY_BUFFER,e.createBuffer()),e.bufferData(e.ARRAY_BUFFER,l.leaf,e.STATIC_DRAW),e.enableVertexAttribArray(0),e.vertexAttribPointer(0,3,e.FLOAT,!1,40,0),e.enableVertexAttribArray(1),e.vertexAttribPointer(1,3,e.FLOAT,!1,40,12),e.enableVertexAttribArray(2),e.vertexAttribPointer(2,2,e.FLOAT,!1,40,24),e.enableVertexAttribArray(3),e.vertexAttribPointer(3,2,e.FLOAT,!1,40,32),e.bindBuffer(e.ELEMENT_ARRAY_BUFFER,e.createBuffer()),e.bufferData(e.ELEMENT_ARRAY_BUFFER,l.li,e.STATIC_DRAW),f.ln=l.li.length,f.ib=e.createBuffer(),d.push(f)}let v=e.createVertexArray();e.bindVertexArray(v),e.bindBuffer(e.ARRAY_BUFFER,e.createBuffer()),e.bufferData(e.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),e.STATIC_DRAW),e.enableVertexAttribArray(0),e.vertexAttribPointer(0,2,e.FLOAT,!1,0,0);let m=e.createBuffer();e.bindVertexArray(null);let h=(b,u)=>{e.bindVertexArray(b),e.bindBuffer(e.ARRAY_BUFFER,u);for(let[l,f]of[[4,0],[5,16]])e.enableVertexAttribArray(l),e.vertexAttribPointer(l,4,e.FLOAT,!1,32,f),e.vertexAttribDivisor(l,1)};for(let b of d)h(b.wv,b.ib),h(b.lv,b.ib);h(v,m),e.bindVertexArray(null);let E=new Map,w=72,y=420,A=(b,u)=>{let l=b*100003+u,f=E.get(l);return f===void 0&&(f=ot(b,u),f&&(f[4]=K(f[0],f[1])),E.set(l,f)),f};return{draw(b,u,l,f){let[T,P,U]=l.C,L=d.map(()=>[]),_=[];if(f>4e3)return;let F=Re(y,Te(w*1.2,f*6+150)),N=te((T-F)/Z),M=te((T+F)/Z),z=te((U-F)/Z),G=te((U+F)/Z);if((M-N)*(G-z)>4e4)return;for(let S=N;S<=M;S++)for(let q=z;q<=G;q++){let D=A(S,q);if(!D)continue;let ze=D[0]-T,Be=D[1]-U,xe=Se(ze,Be);if(xe>F)continue;let Ke=.75+D[3]*.5,Ge=D[3]*40,De=D[2],xt=te(D[3]*997)%3,Ye=D[4]-P,Xe=Re(1,Te(0,(w-xe)/14)),$e=Re(1,Te(0,(xe-(w-14))/14))*Re(1,Te(0,(F-xe)/60));Xe>0&&L[De*3+xt].push(ze,Ye,Be,Xe,Ke,Ge,D[3],De),$e>0&&_.push(ze,Ye,Be,$e,Ke,Ge,D[3],De)}E.size>4e5&&E.clear();let O=S=>{b(S),e.uniform1f(S.uCy,P),e.uniform1f(S.uWd,1)};if(e.useProgram(s.p),O(s),d.forEach((S,q)=>{let D=L[q];D.length&&(e.bindBuffer(e.ARRAY_BUFFER,S.ib),e.bufferData(e.ARRAY_BUFFER,new Float32Array(D),e.DYNAMIC_DRAW),S.cnt=D.length/8,e.bindVertexArray(S.wv),e.drawElementsInstanced(e.TRIANGLES,S.wn,e.UNSIGNED_INT,0,S.cnt))}),e.useProgram(x.p),O(x),e.disable(e.CULL_FACE),d.forEach((S,q)=>{L[q].length&&(e.bindVertexArray(S.lv),e.drawElementsInstanced(e.TRIANGLES,S.ln,e.UNSIGNED_INT,0,S.cnt))}),_.length){let S=[Math.cos(l.pitch)*Math.sin(l.yaw),Math.sin(l.pitch),Math.cos(l.pitch)*Math.cos(l.yaw)],q=Se(S[0],S[2])||1;e.useProgram(p.p),O(p),e.uniform3f(p.uR,-S[2]/q,0,S[0]/q),e.bindBuffer(e.ARRAY_BUFFER,m),e.bufferData(e.ARRAY_BUFFER,new Float32Array(_),e.DYNAMIC_DRAW),e.bindVertexArray(v),e.drawArraysInstanced(e.TRIANGLE_STRIP,0,4,_.length/8)}e.bindVertexArray(null)}}}function nt(e,r,o){let{floor:n,max:a,min:i}=Math,c=(()=>{let u=(1+Math.sqrt(5))/2,l=[[-1,u,0],[1,u,0],[-1,-u,0],[1,-u,0],[0,-1,u],[0,1,u],[0,-1,-u],[0,1,-u],[u,0,-1],[u,0,1],[-u,0,-1],[-u,0,1]].map(L=>{let _=Math.hypot(...L);return L.map(F=>F/_)}),f=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]],T=L=>{let _=Math.hypot(...L);return L.map(F=>F/_)},P=(L,_)=>T(L.map((F,N)=>F+_[N])),U=[];for(let[L,_,F]of f){let N=l[L],M=l[_],z=l[F],G=P(N,M),O=P(M,z),S=P(z,N);for(let q of[[N,G,S],[G,M,O],[S,O,z],[G,O,S]])for(let D of q)U.push(...D)}return new Float32Array(U)})(),s=`
+layout(location = 0) in vec3 aP;
+uniform vec4 uBand;    // lattice spacing, cells across, the camera's place in its cell (x, z)
+uniform ivec2 uBase;   // the camera's cell, folded to 16 bits
+uniform float uFade, uCy; uniform int uKmax; uniform vec2 uCxz;
+out vec3 vP, vN, vL; out float vW, vF, vSd, vT, vS;
+float hh(ivec2 c, int k) { return hsh(c * 7 + ivec2(k * 13, k * 29), 30 + k); }
+float ground(vec2 p) { float y = 0.; for (int k = 0; k < ${37}; k++) { if (k > uKmax) break; y += oct(k, p).x; } return y; }
+void place(out vec3 o, out float sz, out float sd, out float ang, out vec2 w) {
+  int n = int(uBand.y), i = gl_InstanceID % n - n / 2, j = gl_InstanceID / n - n / 2; ivec2 c = (uBase + ivec2(i, j)) & 65535;
+  vec2 jt = vec2(hh(c, 1), hh(c, 2)); o.xz = (vec2(i, j) + jt - uBand.zw) * uBand.x; o.y = uH0 + ground(o.xz);
+  sd = hh(c, 3); sz = .6 + .8 * hh(c, 4); ang = hh(c, 5) * 6.2832; w = o.xz + uCxz;
+}`,x=(u,l)=>r(o+"uniform float uH0;"+s+u,o+`
+in vec3 vP, vN, vL; in float vW, vF, vSd, vT, vS; uniform float uCy;
+layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
+`+Ae+`
+bool gone(float f) { return h1(gl_FragCoord.xy + fract(vSd * 13.7) * 91.) > f; }
+vec3 lite(vec3 alb, vec3 n) { return alb * (uSunC * max(dot(n, uSun), 0.) * .8 + uSky * (.4 + .3 * n.y)); }
+void main() { if (gone(vF)) discard; float fp = vW * uPix; vec3 col; `+l+`
+col = air(col, normalize(vP), length(vP), uCy, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW); }`),p="vec4 Q = uVP * vec4(vP, 1.); vW = Q.w; gl_Position = vec4(Q.xy, 0., Q.w); }",d="float dd = length(o.xz) / (uBand.x * uBand.y * .5); vF = uFade * smoothstep(1., .7, dd);",v=x(`
+void main() { vec3 o; float sz, sd, a; vec2 w; place(o, sz, sd, a, w); ${d}
+  float fo = forest(w, uCy + o.y); if (fo < .3 || sd < .25) vF = 0.;
+  float L = .07 * sz; vec2 u = aP.xz; vL = vec3(u.x * L, u.y * L, L); float c = cos(a), s = sin(a);
+  vec3 p = vec3(u.x * L, (u.y * u.y) * L * .12 + .002 + sd * .004, u.y * L); vP = o + vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z); vN = vec3(0, 1, 0); vSd = sd; vT = hh(ivec2(w * 10.), 7); ${p}`,`float L = vL.z, s = vL.x, w = vL.y; float hw = L * .33 * pow(max(sin(3.1416 * clamp(s / L, 0., 1.)), 0.), .8);
+if (s < 0. || s > L || abs(w) > hw) discard;
+vec3 alb = mix(vec3(.28, .14, .05), vec3(.42, .26, .08), vT) * (.8 + .3 * vSd); alb = mix(alb, vec3(.1, .07, .04), smoothstep(.5, .9, n2(vec2(s, w) * 90. + vSd * 9.)) * .7);
+alb = leafFace(alb, vec2(s, w), L, fp); col = lite(alb, vec3(0, 1, 0)) * .85;`),m=x(`
+void main() { vec3 o; float sz, sd, a; vec2 w; place(o, sz, sd, a, w); ${d}
+  float fo = forest(w, uCy + o.y); vT = fo; bool fern = fo > .5; if (fern && sd > .3) vF = 0.; if (uCy + o.y < 1.) vF = 0.;
+  float bi = floor(aP.x), b = fract(aP.x), lat = aP.z, ht = fern ? .45 * sz : .3 * sz;   // blade bi; b along it 0..1; lat across
+  float ba = a + bi * 2.4, lean = fern ? 1.1 : .35 + .3 * h1(vec2(bi, sd)), len = ht * (fern ? 1. : .7 + .5 * h1(vec2(sd, bi)));
+  vec2 dir = vec2(cos(ba), sin(ba)); float t = b, bend = lean * t * t, wid = fern ? .09 * (1. - t * .8) : .006 * (1. - t);
+  vec3 sway = vec3(sin(uT * 1.3 + w.x * .3) * .04, 0., cos(uT * 1.1 + w.y * .3) * .04) * t * t;
+  vP = o + vec3(dir.x * bend * len, len * t * (1. - bend * .35), dir.y * bend * len) + vec3(-dir.y, 0., dir.x) * lat * wid + sway;
+  vN = normalize(vec3(dir.x * .3, 1., dir.y * .3) + vec3(-dir.y, 0., dir.x) * lat * (fern ? .7 : .4)); vL = vec3(b, lat, bi); vSd = sd; ${p}`,`vec3 alb = vT > .5 ? mix(vec3(.07, .17, .04), vec3(.12, .22, .05), vSd) : mix(vec3(.12, .2, .04), vec3(.28, .27, .1), vSd); vec3 n = normalize(vN); float sh = 1.;
+if (vT > .5) { float pi = fract(vL.x * 14.), lf = abs(pi - .5) * 2., wl = .35 + .65 * lf, al = abs(vL.y);
+if (al > wl) discard;
+float pin = al / wl; sh = (.75 + .35 * (1. - pin)) * (1. - .45 * smoothstep(.06, 0., al) * step(.5, 1. - fp * 200.));
+alb *= 1. + .25 * smoothstep(.15, 0., abs(pin - .5 - .3 * (pi - .5)) ) * smoothstep(.01, .002, fp); }
+float tr = max(dot(-n, uSun), 0.) * .5;
+alb *= .7 + .4 * vL.x; col = (lite(alb, n) + alb * uSunC * tr * vec3(.9, 1.2, .5)) * sh * (.6 + .4 * vL.x);`),h=x(`
+uniform vec3 uKind;   // size, then colour set
+void main() { vec3 o; float sz, sd, a; vec2 w; place(o, sz, sd, a, w); ${d}
+  float fo = forest(w, uCy + o.y); if (uKind.y < .5 && sd > (fo > .3 ? .25 : .45)) vF = 0.;
+  float r = uKind.x * sz * (.5 + sd); vec3 q = aP * vec3(1., .55 + .3 * h1(vec2(sd, 1.)), .8 + .4 * h1(vec2(sd, 2.))); q *= 1. + .25 * (h1(aP.xy * 13. + sd) - .5);
+  float c = cos(a), s = sin(a); vec3 p = vec3(c * q.x - s * q.z, q.y, s * q.x + c * q.z) * r; vP = o + p + vec3(0., r * .25, 0.); vN = normalize(p); vSd = sd; vT = uKind.y; ${p}`,`vec3 n = normalize(cross(dFdx(vP), dFdy(vP))); if (dot(n, vP) > 0.) n = -n; n = normalize(mix(n, normalize(vN), .6));
+vec3 alb = vT < .5 ? mix(vec3(.2, .19, .17), vec3(.36, .33, .28), vSd) : vT < 1.5 ? (vSd < .55 ? vec3(.07, .05, .035) : vSd < .75 ? vec3(.5, .47, .42) : vSd < .9 ? vec3(.42, .3, .22) : vec3(.08, .08, .08))
+: (vSd < .5 ? vec3(.36, .27, .18) : vSd < .8 ? vec3(.55, .5, .45) : vec3(.2, .14, .09));
+alb *= .8 + .4 * n2(vP.xz / max(fp * 6., 1e-7));
+col = lite(alb, n);`),E=(u,l)=>{let f=e.createVertexArray();return e.bindVertexArray(f),e.bindBuffer(e.ARRAY_BUFFER,e.createBuffer()),e.bufferData(e.ARRAY_BUFFER,u,e.STATIC_DRAW),e.enableVertexAttribArray(0),e.vertexAttribPointer(0,3,e.FLOAT,!1,0,0),e.bindVertexArray(null),{v:f,n:l}},w=[];for(let u=0;u<6;u++){let l=u/6,f=(u+1)/6;w.push(l,0,-.5,f,0,-.5,l,0,.5,l,0,.5,f,0,-.5,f,0,.5)}let y=[];for(let u=0;u<7;u++)for(let l=0;l<5;l++){let f=u+l/5,T=u+(l+1)/5-1e-4;y.push(f,0,-1,T,0,-1,f,0,1,f,0,1,T,0,-1,T,0,1)}let A={leaf:E(new Float32Array(w),w.length/3),blade:E(new Float32Array(y),y.length/3),stone:E(c,c.length/3)},b=[{s:.35,n:110,P:m,g:A.blade,kmax:22},{s:.07,n:90,P:v,g:A.leaf,kmax:26},{s:.022,n:80,P:h,g:A.stone,kmax:28,kind:[.006,0,0]},{s:6e-4,n:90,P:h,g:A.stone,kmax:33,kind:[18e-5,1,0]},{s:35e-6,n:80,P:h,g:A.stone,kmax:36,kind:[11e-6,2,0]}];return{draw(u,l,f,T,P){let[U,L,_]=f.C;for(let F of b){let N=F.s*F.n*.5,M=i(1,a(0,(N*.9-T)/(N*.5)))*i(1,a(0,(F.s*160-T)/(F.s*60)+1));if(M<=0)continue;let z=F.P;e.useProgram(z.p),u(z),l(z);let G=n(U/F.s),O=n(_/F.s);e.uniform4f(z.uBand,F.s,F.n,U/F.s-G,_/F.s-O),e.uniform2i(z.uBase,(G%65536+65536)%65536,(O%65536+65536)%65536),e.uniform1f(z.uFade,M),e.uniform1f(z.uCy,L),e.uniform1f(z.uH0,P-L),e.uniform1i(z.uKmax,F.kmax),e.uniform2f(z.uCxz,U,_),F.kind&&e.uniform3fv(z.uKind,F.kind),e.bindVertexArray(F.g.v),e.drawArraysInstanced(e.TRIANGLES,0,F.g.n,F.n*F.n)}e.bindVertexArray(null)}}}function at(e,r,o){let n=`#version 300 es
+out vec2 v; void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); v = p; gl_Position = vec4(p * 2. - 1., 0., 1.); }`,a=`
+uniform vec3 uR, uU, uF; uniform vec2 uTan; in vec2 v;
+vec3 ray() { vec2 s = (v * 2. - 1.) * uTan; return normalize(uF + uR * s.x + uU * s.y); }
+vec3 skyc(vec3 rd) {
+float y = rd.y, mu = max(dot(rd, uSun), 0.), sp = smoothstep(12000., 90000., uAlt), dip = -sqrt(max(2. * uAlt / 6.371e6, 0.));
+float yy = max((y - dip) / (1. - dip), 0.);
+vec3 zen = uSky * vec3(.42, .62, 1.05), hor = uSky * vec3(1.05, 1.08, 1.12) + uSunC * .05 * (1. + 2. * pow(mu, 4.));
+vec3 c = mix(hor, zen, pow(yy, .5));
+c = mix(c, vec3(.002, .004, .012), sp * smoothstep(-.02, .25, yy));
+c += uSunC * (pow(mu, 3000.) * 60. + pow(mu, 30.) * .3 * (1. - sp * .6));
+return y < dip ? hor * .6 : c;
+}`,i=r(n,o+a+`
+layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
+void main() { oC = vec4(skyc(ray()), 1.); oD = vec4(1e12, 0, 0, 1); }`),c=r(n,o+a+`
+uniform sampler2D uDist; uniform float uCov; out vec4 o;
+float h3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float n3(vec3 p) { vec3 i = floor(p), f = p - i; f = f * f * (3. - 2. * f);
+return mix(mix(mix(h3(i), h3(i + vec3(1, 0, 0)), f.x), mix(h3(i + vec3(0, 1, 0)), h3(i + vec3(1, 1, 0)), f.x), f.y), mix(mix(h3(i + vec3(0, 0, 1)), h3(i + vec3(1, 0, 1)), f.x), mix(h3(i + vec3(0, 1, 1)), h3(i + 1.), f.x), f.y), f.z); }
+const float B0 = 1500., B1 = 4000.;
+float uFp, gC;
+float dens(vec3 p, int oc) {
+vec3 q = p / 2600. + vec3(uT * .006, 0., uT * .002);
+float g0 = smoothstep(.7, .25, uFp / 2600.), g1 = smoothstep(.7, .25, uFp / 1240.);
+float base = mix(.275, n3(q * vec3(1., 2.2, 1.)) * .55, g0) + mix(.14, n3(q * 2.1 + 3.1) * .28, g1);
+float hf = clamp((p.y - B0) / (B1 - B0), 0., 1.), prof = smoothstep(0., .12, hf) * smoothstep(1., .45, hf);
+float cv = clamp(uCov + .5 * (n3(p / 70000. + 5.3) - .5) + .25 * (n3(p / 23000. + 1.7) - .5), 0., 1.);
+float d = base * prof - (1. - cv) * .55, sg = (.16 * (1. - g0) + .08 * (1. - g1)) * prof + 1e-4;
+gC = smoothstep(-sg, sg, d); d = max(d, 0.) + sg * .6 * gC;
+if (d <= 0. || oc < 2) return max(d, 0.) * 3.;
+float f1 = smoothstep(.8, .2, uFp / 410.), f2 = smoothstep(.8, .2, uFp / 170.);
+d -= (mix(.25, n3(q * 6.3 + 7.) * .5, f1) + mix(.125, n3(q * 15. + 1.) * .25, f2)) * .16 * (1. - hf * .3);
+return max(d, 0.) * 3.;
+}
+void main() {
+vec3 rd = ray(), ro = uCam; float lim = texture(uDist, v).r;
+float ta = (B0 - ro.y) / rd.y, tb = (B1 - ro.y) / rd.y, t0 = max(min(ta, tb), 0.), t1 = min(max(ta, tb), lim);
+if (abs(rd.y) < 1e-4) { if (ro.y < B0 || ro.y > B1) { o = vec4(0, 0, 0, 1); return; } t0 = 0.; t1 = min(lim, 60000.); }
+t1 = min(t1, t0 + 60000.);
+if (t1 <= t0) { o = vec4(0, 0, 0, 1); return; }
+float T = 1., dt = (t1 - t0) / 48., t = t0 + dt * h1(gl_FragCoord.xy + fract(uT) * 37.);
+vec3 acc = vec3(0.); float mu = dot(rd, uSun), ph = .55 * (1. - .7 * .7) / pow(1. + .49 - 1.4 * mu, 1.5) / 12.566 + .45 * .0796;
+float tw = 0., cm = 0.;
+for (int i = 0; i < 48; i++) {
+vec3 p = ro + rd * t; uFp = t * uPix; float d = dens(p, 3); cm = max(cm, gC);
+if (d > .002) {
+float sh = 0.; for (int j = 1; j <= 4; j++) sh += dens(p + uSun * 120. * float(j * j), 1);
+vec3 L = uSunC * exp(-sh * 1.1) * ph * 9. + uSky * (.35 + .5 * clamp((p.y - B0) / (B1 - B0), 0., 1.));
+float a = 1. - exp(-d * dt * .004); acc += T * a * L; tw += T * a * t; T *= 1. - a;
+if (T < .02) break;
+}
+t += dt;
+}
+float a0 = max(1. - T, 1e-3), al = (1. - T) * cm; if (al < .002) { o = vec4(0, 0, 0, 1); return; }
+vec3 c = air(acc / a0, rd, tw / a0, ro.y, ro.y + rd.y * tw / a0) * al;
+o = vec4(c, 1. - al);
+}`),s=e.createVertexArray(),x=e.createFramebuffer(),p=null,d=(h,E,w)=>{let y=[Math.cos(h.pitch)*Math.sin(h.yaw),Math.sin(h.pitch),Math.cos(h.pitch)*Math.cos(h.yaw)],A=[-y[2],0,y[0]],b=Math.hypot(A[0],A[2])||1,u=[A[0]/b,0,A[2]/b],l=[u[1]*y[2]-u[2]*y[1],u[2]*y[0]-u[0]*y[2],u[0]*y[1]-u[1]*y[0]],f=Math.tan(h.fov/2);return{d:y,r:u,u:l,tan:[f*E/w,f]}},v=(h,E)=>{let w=e.drawingBufferWidth,y=e.drawingBufferHeight,A=d(E,w,y);e.uniform3fv(h.uR,A.r),e.uniform3fv(h.uU,A.u),e.uniform3fv(h.uF,A.d),e.uniform2fv(h.uTan,A.tan)},m={cover:.42};return{S:m,draw(h,E,w,y){e.useProgram(i.p),h(i),v(i,y),e.uniform3f(i.uCam,y.C[0],y.C[1],y.C[2]),e.bindVertexArray(s),e.drawArrays(e.TRIANGLES,0,3)},clouds(h,E,w,y,A){p!==A.t[0]&&(e.bindFramebuffer(e.FRAMEBUFFER,x),e.framebufferTexture2D(e.FRAMEBUFFER,e.COLOR_ATTACHMENT0,e.TEXTURE_2D,A.t[0],0),p=A.t[0]),e.bindFramebuffer(e.FRAMEBUFFER,x),e.disable(e.DEPTH_TEST),e.enable(e.BLEND),e.blendFunc(e.ONE,e.SRC_ALPHA),e.useProgram(c.p),h(c),v(c,y),e.uniform3f(c.uCam,y.C[0],y.C[1],y.C[2]),e.uniform1f(c.uCov,m.cover),e.activeTexture(e.TEXTURE0),e.bindTexture(e.TEXTURE_2D,A.t[1]),e.uniform1i(c.uDist,0),e.bindVertexArray(s),e.drawArrays(e.TRIANGLES,0,3),e.disable(e.BLEND),e.enable(e.DEPTH_TEST)}}}var ne=e=>document.getElementById(e),C=ne("c"),t=C.getContext("webgl2",{antialias:!1,depth:!1,alpha:!1,powerPreference:"high-performance"});if(!t||!t.getExtension("EXT_color_buffer_float"))throw ne("err").hidden=!1,new Error("no WebGL2 float targets");var{sin:le,cos:ce,min:J,max:k,abs:Jt,floor:ct,round:it,log2:Tt,exp:St,hypot:de,PI:ue}=Math,me=`#version 300 es
+precision highp float; precision highp int;
+uniform mat4 uVP; uniform vec3 uCam; uniform vec3 uSun, uSunC, uSky; uniform float uT, uPix, uAlt;
+float fdep(float w) { return log2(max(w, 1e-7) * 1e7 + 1.) / 50.; }
+float h1(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float n2(vec2 p) { vec2 i = floor(p), f = p - i; f = f * f * (3. - 2. * f); return mix(mix(h1(i), h1(i + vec2(1, 0)), f.x), mix(h1(i + vec2(0, 1)), h1(i + 1.), f.x), f.y); }
+vec3 air(vec3 col, vec3 rd, float d, float y0, float y1) {
+float H = 8000., a = exp(-max(y0, -100.) / H), b = exp(-max(y1, -100.) / H), od = d * (abs(y1 - y0) > 1. ? (a - b) * H / (y1 - y0) : a);
+float tr = exp(-od * 1.3e-5), mu = max(dot(rd, uSun), 0.);
+vec3 sc = uSky * vec3(.62, .78, 1.05) + uSunC * (.06 + .5 * pow(mu, 8.));
+return col * tr + sc * (1. - tr);
+}
+`,pe=(e,r)=>{let o=t.createProgram();for(let[i,c]of[[t.VERTEX_SHADER,e],[t.FRAGMENT_SHADER,r]]){let s=t.createShader(i);if(t.shaderSource(s,c),t.compileShader(s),!t.getShaderParameter(s,t.COMPILE_STATUS))throw new Error(t.getShaderInfoLog(s)+c.split(`
+`).map((x,p)=>p+1+": "+x).join(`
+`));t.attachShader(o,s)}if(t.linkProgram(o),!t.getProgramParameter(o,t.LINK_STATUS))throw new Error(t.getProgramInfoLog(o));let n=t.getProgramParameter(o,t.ACTIVE_UNIFORMS),a={p:o};for(let i=0;i<n;i++){let c=t.getActiveUniform(o,i),s=c.name.replace(/\[0\]$/,"");a[s]=t.getUniformLocation(o,c.name)}return a},vt=(()=>{for(let e=0;e<6e3;e++){let r=e%80*250-1e4,o=Math.floor(e/80)*250-1e4,n=K(r,o);if(n>150&&n<1300&&Ue(r,o,n)>.97&&Math.abs(K(r+8,o)-n)<1&&Math.abs(K(r,o+8)-n)<1)return[r,o]}return[0,0]})(),R={C:[0,0,0],yaw:.6,pitch:-.35,fov:55*ue/180},ut=()=>{let[e,r]=vt;R.C=[e,K(e,r)+1.7,r]};ut();var he=(e,r)=>K(e,r),Ve=(e=R.yaw,r=R.pitch)=>[ce(r)*le(e),le(r),ce(r)*ce(e)],re=64,ae=re/2,X=pe(me+se+`
+layout(location = 0) in vec2 aG;
+uniform vec3 uLv; uniform float uH0, uSea, uKc, uCy; uniform int uK; uniform vec2 uCxz;
+out vec3 vP, vN0; out vec2 vG; out float vW, vCe, vH;
+void main() {
+  float c = uLv.z, m = smoothstep(.72, .94, max(abs(aG.x), abs(aG.y)) / ${ae}.);   // the outer band blends into the next ring's coarser grid
+  vec2 g = aG - fract(aG * .5) * 2. * m, p = uLv.xy + g * c; float ce = c * (1. + m);
+  float y = uH0; vec2 gr = vec2(0.);
+  for (int k = 0; k < ${37}; k++) { float s = sOf(k), w = clamp(s / ce - 1.5, 0., 1.); if (w <= 0.) break; vec3 o = oct(k, p) * w; y += o.x; gr += o.yz; }
+  float yr = y; y = max(y, uSea);
+  float dd = length(p); if (dd > 280.) y += 17. * forest(p + uCxz, y + uCy) * smoothstep(280., 460., dd) * smoothstep(9e4, 3e4, dd);   // far off, the forest is a canopy over the ground
+  y -= dot(p, p) / ${(2*6371e3).toFixed(1)};                                  // the earth curves away
+  vP = vec3(p.x, y, p.y); vG = gr; vCe = ce; vH = yr;
+  vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w);
+}`,me+se+`
+in vec3 vP, vN0; in vec2 vG; in float vW, vCe, vH;
+uniform float uH0, uSea, uCy; uniform vec4 uFine; uniform vec2 uCxz;
+layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
+float vor(vec2 u, out float id) { vec2 i = floor(u), f = u - i; float d = 9.; id = 0.; for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 o = vec2(x, y), r = o + vec2(h1(i + o), h1(i + o + 7.3)) - f; float e = dot(r, r); if (e < d) { d = e; id = h1(i + o + 3.1); } } return sqrt(d); }
+void main() {
+  if (vP.x > uFine.x && vP.x < uFine.z && vP.z > uFine.y && vP.z < uFine.w) discard;   // a finer ring is drawn here
+  float d = length(vP), fp = max(vW * uPix, 1e-9);
+  vec2 gr = vG;                                                            // finer octaves, for the light only, down to the pixel
+  for (int k = 0; k < ${37}; k++) { float s = sOf(k); if (s > vCe * 2.5) continue; if (s < fp * 1.5) break; float w = (1. - clamp(s / vCe - 1.5, 0., 1.)) * clamp(s / fp * .5 - .75, 0., 1.); gr += oct(k, vP.xz).yz * w; }
+  vec3 n = normalize(vec3(-gr.x, 1., -gr.y));
+  float hA = vH + uCy, sl = 1. - n.y;                                     // height above the sea, and steepness
+  vec2 wp = vP.xz + uCxz;                                                  // where on earth (coarse: for things that change slowly)
+  bool sea = vH < uSea + 1e-4;
+  // what the ground is made of, as it would look from far off: forest, meadow, rock, snow, beach
+  float fo = forest(wp, hA, fp);
+#define NF(q, S) mix(n2((q) / (S)), .5, smoothstep(.2, .8, fp / (S)))   // a noise, smoothed to its mean once a pixel covers it
+  vec3 meadow = mix(vec3(.13, .2, .05), vec3(.25, .26, .09), NF(wp, 40.)), rock = mix(vec3(.24, .23, .21), vec3(.36, .34, .31), NF(wp, 9.));
+  vec3 canopy = mix(vec3(.06, .13, .045), vec3(.1, .17, .06), NF(wp, 7.));
+  float far = smoothstep(80., 420., d);                                    // under trees you see the floor; from far, their crowns
+  vec3 alb = mix(meadow, mix(vec3(.11, .08, .05), canopy, far), fo);
+  alb = mix(alb, rock, smoothstep(.42, .62, sl + .1 * NF(wp, 30.)) * (1. - fo * .7));
+  // from above, a forest is crowns: one per tree site (the same sites the trees stand on), domes for broadleaves and
+  // cones for conifers, dark gaps between; once a crown is smaller than a pixel, only their mean darkness is left
+  vec3 nl = n; float cf = fo * far;
+  if (cf > 0.) { float kc = smoothstep(5., 1.2, fp), sm = .7;
+    if (kc > 0.) { vec2 tc = wp / 7.; ivec2 ci = ivec2(floor(tc)); float best = 0.; vec3 cn = vec3(0, 1, 0);
+      for (int a = -1; a <= 1; a++) for (int b = -1; b <= 1; b++) { ivec2 c = ci + ivec2(a, b); if (hsh(c, 42) > fo) continue;
+        vec2 dv = tc - (vec2(c) + .15 + .7 * vec2(hsh(c, 40), hsh(c, 41))); bool con = hsh(c, 43) < .45 + .4 * clamp((hA - 900.) / 700., 0., 1.);
+        float R = (con ? .3 : .5) * (.8 + .4 * hsh(c, 44)), q = dot(dv, dv) / (R * R);
+        if (q < 1.) { float t = (con ? 1. - sqrt(q) : sqrt(1. - q)) * (.75 + .5 * hsh(c, 44)); if (t > best) { best = t; cn = con ? normalize(vec3(normalize(dv + 1e-5) * .7, .6)) : normalize(vec3(dv.x / R, sqrt(1. - q), dv.y / R)); } } }
+      float cs = best > 0. ? .72 + .5 * best : .35; nl = normalize(mix(n, cn, kc * cf)); sm = mix(sm, cs, kc); }
+    alb *= mix(1., sm, cf); }
+
+  alb = mix(alb, vec3(.55, .5, .4), smoothstep(6., 2., hA));               // beach
+  alb = mix(alb, rock, smoothstep(2200., 2600., hA + 200. * NF(wp, 800.)));
+  alb = mix(alb, vec3(.85, .88, .92), smoothstep(2700., 2850., hA + 250. * NF(wp, 500.)) * smoothstep(.75, .45, sl));
+  // close up: the floor's own grain, scale by scale, each fading in as it grows big enough to see
+  float id, g1 = vor(uA[22].xy + vec2(cos(22. * 2.39996) * vP.x - sin(22. * 2.39996) * vP.z, sin(22. * 2.39996) * vP.x + cos(22. * 2.39996) * vP.z) / sOf(22), id);   // crumbs, about 3 cm
+  float k1 = smoothstep(.06, .015, fp); alb *= mix(1., .8 + .35 * id - .3 * smoothstep(.3, .75, g1), k1 * (1. - far));
+  float id2, g2 = vor(uA[27].xy + vec2(cos(27. * 2.39996) * vP.x - sin(27. * 2.39996) * vP.z, sin(27. * 2.39996) * vP.x + cos(27. * 2.39996) * vP.z) / sOf(27), id2);   // grains, about a millimetre
+  float k2 = smoothstep(.002, .0005, fp); vec3 grain = id2 < .7 ? vec3(.06, .045, .03) * (.7 + .6 * id2) : id2 < .82 ? vec3(.3, .27, .22) : id2 < .92 ? vec3(.24, .17, .12) : vec3(.07, .07, .07);   // humus crumbs, quartz, feldspar, dark minerals
+  grain *= .6 + .55 * sqrt(max(0., 1. - g2 * g2 * 1.6));   // each a little dome
+  alb = mix(alb, grain * (1. - .5 * smoothstep(.35, .75, g2)), k2 * .85 * (1. - far));
+  float id3, g3 = vor(uA[32].xy + vec2(cos(32. * 2.39996) * vP.x - sin(32. * 2.39996) * vP.z, sin(32. * 2.39996) * vP.x + cos(32. * 2.39996) * vP.z) / sOf(32), id3);   // finer grains and clay, tens of micrometres
+  float k3 = smoothstep(6e-5, 1.5e-5, fp); alb = mix(alb, alb * (.7 + .6 * id3) * (1. - .4 * smoothstep(.4, .8, g3)), k3);
+  vec3 col;
+  if (sea) { vec3 r = reflect(normalize(vP), vec3(0, 1, 0)); float fr = .02 + .98 * pow(1. - max(dot(-normalize(vP), vec3(0, 1, 0)), 0.), 5.); col = mix(vec3(.01, .04, .06), uSky * .9 + uSunC * pow(max(dot(r, uSun), 0.), 400.) * 8., fr); }
+  else { float dif = max(dot(nl, uSun), 0.), am = .55 + .45 * nl.y; col = alb * (uSunC * dif + uSky * am * .55); }
+  col = air(col, normalize(vP), d, uCy, hA);
+  oC = vec4(col, 1.); oD = vec4(d, 0, 0, 1); gl_FragDepth = fdep(vW);
+}`),Ce=(()=>{let e=[],r=[],o=[],n=re+1;for(let s=0;s<=re;s++)for(let x=0;x<=re;x++)e.push(x-ae,s-ae);for(let s=0;s<re;s++)for(let x=0;x<re;x++){let p=x+s*n,d=[p,p+n,p+1,p+1,p+n,p+n+1];r.push(...d);let v=x-ae,m=s-ae;v>=-15&&v<15&&m>=-15&&m<15||o.push(...d)}let a=t.createVertexArray();t.bindVertexArray(a);let i=t.createBuffer();t.bindBuffer(t.ARRAY_BUFFER,i),t.bufferData(t.ARRAY_BUFFER,new Float32Array(e),t.STATIC_DRAW),t.enableVertexAttribArray(0),t.vertexAttribPointer(0,2,t.FLOAT,!1,0,0);let c=t.createBuffer();return t.bindBuffer(t.ELEMENT_ARRAY_BUFFER,c),t.bufferData(t.ELEMENT_ARRAY_BUFFER,new Uint16Array([...r,...o]),t.STATIC_DRAW),t.bindVertexArray(null),{vao:a,nf:r.length,nr:o.length}})(),lt=new Float32Array(148),dt=new Float32Array(148),mt=new Float32Array(37);function Ct(){let[e,,r]=R.C;for(let o=0;o<37;o++){let n=tt(o,e,r);lt.set([n[0],n[1],n[2],Ne[o]],o*4),dt.set([n[3],n[4],n[5],n[6]],o*4),mt[o]=n[7]}}var Me=e=>{t.uniform4fv(e.uA,lt),t.uniform4fv(e.uB,dt),t.uniform1fv(e.uC,mt)},g=null;function Pt(e,r){if(g&&g.w===e&&g.h===r)return;if(g){t.deleteFramebuffer(g.f);for(let c of g.t)t.deleteTexture(c);t.deleteRenderbuffer(g.d)}let o=c=>{let s=t.createTexture(),x=c===t.RGBA32F?t.NEAREST:t.LINEAR;return t.bindTexture(t.TEXTURE_2D,s),t.texStorage2D(t.TEXTURE_2D,1,c,e,r),t.texParameteri(t.TEXTURE_2D,t.TEXTURE_MIN_FILTER,x),t.texParameteri(t.TEXTURE_2D,t.TEXTURE_MAG_FILTER,x),t.texParameteri(t.TEXTURE_2D,t.TEXTURE_WRAP_S,t.CLAMP_TO_EDGE),t.texParameteri(t.TEXTURE_2D,t.TEXTURE_WRAP_T,t.CLAMP_TO_EDGE),s},n=t.createFramebuffer(),a=[o(t.RGBA16F),o(t.RGBA32F)],i=t.createRenderbuffer();t.bindRenderbuffer(t.RENDERBUFFER,i),t.renderbufferStorage(t.RENDERBUFFER,t.DEPTH_COMPONENT32F,e,r),t.bindFramebuffer(t.FRAMEBUFFER,n),t.framebufferTexture2D(t.FRAMEBUFFER,t.COLOR_ATTACHMENT0,t.TEXTURE_2D,a[0],0),t.framebufferTexture2D(t.FRAMEBUFFER,t.COLOR_ATTACHMENT1,t.TEXTURE_2D,a[1],0),t.framebufferRenderbuffer(t.FRAMEBUFFER,t.DEPTH_ATTACHMENT,t.RENDERBUFFER,i),t.drawBuffers([t.COLOR_ATTACHMENT0,t.COLOR_ATTACHMENT1]),g={f:n,t:a,d:i,w:e,h:r}}var ge=pe(`#version 300 es
+out vec2 v; void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); v = p; gl_Position = vec4(p * 2. - 1., 0., 1.); }`,`#version 300 es
+precision highp float; in vec2 v; uniform sampler2D uS; uniform float uEx; out vec4 o;
+void main() { vec3 c = texture(uS, v).rgb * uEx; c = clamp(c * (2.51 * c + .03) / (c * (2.43 * c + .59) + .14), 0., 1.); c = pow(c, vec3(.4545)); vec2 w = v - .5; c *= 1. - .35 * dot(w, w); o = vec4(c, 1.); }`),kt=t.createVertexArray(),qe=at(t,pe,me),Lt=rt(t,pe,me+se),_t=nt(t,pe,me+se),V={sun:[0,1,0],sunC:[0,0,0],sky:[0,0,0],day:.36};function ht(){let e=(8+52*le(ue*J(k(V.day,0),1)))*ue/180,r=(110+V.day*180)*ue/180;V.sun=[ce(e)*le(r),le(e),ce(e)*ce(r)];let o=J(1,k(0,(e*180/ue-2)/30));V.sunC=[2.3,1.75+.5*o,1.1+1*o].map(n=>n*(.35+.65*o)),V.sky=[.28,.5,.95].map((n,a)=>n*(.45+.55*o)+[.25,.12,.02][a]*(1-o)*.5)}ht();var _e=new Float32Array(16),$=0,W=0,zt=performance.now(),Pe=60,oe=1,H={};function Bt(){let e=Ve(),r=[0,1,0],o=[-e[2],0,e[0]],n=de(o[0],o[2])||1,a=[o[0]/n,0,o[2]/n],i=[a[1]*e[2]-a[2]*e[1],a[2]*e[0]-a[0]*e[2],a[0]*e[1]-a[1]*e[0]],c=1/Math.tan(R.fov/2),s=$/W,x=[a[0],i[0],-e[0],0,a[1],i[1],-e[1],0,a[2],i[2],-e[2],0,0,0,0,1],p=[c/s,0,0,0,0,c,0,0,0,0,-1,-1,0,0,-1,0];for(let d=0;d<4;d++)for(let v=0;v<4;v++){let m=0;for(let h=0;h<4;h++)m+=p[h*4+v]*x[d*4+h];_e[d*4+v]=m}}var ve=e=>{t.uniformMatrix4fv(e.uVP,!1,_e),t.uniform3fv(e.uSun,V.sun),t.uniform3fv(e.uSunC,V.sunC),t.uniform3fv(e.uSky,V.sky),t.uniform1f(e.uT,(performance.now()-zt)/1e3),t.uniform1f(e.uPix,2*Math.tan(R.fov/2)/W),t.uniform1f(e.uAlt,R.C[1])},Zt={cam:R,L:V,get W(){return $},get H(){return W}};function Le(e){let r=J(.1,(e-(Le.t||e))/1e3);Le.t=e,Pe+=(1/k(r,.001)-Pe)*.05,Pe<28&&oe>.5?oe*=.97:Pe>50&&oe<1&&(oe=J(1,oe*1.02));let o=J(devicePixelRatio||1,2)*oe;$=k(2,it(C.clientWidth*o)),W=k(2,it(C.clientHeight*o)),(C.width!==$||C.height!==W)&&(C.width=$,C.height=W),Nt(r),Pt($,W),Bt(),Ct();let[n,a,i]=R.C,c=he(n,i),s=k(a-k(c,0),1e-7);t.bindFramebuffer(t.FRAMEBUFFER,g.f),t.viewport(0,0,$,W),t.clearBufferfv(t.COLOR,1,[1e12,0,0,1]),t.clearDepth(1),t.clear(t.DEPTH_BUFFER_BIT),t.disable(t.DEPTH_TEST),qe.draw(ve,_e,V,R),t.enable(t.DEPTH_TEST),t.depthFunc(t.LESS),t.useProgram(X.p),ve(X),Me(X),t.uniform1f(X.uH0,c-a),t.uniform1f(X.uSea,-a),t.uniform1f(X.uCy,a),t.uniform2f(X.uCxz,n,i),t.bindVertexArray(Ce.vao);let x=k(s/40,1e-6),p=k(8e3,Math.sqrt(2*6371e3*k(a,1))*1.3,s*40),d=[1,1,-1,-1];for(let v=0;;v++){let m=x*2**v,h=ct(n/(2*m))*2*m-n,E=ct(i/(2*m))*2*m-i;t.uniform3f(X.uLv,h,E,m),t.uniform4fv(X.uFine,d),v===0?t.drawElements(t.TRIANGLES,Ce.nf,t.UNSIGNED_SHORT,0):t.drawElements(t.TRIANGLES,Ce.nr,t.UNSIGNED_SHORT,Ce.nf*2);let w=ae*m;if(d=[h-w+m*.02,E-w+m*.02,h+w-m*.02,E+w-m*.02],w>p||v>40)break}Lt.draw(ve,Me,R,s,c),_t.draw(ve,Me,R,s,c),qe.clouds(ve,_e,V,R,g),t.bindFramebuffer(t.FRAMEBUFFER,null),t.viewport(0,0,$,W),t.disable(t.DEPTH_TEST),t.useProgram(ge.p),t.activeTexture(t.TEXTURE0),t.bindTexture(t.TEXTURE_2D,g.t[0]),t.uniform1i(ge.uS,0),t.uniform1f(ge.uEx,.62),t.bindVertexArray(kt),t.drawArrays(t.TRIANGLES,0,3),Ie(s),requestAnimationFrame(Le)}function He(e,r){if(!g)return null;t.bindFramebuffer(t.FRAMEBUFFER,g.f),t.readBuffer(t.COLOR_ATTACHMENT1);let o=new Float32Array(4);return t.readPixels(Math.floor(e*$/C.clientWidth),Math.floor(W-1-r*W/C.clientHeight),1,1,t.RGBA,t.FLOAT,o),t.bindFramebuffer(t.FRAMEBUFFER,null),o[0]<1e11?o[0]:null}function Dt(e,r){let o=Ve(),n=Math.tan(R.fov/2),a=C.clientWidth/C.clientHeight,i=(e/C.clientWidth*2-1)*n*a,c=(1-r/C.clientHeight*2)*n,s=[-o[2],0,o[0]],x=de(s[0],s[2])||1;s[0]/=x,s[2]/=x;let p=[s[1]*o[2]-s[2]*o[1],s[2]*o[0]-s[0]*o[2],s[0]*o[1]-s[1]*o[0]],d=[o[0]+s[0]*i+p[0]*c,o[1]+s[1]*i+p[1]*c,o[2]+s[2]*i+p[2]*c],v=de(...d);return d.map(m=>m/v)}function We(e,r,o){let n=Dt(e,r),a=He(e,r);a===null&&(a=k(1,(R.C[1]-k(he(R.C[0],R.C[2]),0))*3));let i=R.C,c=[i[0]+n[0]*a,i[1]+n[1]*a,i[2]+n[2]*a],s=[c[0]+(i[0]-c[0])*o,c[1]+(i[1]-c[1])*o,c[2]+(i[2]-c[2])*o],x=k(he(s[0],s[2]),0);s[1]<x+a*o*.02+1e-7&&(s[1]=x+a*o*.02+1e-7),!(o>1&&s[1]-x>3e6)&&(R.C=s,Oe=0)}var ie=null,Oe=0,ke=[0,0,0],Q=new Map;C.addEventListener("pointerdown",e=>{C.setPointerCapture(e.pointerId),Q.set(e.pointerId,[e.clientX,e.clientY]),ie={x:e.clientX,y:e.clientY,d0:null},Oe=0});C.addEventListener("pointermove",e=>{if(!Q.has(e.pointerId))return;let r=Q.get(e.pointerId),o=e.clientX-r[0],n=e.clientY-r[1];if(Q.set(e.pointerId,[e.clientX,e.clientY]),Q.size===2){let[a,i]=[...Q.values()],c=de(a[0]-i[0],a[1]-i[1]);ie.d0&&We((a[0]+i[0])/2,(a[1]+i[1])/2,ie.d0/c),ie.d0=c;return}R.yaw-=o*.004,R.pitch=J(1.5,k(-1.5,R.pitch+n*.004))});var pt=e=>{Q.delete(e.pointerId),Q.size<2&&ie&&(ie.d0=null)};C.addEventListener("pointerup",pt);C.addEventListener("pointercancel",pt);C.addEventListener("wheel",e=>{e.preventDefault(),We(e.clientX,e.clientY,St(e.deltaY*(e.deltaMode?.05:.0015)))},{passive:!1});addEventListener("keydown",e=>{H[e.code]=1});addEventListener("keyup",e=>{H[e.code]=0});function Nt(e){let r=k(R.C[1]-k(he(R.C[0],R.C[2]),0),1e-6),o=k(r,2e-5)*1.6*(H.ShiftLeft?4:1),n=(H.KeyW?1:0)-(H.KeyS?1:0),a=(H.KeyD?1:0)-(H.KeyA?1:0),i=(H.KeyE||H.Space?1:0)-(H.KeyQ||H.KeyC?1:0),c=Ve(R.yaw,0),s=(c[0]*n-c[2]*a)*o,x=(c[2]*n+c[0]*a)*o,p=i*o;if(ke=ke.map((v,m)=>v+([s,p,x][m]-v)*J(1,e*8)),de(...ke)<1e-12)return;R.C=R.C.map((v,m)=>v+ke[m]*e);let d=k(he(R.C[0],R.C[2]),0);R.C[1]<d+1e-6&&(R.C[1]=d+1e-6),Oe=0}var st=e=>e>=1e3?(e/1e3).toPrecision(e>=1e4?3:2).replace(/\.0+$/,"")+" km":e>=1?e.toPrecision(2).replace(/\.0$/,"")+" m":e>=.01?(e*100).toPrecision(2)+" cm":e>=.001?(e*1e3).toPrecision(2)+" mm":(e*1e6).toPrecision(2)+" \xB5m",Ut=[[2e5,"a continent"],[2e4,"mountain ranges"],[2e3,"a valley"],[200,"a forest"],[20,"a stand of trees"],[2,"the forest floor"],[.2,"leaf litter"],[.02,"a handful of soil"],[.002,"grains"],[2e-4,"silt and cells"],[0,"clay"]];function Ie(e){if((Ie.n=(Ie.n||0)+1)%6)return;let r=He(C.clientWidth/2,C.clientHeight/2),o=r??e*3,n=2*o*Math.tan(R.fov/2)*C.clientWidth/C.clientHeight;ne("scale").textContent=st(n)+" across",ne("what").textContent=Ut.find(a=>n>=a[0])[1],ne("alt").textContent=st(e)+" up",ne("bar").style.width=J(100,k(2,(Tt(n)+20)/41*100))+"%"}requestAnimationFrame(Le);window.sylva={cam:R,L:V,light:ht,H:K,start:ut,zoomAt:We,pick:He,START:vt,sky:qe.S};})();
+</script>
+</body></html>

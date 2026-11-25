@@ -11,3 +11,7 @@ cp a/index.html "$D/source/0.2kb/forest.html"
 [ -d dialogue ] && cp -r dialogue "$D/"
 cp DATA.md "$D/"
 rm -f "$D/source/tools/notes.pyc"; find "$D" -name __pycache__ -prune -exec rm -rf {} +
+# the continuous world, built beside the ladder until it replaces the 2 MB rung
+mkdir -p "$D/continuous" "$D/source/continuous"
+cp cont/out/index.html "$D/continuous/index.html"
+cp cont/*.js cont/page.html "$D/source/continuous/"

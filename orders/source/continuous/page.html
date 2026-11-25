@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sylva, continuous</title>
+<style>
+:root { --ink: #eef0e2; --amber: #e8b25a; --lichen: #a8c99a; --glass: rgba(14, 20, 13, .62); --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#hud { position: fixed; left: 14px; top: 14px; padding: 10px 14px 12px; border-radius: 12px; background: var(--glass); color: var(--ink); font: 400 13px/1.4 system-ui, sans-serif; backdrop-filter: blur(8px); min-width: 210px; pointer-events: none; }
+#hud h1 { margin: 0 0 6px; font: italic 600 22px/1 var(--serif); }
+#scale { font: 600 20px/1.1 var(--serif); color: var(--amber); } #what { font: italic 400 15px/1.2 var(--serif); color: var(--lichen); }
+#track { margin-top: 8px; height: 4px; border-radius: 2px; background: rgba(238,240,226,.15); } #bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--lichen), var(--amber)); width: 50%; }
+#ends { display: flex; justify-content: space-between; font-size: 11px; opacity: .7; margin-top: 3px; } #alt { opacity: .75; font-size: 12px; margin-top: 4px; }
+#hint { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; background: var(--glass); color: var(--ink); font: italic 400 14px/1.3 var(--serif); backdrop-filter: blur(8px); white-space: nowrap; pointer-events: none; }
+#err[hidden] { display: none; } #err { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink); font: 16px system-ui; background: #111; }
+@media (max-width: 560px) { #hud { min-width: 0; } #hint { white-space: normal; width: calc(100% - 40px); text-align: center; } }
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"><h1>Sylva</h1><div id="scale">—</div><div id="what"></div><div id="track"><div id="bar"></div></div><div id="ends"><span>1 µm</span><span>1000 km</span></div><div id="alt"></div></div>
+<p id="hint">Scroll or pinch toward anything to go in, as far as you like · drag to look · WASD to move</p>
+<div id="err" hidden>This needs WebGL 2 with float render targets.</div>
+<script>/*SCRIPT*/</script>
+</body></html>
