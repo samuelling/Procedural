@@ -47,7 +47,7 @@ float shd(vec3 p, vec3 n) {
   return s * .25;
 }
 vec3 amb(vec3 n, float ao) { return mix(vec3(.19, .16, .11) * (uHorC + .2), uSkyC * 1.1 + uHorC * .45, n.y * .5 + .5) * ao; }
-` + (TIER > 3 ? `uniform vec2 uCv;   // underground: how much of the sky's light is shut out, and the lamp you carry
+` + (TIER > 3 ? `uniform vec4 uCv;   // underground: how much of the sky's light is shut out, and the lamp (then the night's dew and rime) you carry
 vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { vec3 l = uCam - p; float d = length(l) + 1e-3; return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao) * (1. - uCv.x) + uCv.y * vec3(1., .86, .68) * max(dot(n, l / d), 0.) / (1. + .15 * d * d)); }` : `vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao)); }`) + `vec3 fogc(vec3 c, vec3 p) { vec3 d = p - uCam; float l = length(d), f = 1. - exp(-uFog.x * .4 * l * exp(-max(.5 * (p.y + uCam.y) - uFog.z, 0.) * uFog.y)); return mix(c, sky(normalize(vec3(d.x, .06 * l, d.z))) * .8, f); }
 // moss is a rule: it takes where a surface faces up, away from the sun, low down, and where the noise says it is damp
 float mossf(vec3 p, vec3 n, float k) { return smoothstep(.45, .72, n.y * .5 + fb3(p * 1.7) * .7 + k + uMoss - .78 - dot(n.xz, uSun.xz) * .15); }
@@ -208,7 +208,7 @@ void main() {
   float vein; if (mask(uv, int(ci.x + .5), ci.w, vein) < .5) discard;
   int sp = int(ci.z + .5); vec3 n = nn; if (dot(n, uCam - pw) < 0.) n = -n;
   vec3 alb = mix(uLA[sp], uLB[sp], clamp(ci.w * .7 + h1(floor(uv.x * 5.) + ci.w * 57.) * .5 - .1, 0., 1.)) * (.85 + .3 * vein);
-` + (TIER > 3 ? ' DEW = max(smoothstep(.5, .15, uSun.y), uWx.x) * (1. - uWx.y);' + SEAF + LEAFD : '') + `
+` + (TIER > 3 ? ' DEW = max(smoothstep(.5, .15, uSun.y) * uCv.z, uWx.x) * (1. - uWx.y); alb = mix(alb, vec3(.8, .84, .88), uCv.w * smoothstep(.5, .15, uSun.y) * .55);' + SEAF + LEAFD : '') + `
   float nl = dot(n, uSun), sh = shd(pw, n * sign(nl + 1e-4));
   // lit from the front, or glowing with the sun behind it
   vec3 c = wxa(alb, pw, vec3(0., abs(n.y), 0.)) * (uSunC * (max(nl, 0.) * .85 + max(-nl, 0.) * .7 * vec3(1.15, 1.2, .55)) * sh * cshd(pw) * (.5 + .5 * ci.y) + amb(n, .35 + .65 * ci.y));` + (TIER > 3 ? ' c = c * (1. - .4 * bv * smoothstep(0., -.3, nl)) + uSunC * spec(n, pw, gl0 > 1. ? 300. : 40.) * gl0 * .3 * sh * cshd(pw);' : '') + `
@@ -294,7 +294,7 @@ export function mkRenderer(canvas, low) {
     gl.useProgram(P.p); gl.uniformMatrix4fv(P.uV, false, view); gl.uniformMatrix4fv(P.uSM, false, f.SM); gl.uniformMatrix3fv(P.uIV, false, f.IV);
     gl.uniform2f(P.uK, K[0], K[1]); gl.uniform2f(P.uR, R[0], R[1]); gl.uniform2f(P.uNF, nf[0], nf[1]); gl.uniform1f(P.uOr, or); gl.uniform1f(P.uT, f.t); gl.uniform1f(P.uMoss, f.moss);
     gl.uniform3fv(P.uCam, f.cam); gl.uniform3fv(P.uSun, f.sun); gl.uniform3fv(P.uSunC, f.sunC); gl.uniform3fv(P.uSkyC, f.skyC); gl.uniform3fv(P.uHorC, f.horC); gl.uniform3fv(P.uFog, f.fog); gl.uniform3fv(P.uWd, f.wd);
-    gl.uniform1i(P.uSh, 1); gl.uniform4fv(P.uWx, f.wx); gl.uniform4fv(P.uSe, f.se); if (TIER > 3) gl.uniform2fv(P.uCv, f.cv || [0, 0]);
+    gl.uniform1i(P.uSh, 1); gl.uniform4fv(P.uWx, f.wx); gl.uniform4fv(P.uSe, f.se); if (TIER > 3) gl.uniform4fv(P.uCv, f.cv || [0, 0, 1, 0]);
   };
   if (TIER > 3) pick = (u, v) => {
     const t = T[0]; if (!t || !t.w) return 0; gl.bindFramebuffer(gl.READ_FRAMEBUFFER, t.f);

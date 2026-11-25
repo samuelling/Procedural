@@ -362,6 +362,26 @@ inflates when the page loads (about 0.1 s):
   The valley's own ridges now stand as high over the plot as the cell's measured mean stands over its lowest point
   (854 m at Innsbruck, 40 m at Des Moines); their shape is still noise. A third height plane, each cell's highest
   point, cost 164 kB. Rowan guessed 70 kB.
+- **The place's year at every scale (round 4).** Three more things follow the measured months, in every world you
+  dive to:
+  - **Snow on the ground** is a degree-day snowpack run through the year, a sketch rule on measured inputs. It
+    melts 3 mm of water per degree-day (Hock 2003 gives 2 to 7 over snow). Precipitation falls as snow below 1 °C.
+    Each day's swing comes from the measured diurnal range. It gives Tromsø 123 mm of snow water in mid-January
+    and 261 mm in mid-March, and Boston 9 mm in January.
+  - **Deciduous leaves** come out once the warmth above 5 °C since the coldest day sums to 150 degree-days. They
+    colour after midsummer once the day's temperature falls below 10 °C, and are bare below 5 °C. These thresholds
+    are a sketch: the 5 °C base is common, but the sums are fitted species by species in the literature, and I
+    found no source for the 10 °C rule. Innsbruck: out 11 May, colouring 23 October, bare 18 November. Tromsø:
+    out 6 July, which is late for birch. Manaus and Quito never drop their leaves for cold.
+  - **Dew and rime at dawn** now form only when a leaf, cooled 2 °C below the night's low by a clear sky (none
+    under cloud), reaches the measured dew point. The dew point comes from CRU's relative humidity by the Magnus
+    formula and is shipped as the depression below the mean, in whole degrees, with the diurnal range: 226 kB more.
+    It is rime when the dew point is below freezing. Before, every dawn everywhere had dew. Now Manaus has it,
+    Calama in the Atacama never does, and Innsbruck in January gets rime.
+  - **Valley temperatures** now fall from the cell's mean height to the floor at a lapse rate weaker in winter than
+    in summer (4.2 against 6.6 °C a km at mid-latitudes), for the inversions that fill Alpine valleys. The numbers
+    are a sketch after Rolland 2003 and unverified. Innsbruck's January comes out −0.2 °C; the station is colder,
+    about −1.5 (from memory). So its valley floor still has no lasting snow in January, which is likely wrong.
 - **One sun, one year (round 3).** On Earth the sun is placed for true north (south is +z, east +x, as on the range)
   in every world you dive to. Its declination now runs smoothly through the year, not in four steps; the year starts
   on 1 March, at the start of spring. Snow lies when the month's measured temperature, interpolated between months,

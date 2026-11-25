@@ -1,6 +1,6 @@
 # Filling the 2 MB rung
 
-The top rung holds about 1.08 MB, about 965 kB of it measured ground and climate of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
+The top rung holds about 1.31 MB, about 1.19 MB of it measured ground and climate of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
 guesses at packed bytes. Nothing here is padding: every track is rules, or tables of knowledge about real forests.
 
 | Track | Guess | State |
@@ -50,4 +50,9 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
 | True north and a continuous year; snow from the month | **Done** (round 3) |
 | The range built a pass per frame instead of at once | Queued (it still freezes the page for about 0.8 s on a laptop) |
 | The next world drawn in a window before the swap (stencil) | Queued |
+| Snowpack, leaf-out and leaf-fall from the months, in every world | **Done** (round 4), thresholds a sketch |
+| Dew and rime from measured humidity and diurnal range | **Done** (round 4) |
+| Winter inversions in valleys | First pass (round 4); Innsbruck still too warm in January |
+| Phenology on the Growing Season Index (dry-season leaf drop) | Queued |
+| The litter's age and the fallen-leaf case in the small worlds | Queued |
 

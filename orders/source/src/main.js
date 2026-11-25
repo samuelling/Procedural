@@ -138,7 +138,7 @@ function grow(keepView, aged) {
   if (TIER > 3 && aged) stand.world = world;                                 // the regrowth is told where it has burnt and how high the dam stands
   B = build(G, (TIER > 3 && G.sd) || seed, Q, den, TIER > 3 && aged ? stand : undefined);
   if (TIER > 3 && B.cave) { const c = B.cave; B.xm = c.meshes; B.ref = 2; B.Hgt = (x, z) => c.floorAt(x, B.ref, z); }   // in the cave the ground is whatever floor lies below you
-  if (TIER > 3) f.cv = G.world === 'cave' ? [0, 1.3] : [0, 0];
+  if (TIER > 3) f.cv = G.world === 'cave' ? [0, 1.3, 1, 0] : [0, 0, 1, 0];
   R.load(B, G);
   if (TIER > 3 && !aged) fire = mkFire(B.S, B.strm);
   if (TIER > 3) { col = B.trees.filter((t) => t.st < 2 && t.H > 1.5).map((t) => [t.x, t.z, 0.05 + 0.011 * t.H, B.Hgt(t.x, t.z) + t.H]); for (const a of B.rocks) for (let i = 0; i < a.length; i += 12) if (a[i + 3] > 0.35) col.push([a[i], a[i + 2], a[i + 3] * 0.8, a[i + 1] + a[i + 3] * 0.7]); }
@@ -268,7 +268,7 @@ function frame(now) {
   view();
   if (TIER > 2) {                                                          // weather moves toward what was asked for; rain wets, snow settles, both pass slowly
     const w = WXS[wx], go = (i, to, r) => { const d = to - f.wx[i]; f.wx[i] += clamp(d, -r * dt, r * dt); return Math.abs(d) > 1e-3; };
-    let ch = go(2, w[0], 0.12); ch = go(0, w[2], w[2] ? 0.3 : 0.04) || ch; ch = go(1, max(w[3], TIER > 3 && G.cl && G.cl.tl ? 0.95 * clamp(-mon() / 3, 0, 1) * clamp(G.cl.Pa / 300, 0.2, 1) : season === 3 ? 0.95 * (TIER > 3 && G.cl ? G.cl.snow : 1) : 0), w[3] ? 0.08 : 0.03) || ch;   // on Earth, snow lies when this month freezes
+    let ch = go(2, w[0], 0.12); ch = go(0, w[2], w[2] ? 0.3 : 0.04) || ch; ch = go(1, max(w[3], TIER > 3 && G.cl && G.cl.swe ? 0.95 * clamp(G.cl.swe[cday()] / 15, 0, 1) : season === 3 ? 0.95 * (TIER > 3 && G.cl ? G.cl.snow : 1) : 0), w[3] ? 0.08 : 0.03) || ch;   // on Earth, snow lies when this month freezes
     const d = w[1] - fogK; if (Math.abs(d) > 1e-3) { fogK += clamp(d, -dt * 0.7, dt * 0.7); ch = 1; } f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke); if (smoke > 0.01) ch = 1;
     rainA += clamp(w[2] - rainA, -dt * 0.5, dt * 0.5); snowA += clamp(w[3] - snowA, -dt * 0.5, dt * 0.5); f.wx[3] = rainA;
     if (TIER > 3) { if (rainA > 0.8 && Math.random() < dt * 0.09) { flash = 1; if (audio) audio.boom(); } if (flash > 0.01) { flash *= Math.exp(-dt * 7) * (Math.random() < 0.3 ? 1.6 : 1); flash = min(flash, 1); ch = 1; } }
@@ -285,6 +285,7 @@ function frame(now) {
     R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night, yrs, season, f.wx[1]));
     if (audio && fr % 12 === 0) { audio.set(ws, 1 - night); audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night, season, TIER > 3 ? smoke : 0, TIER > 3 && key === 'earth' ? 'earth' + G.cl.now[0] : key, day); }
   }
+  if (TIER > 3 && G.cl && G.cl.swe && fr % 15 === 0) place2();
   if (TIER > 3) { const c = G.cl, t = c && c.tl, s = max(f.wx[1], f.se[1] * 0.6), m = t && max(0, mon()) / 6.5;   // the snowline: on Earth the higher of where this month freezes and where it never thaws, else fixed
     f.tl = t ? [t[0], t[1], min(t[2], m * 1000), min(t[3], t[1] - t[0] / 1000 + m)].map((v, i) => i > 1 ? v * (1 - 0.7 * f.wx[1]) : v) : [460, 1.85, 900 - 630 * s, 2.95 - 1.77 * f.se[1]]; }
   if (TIER > 3) { f.nf = rad > 300 && !fp ? [2, 9000] : [0.1, 4000]; f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke) * (fp || G.span ? 1 : clamp(70 / rad, 0.08, 1)); }   // from high up the valley's air is clear
@@ -408,6 +409,15 @@ if (TIER > 3) {   // anywhere on Earth: a map of the measured climate classes; c
 for (const k in act) $('b-' + k).addEventListener('click', act[k]);
 // this month's temperature at the plot, between the measured months: the calendar month runs two ahead of the year
 // here, which starts on the first of March (eight in the south, where March is autumn)
+const cday = () => Math.floor(((yearF % 1) * 365 + (G.cl.south ? 243 : 59)) % 365);   // today, as a day of the calendar year
+// on Earth the leaves follow the place: out, colouring, bare on the days its months give; and dew and rime at dawn only
+// when the leaf, cooled by a clear night, falls to the measured dew point
+const place2 = () => {
+  const c = G.cl, d = cday(), ph = c.ph, dc = c.dec, inn = (a, b) => (a <= b ? d >= a && d < b : d >= a || d < b);
+  if (ph) { f.se[0] = inn(ph[1], ph[2]) ? dc : 0; f.se[1] = inn(ph[2], ph[0]) ? dc : 0; f.se[3] = inn((ph[0] + 345) % 365, (ph[0] + 40) % 365) ? 1 : 0; }
+  if (c.D) { const x = ((yearF % 1) * 12 + (c.south ? 8 : 2) - 0.5 + 12) % 12, i = Math.floor(x), u = x - i, at = (A) => A[i] * (1 - u) + A[(i + 1) % 12] * u, T = mon(), Td = T - at(c.D), s = T - at(c.R) / 2 - 2 * (1 - f.wx[2]) - Td;
+    f.cv[2] = sstep(1, -1, s); f.cv[3] = Td < 0 ? f.cv[2] : 0; }
+};
 const mon = () => { const T = G.cl.T, x = ((yearF % 1) * 12 + (G.cl.south ? 8 : 2) - 0.5 + 12) % 12, i = Math.floor(x), u = x - i; return T[i] * (1 - u) + T[(i + 1) % 12] * u; };
 const setWx = (v) => { wx = v; $('b-wx').textContent = 'Weather: ' + v; }, setSea = (v) => {
   if (v === 0 && season !== 0 && LIFE) LIFE.spring();
@@ -466,6 +476,6 @@ if (TIER > 3) $('hint').textContent += coarse ? ' · double-tap anything to look
 const HO = TIER > 3 && $('hint').textContent, HW = coarse ? 'Walking: left thumb to walk (push far to run) · drag on the right to look · double-tap to go closer' : 'Walking: WASD · click to look with the mouse (Esc frees it) · Shift run · Z sneak · Space hop · F float · double-click to go closer · O to leave';
 grow();
 // for tests and screenshots
-window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { pass(o.years); LIFE.lapse(o.years); grow(1, 1); } if (TIER > 3 && o.strike) strike(); if (TIER > 3 && o.see !== undefined) fol = LIFE.herd.find((d) => d.kind === o.see && d.mode !== 9) || null; if (TIER > 3 && o.burn) { for (let i = 0; i < o.burn; i++) fire.step(0.5, f.wd, 0, Math.random, stand, G); grow(1, 1); } if (TIER > 3 && o.wolves) LIFE.pack(1); if (TIER > 3 && o.deep) { if (!G.ero) { G.ero = 1; grow(1, 1); } for (let i = 0; i < o.deep; i++) deep(); } if (TIER > 3 && o.walk) { walking(0); eye[0] = o.walk[0]; eye[2] = o.walk[1]; walking(1); yaw = o.yaw ?? yaw; pitch = o.pitch ?? 0; } if (TIER > 3 && o.back) for (let i = 0; i < o.back && tape.length; i++) unspool(tape.pop()); if (TIER > 3 && o.look) look(o.look[0], o.look[1]); if (TIER > 3 && o.at) { fz = 1; fly = [o.at, o.r || 0.35, o.yaw ?? yaw, o.pitch ?? max(0.02, pitch)]; } if (TIER > 3 && o.dam) { world.dam = o.dam; grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
+window.sylva = { get B() { return B; }, get L() { return LIFE; }, set(o) { if (o.yaw !== undefined) yaw = o.yaw; if (o.pitch !== undefined) pitch = o.pitch; if (o.rad) rad = o.rad; if (o.tgt) tgt = o.tgt; if (o.day !== undefined) { day = o.day; setSun(); } if (TIER > 3 && o.yf !== undefined) { yearF = o.yf; setSea(Math.floor((yearF % 1) * 4)); setSun(); } if (TIER > 3 && o.clock !== undefined) { clock = o.clock; $('b-time').textContent = 'Time: ' + TIMES[clock]; } if (TIER > 3 && o.fol) $('b-fol').click(); if (TIER > 3 && o.years) { pass(o.years); LIFE.lapse(o.years); grow(1, 1); } if (TIER > 3 && o.strike) strike(); if (TIER > 3 && o.see !== undefined) fol = LIFE.herd.find((d) => d.kind === o.see && d.mode !== 9) || null; if (TIER > 3 && o.burn) { for (let i = 0; i < o.burn; i++) fire.step(0.5, f.wd, 0, Math.random, stand, G); grow(1, 1); } if (TIER > 3 && o.wolves) LIFE.pack(1); if (TIER > 3 && o.deep) { if (!G.ero) { G.ero = 1; grow(1, 1); } for (let i = 0; i < o.deep; i++) deep(); } if (TIER > 3 && o.walk) { walking(0); eye[0] = o.walk[0]; eye[2] = o.walk[1]; walking(1); yaw = o.yaw ?? yaw; pitch = o.pitch ?? 0; } if (TIER > 3 && o.back) for (let i = 0; i < o.back && tape.length; i++) unspool(tape.pop()); if (TIER > 3 && o.look) look(o.look[0], o.look[1]); if (TIER > 3 && o.at) { fz = 1; fly = [o.at, o.r || 0.35, o.yaw ?? yaw, o.pitch ?? max(0.02, pitch)]; } if (TIER > 3 && o.dam) { world.dam = o.dam; grow(1, 1); } if (TIER > 2 && o.wx) setWx(o.wx); if (TIER > 3 && o.season !== undefined) setSea(o.season); if (TIER > 2 && o.skip) { const w = WXS[wx]; f.wx[0] = w[2]; f.wx[1] = max(w[3], season === 3 ? 0.95 : 0); f.wx[2] = w[0]; fogK = w[1]; rainA = w[2]; snowA = w[3]; setSun(); } if (o.den) { den = o.den; $('den').value = round(den * 100); denLabel(); grow(1); } idle = 0; }, info: () => ({ key, seed, mut, den, year: TIER > 3 && year, stand: TIER > 3 && stand.length, log: TIER > 3 && $('log').textContent, wx: TIER > 2 && wx, season, night, life: TIER > 2 && LIFE.counts, trees: B.st.trees, caps: B.caps.length / 12, cards: B.cards.length / 12, time, scale, hdr: R.hdr }) };
 if (TIER > 3) Object.defineProperty(window.sylva, 'cam', { get: () => ({ tgt, rad, yaw, pitch, fz, fly, eye, fp, wp, ong, noise: LIFE.noise }) });   // for the headless checks
 requestAnimationFrame(frame);
