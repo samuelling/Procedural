@@ -1,6 +1,6 @@
 # Filling the 2 MB rung
 
-The top rung holds about 113 kB of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
+The top rung holds about 114 kB of its 2,000,000 bytes. This is the plan for the rest, and the state of it. Sizes are
 guesses at packed bytes. Nothing here is padding: every track is rules, or tables of knowledge about real forests.
 
 | Track | Guess | State |
@@ -26,3 +26,18 @@ guesses at packed bytes. Nothing here is padding: every track is rules, or table
   checked against a source. Measured data from a real dataset is allowed if it is not an image or a model, and is
   labelled as measured.
 - What has only been confirmed in the simulation log, and not seen in a render, is listed in the README.
+
+## Binding the scales (overnight, from the dialogue in `dialogue/`)
+
+| Step | State |
+| --- | --- |
+| Park the plot across dives; years away lived on return | **Done** (round 1) |
+| Site record: place, sun, log species and seed carried in | **Done** (round 1) |
+| Dive at a real log; acorns only near an oak | **Done** (round 1) |
+| Range out-dive onto a headwater; home forest colour | **Done** (round 1). To do: treeline from the place's climate |
+| Radial dissolve from the spot | **Done** (round 1). To do: a viewfinder of the next world's extent |
+| Leaf world takes the species' colour and, for conifers, needle stomata in rows | Queued |
+| Bark beetle galleries per host | Queued |
+| Weather and night change the small worlds (stomata close, moss folds, tardigrades curl) | Queued |
+| Things that cross scales: falling leaves, a hoof, the plot's mites setting the moss world's | Queued |
+

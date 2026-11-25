@@ -319,7 +319,7 @@ export function mkRenderer(canvas, low) {
       W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
       if (TIER > 3) W.xm = B.xm && B.xm.map((m) => mesh(m));
       if (TIER > 3) W.str = B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // the rock bed a gorge cuts through
-      if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const tot = G.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => G.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }
+      if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const H = G.home || G, tot = H.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => H.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }   // the range's forest is the colour of the forest you came from
       gl.bindVertexArray(null);
     },
     // f: { V, K, IV, cam, sun, sunC, skyC, horC, fog, wd, t, moss, SM, LV, LK, LNF, focus, shadow }
@@ -328,7 +328,7 @@ export function mkRenderer(canvas, low) {
       const G = W.G, pal = W.pal;
       const geometry = (PMx, PCx, PKx, view, K, R, or, nf, shadow) => {
         com(PMx, f, view, K, R, or, nf);
-        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PMx.uStr, W.str); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
+        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PMx.uStr, W.str); gl.uniform3fv(PMx.uFor, W.for); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
         gl.bindVertexArray(W.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, W.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, W.land.n - W.nTop, gl.UNSIGNED_SHORT, W.nTop * 2); }
         if (TIER > 3 && W.xm) { gl.uniform1f(PMx.uMat, 1); for (const m of W.xm) { gl.bindVertexArray(m.v); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0); } }   // rock in three dimensions: a cave

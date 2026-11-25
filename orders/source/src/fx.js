@@ -820,7 +820,7 @@ export const RANGEG = `
   } else if (uMat < 1.5 && uLeaf > 2.5) {
     vec2 p = pw.xz; float y = pw.y, sl = 1. - n.y, w1 = vn(p * 1.3), w2 = vn(p * 5.3 + 3.), w3 = vn(p * 21. + 7.);
     float tl = 1.85 + .4 * (w1 - .5) + .35 * n.x - .4 * sl, sn = mix(2.95, 1.2, uSe.y) + .35 * (w1 - .5) - .25 * n.x;
-    vec3 fo = mix(vec3(.04, .1, .045), vec3(.09, .17, .06), w2 * .7 + w3 * .3);
+    vec3 fo = mix(vec3(.04, .1, .045), vec3(.09, .17, .06), w2 * .7 + w3 * .3); if (uFor.g > .01) fo = mix(fo, uFor * (.3 + .35 * w2), .75);
     fo = mix(fo, mix(vec3(.42, .26, .06), vec3(.3, .14, .05), w3), uSe.x * smoothstep(1.3, .8, y) * smoothstep(.3, .7, w2) * .8);
     alb = mix(fo, mix(vec3(.24, .28, .12), vec3(.4, .37, .28), smoothstep(.2, .5, sl)) * (.85 + .3 * w3), smoothstep(tl - .12, tl + .12, y));
     alb = mix(alb, vec3(.34, .32, .3) * (.75 + .45 * w3), smoothstep(.42, .62, sl + .15 * w2));

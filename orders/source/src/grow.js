@@ -95,7 +95,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
     const ey = Hgt(ex, ez); for (let k = 0; k < 9; k++) rock(k % 3, ex - 2.4 - rr(0, 1.2), ez + (k - 4) * 0.85, rr(1.2, 2.3), rr(0.75, 1), 0.35);
     cap([ex - 1.5, ey + 0.1, ez - 0.9], 1, [ex - 1.5, ey + 0.1, ez + 0.9], 1, 0, 0, 0.5, 18); placed.push({ x: ex - 1.5, z: ez, cr: 4 }); lv = { mouth: [ex - 1.5, ez] };
   }
-  if (TIER > 3 && G.world) (G.world === 'lake' || G.world === 'cave' ? underBuild : microBuild)(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks, vein: lv, stomata: [], bark: lv, cave: lv, sea: G.sea });   // the worlds further in, and under
+  if (TIER > 3 && G.world) (G.world === 'lake' || G.world === 'cave' ? underBuild : microBuild)(G.world, { cap, card, Hgt, hs, rnd, blockers, low, log: lg, rocks, vein: lv, stomata: [], bark: lv, cave: lv, sea: G.sea, ls: G.trees.length > 2 ? 2.5 : 0.5, oak: G.oak });   // the worlds further in, and under
   if (TIER > 2 && strm) for (let n = low ? 30 : 56; n > 0; n--) {                       // stones in and along the stream
     const x = rr(-hs + 1, hs - 1), z = strm.zc(x) + gs() * (strm.wid(x) * 0.7 + 0.4); if (abs(z) < hs - 1) rock((rnd() * 4) | 0, x, z, rr(0.12, 0.5) * (rnd() < 0.15 ? 2.2 : 1), rr(0.5, 0.9), rr(0.3, 1));
   }
@@ -315,7 +315,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   const pal = { la: new Float32Array(24), lb: new Float32Array(24), ba: new Float32Array(24), bb: new Float32Array(24), bp: new Float32Array(32) };
   G.trees.forEach((sp, i) => { pal.la.set(sp.leaf.a, i * 3); pal.lb.set(sp.leaf.b, i * 3); pal.ba.set(sp.bark.a, i * 3); pal.bb.set(sp.bark.b, i * 3); pal.bp.set([sp.bark.t, sp.bark.sc, TIER > 3 && sp.leaf.t === 1 ? 1 : 0, 0], i * 4); });
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
-  const vy = TIER > 3 && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' && { cave: lv });
+  const vy = TIER > 3 && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' ? { cave: lv } : G.world === 'range' && { spot: lv.spot });
   if (TIER > 3 && vy && lv && lv.mouth) vy.mouth = lv.mouth;   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
   const sr = rng(seed ^ 0x77);
   if (TIER > 3 && G.world === 'lake') water = sheet(Hgt, 0, -hs, hs, -hs, hs, 96);   // the lake's surface, seen from below

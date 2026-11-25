@@ -58,5 +58,9 @@ export function rangeLand(rnd, hs, stage = 10) {
       const y = 2.6 + rnd() * 0.3; for (let m = 0; m < 7; m++) { const r = 0.25 + rnd() * 0.45, a = rnd() * PI * 2, d = rnd() * 0.9; cap([x + cos(a) * d, y + r * 0.4 + rnd() * 0.3, z + sin(a) * d], r, [x + cos(a) * d + 0.2, y + r * 0.5, z + sin(a) * d], r * 0.9, 0, 0, 0.5, 8); }
     }
   };
-  return { Hgt, wet, range: { draw } };
+  // where the plot lies: a headwater stream (12 to 60 km² draining through, a brook a few metres wide) running roughly
+  // east or west, below the treeline, nearest the middle
+  let spot = null, bd = 1e9; for (let q = 0; q < NN; q++) { const r = rc[q], d = r - q, x = xy(q), y = f[q];
+    if (A[q] >= 2 && A[q] <= 10 && r >= 0 && !lake[q] && (d === 1 || d === -1) && y > 0.4 && y < 1.5) { const e = Math.hypot(x[0], x[1]); if (e < bd) { bd = e; spot = [x[0], y * U, x[1]]; } } }
+  return { Hgt, wet, range: { draw, spot } };
 }

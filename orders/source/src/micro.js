@@ -60,7 +60,7 @@ export function microBuild(world, c) {
   const { cap, card, Hgt, hs, rnd, blockers, low, log, rocks } = c, rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * Math.log(1 - rnd())) * cos(TAU * rnd());
   const up = (p, h) => [p[0], p[1] + h, p[2]];
   if (world === 'log') {
-    const { zc, R, cy } = log, sd = 0 + 0.5;
+    const { zc, R, cy } = log, sd = c.ls;   // the wood of the log you dived at
     let prev = null;
     for (let x = -hs - 12; x <= hs + 12; x += 4) {                         // the log: grey wood, and over most of it the old bark
       const p = [x, cy(x), zc(x)], r = R(x);
@@ -83,7 +83,7 @@ export function microBuild(world, c) {
       const x = rr(-hs + 3, hs - 3), z = zc(x) + (rnd() < 0.5 ? -1 : 1) * (R(x) + rr(1, 6)), y = Hgt(x, z), s = rr(0.8, 1.8);
       cap([x, y + 0.1, z], s, [x, y + s * 0.35, z], s * 0.75, 0, 0, rr(0.05, 0.35), 3);
     }
-    for (let i = 0; i < 14; i++) {                                        // acorns, some still in their cups
+    for (let i = 0; i < (c.oak === false ? 0 : 14); i++) {              // acorns, some still in their cups, if an oak stands near enough
       const x = rr(-hs + 2, hs - 2), z = rr(-hs + 2, hs - 2), y = Hgt(x, z), a = rnd() * TAU, d = [cos(a), 0.15, sin(a)];
       cap([x, y + 0.7, z], 0.7, [x + d[0] * 1.2, y + 0.75, z + d[2] * 1.2], 0.55, 0, 0, rr(0.76, 0.9), 3);
       if (rnd() < 0.5) cap([x - d[0] * 0.2, y + 0.75, z - d[2] * 0.2], 0.78, [x + d[0] * 0.25, y + 0.85, z + d[2] * 0.25], 0.6, 0, 0, sd, 1);

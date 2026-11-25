@@ -172,6 +172,29 @@ The two worlds are never drawn at once, so the dissolve is between matched views
 The sizes are right to within a factor of two or so; the shapes are simplified, and the soil is lit as if the litter
 above had been lifted away.
 
+## One world through the scales (2 MB rung)
+
+The ladder used to grow each world from a fixed genome, so every log was the same log and the plot was regrown, and
+its history lost, when you came back out. Now:
+
+- **The plot waits for you.** Going in or out keeps the plot as it is (its year, its tape, its evolved species, its
+  fire scars and dam, its animals) and comes back to the same spot. Time runs on while you are away: the season turns
+  in every world, the years are counted, and on return the plot lives them (up to sixty at once) and says how many.
+- **You dive at a real log.** Zooming in from the plot glides to the fallen trunk nearest where you were looking (within
+  14 m) and the log world is that log: its wood and bark are that species' (a birch log is white), its seed comes from
+  that trunk, so two logs give two different worlds and the same log the same one every time, down through the moss,
+  the soil and the leaf. Acorns lie by it only if a live oak stands within 10 m. Under the bark says whose log it is,
+  and, on a broadleaf, that the galleries drawn are a spruce engraver's and its own beetles' are not drawn yet.
+- **The place goes with you.** On Earth the inner worlds keep the place's sun and its snow (or lack of it).
+- **The range is your plot's surroundings.** Going out lands on a headwater stream in the range (12 to 60 km²
+  draining through it, flowing east or west, below the treeline, nearest the middle), and the range's forest is the
+  colour of the forest you came from. The plot is not marked: at this scale it would be a fortieth of a pixel.
+- **The new world opens from the spot.** The last frame of the old world now opens outward from the middle of the view,
+  the point you went toward, instead of fading all at once (a plain fade when motion is reduced or frames are slow).
+
+How this was decided, and what is queued, is in `dialogue/`: two Claude agents arguing it out, Ash proposing and
+Rowan checking against the code.
+
 ## Deep time, and the tape (2 MB rung)
 
 **Rewind and Fast forward.** Before every stride of time (five years in decades, 250 in millennia) the forest, its
