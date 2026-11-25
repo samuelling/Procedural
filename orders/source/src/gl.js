@@ -378,7 +378,7 @@ export function mkRenderer(canvas, low) {
       if (TIER > 3) f.gx = (Wx, PMx, PCx, PKx, fi, view, K, R, or, nf, shadow) => {
         const G = Wx.G, pal = Wx.pal;
         com(PMx, fi, view, K, R, or, nf);
-        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : 0); gl.uniform3fv(PMx.uStr, Wx.str); gl.uniform3fv(PMx.uFor, Wx.for); gl.uniform4fv(PMx.uTl, f.tl); gl.uniform1f(PMx.uNdl, 0); }
+        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : 0); gl.uniform3fv(PMx.uStr, Wx.str); gl.uniform3fv(PMx.uFor, Wx.for); gl.uniform4fv(PMx.uTl, f.tl); gl.uniform1f(PMx.uNdl, 0); }
         gl.bindVertexArray(Wx.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, Wx.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, Wx.land.n - Wx.nTop, gl.UNSIGNED_SHORT, Wx.nTop * 2); }
         gl.uniform1f(PMx.uMat, 0); for (const s of Wx.stones) if (s.k) { gl.bindVertexArray(s.v); gl.drawElementsInstanced(gl.TRIANGLES, s.n, gl.UNSIGNED_SHORT, 0, s.k); }

@@ -4,7 +4,7 @@
 //   meshes   the ground, the plot's cut sides, and a few stones that are placed many times
 import { rng, fbm } from './noise.js';
 const { PI, sin, cos, hypot, abs, max, min, round, pow, exp, log, sqrt, floor } = Math, TAU = PI * 2, RAD = PI / 180;
-const nrm = (v) => { const l = hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+const sm3 = (t) => { t = min(1, max(0, t)); return t * t * (3 - 2 * t); }, nrm = (v) => { const l = hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const perp = (n, u) => { const k = n[0] * u[0] + n[1] * u[1] + n[2] * u[2]; return nrm([n[0] - u[0] * k, n[1] - u[1] * k, n[2] - u[2] * k]); };
 const UP = [0, 1, 0];
@@ -58,6 +58,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
     const wd = (x, z) => min(ws ? ws.dist(x, z) : 1e9, lk ? (sqrt(((x - lk.x) / lk.rx) ** 2 + ((z - lk.z) / lk.rz) ** 2) - 1.05) * lk.rz : 1e9);   // metres from the water, stream or lake
     Hgt = (x, z) => off.H(x + X, z + Z);
     wet = (x, z) => { const a = x + X, b = z + Z; return max(min(1, max(0, fbm(a * 0.045 + oz + 31, 3, b * 0.045 + ox, 3) * 1.5 - 0.25 - H0(a, b) / (L.amp * 6))), 1 - max(0, wd(a, b)) / 6); };   // as damp as the plot's own ground would be there
+    if (G.world === 'range') wet = () => 0;                                 // (no rivers drawn on the range beyond the range)
     if (ws || lk) off.s = { dist: (x, z) => wd(x + X, z + Z), zc: (x) => (ws ? ws.zc(x + X) : 1e9) - Z, wid: (x) => (ws ? ws.wid(x + X) : 0), lvl: (x) => (ws ? ws.lvl(x + X) : -1e9), xd: -1e9, px: -1e9, fl: 0, deep: () => false };
   }
   // above the 20 kB rung a stream crosses the plot. It falls steadily from one side to the other, the land is drawn
@@ -84,9 +85,10 @@ export function build(G, seed, q = 1, den = 1, stand) {
   else if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
   if (TIER > 3 && G.world === 'leaf' && G.off) { const v0 = G.off.lv, X = G.off.X, Z = G.off.Z; lv = (x) => v0(x + X) - Z; }   // and the same vein
   else if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
-  if (TIER > 3 && G.world === 'lake') Hgt = lakeLand(Hgt, hs);   // a lake bed
+  if (TIER > 3 && G.world === 'lake' && !G.off) Hgt = lakeLand(Hgt, hs);   // (beside it, the bed carries on as the lake's own Hgt says)   // a lake bed
   if (TIER > 3 && G.world === 'cave') { lv = cave3(rnd, hs); Hgt = () => -60; }   // a cave in the rock; the ordinary ground goes far below, out of sight
-  if (TIER > 3 && G.world === 'range') { const c = G.cl, l = rangeLand(rnd, hs, G.stage ?? 10, c && c.elev != null && ((x, z) => { const m = elev(c.lat - z * 10 / 111.2, c.lon + x * 10 / (111.2 * Math.cos(c.lat * Math.PI / 180))); return m === null ? null : m / 1000; }), c && c.lon != null ? '@' + c.lat + ',' + c.lon : ''); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
+  if (TIER > 3 && G.world === 'range' && G.off) lv = { draw: () => 0, spot: [0, 0, 0] };   // beside the range, the mountains as the far land has them
+  else if (TIER > 3 && G.world === 'range') { const c = G.cl, l = rangeLand(rnd, hs, G.stage ?? 10, c && c.elev != null && ((x, z) => { const m = elev(c.lat - z * 10 / 111.2, c.lon + x * 10 / (111.2 * Math.cos(c.lat * Math.PI / 180))); return m === null ? null : m / 1000; }), c && c.lon != null ? '@' + c.lat + ',' + c.lon : ''); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
   if (TIER > 3 && G.world === 'bark') { const l = barkLand(Hgt, rnd, hs); Hgt = l.Hgt; lv = l.bark; }   // beetle galleries cut into the wood, and the bark that is left
   const caps = [], cards = [], st = { trees: 0, wood: 0, leaves: 0, rocks: 0, under: 0 };
   const cap = (a, ra, b, rb, s0, s1, id, k) => caps.push(a[0], a[1], a[2], ra, b[0], b[1], b[2], rb, s0, s1, id, k);
@@ -336,13 +338,17 @@ export function build(G, seed, q = 1, den = 1, stand) {
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
   const vy = TIER > 3 && !G.off && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' ? { cave: lv } : G.world === 'range' ? { spot: lv.spot } : {});
   if (TIER > 3 && vy && lv && lv.mouth) vy.mouth = lv.mouth; if (TIER > 3 && vy && !G.span && G.cl && G.cl.elev != null) vy.hz = horizon(G.cl);   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
-  if (TIER > 3 && vy && G.span && !G.off && G.world !== 'cave' && G.world !== 'lake') {   // a small world goes on past its patch: its own ground, out to where the haze takes it
+  if (TIER > 3 && vy && G.span && !G.off && G.world !== 'cave') {   // a small world goes on past its patch: its own ground, out to where the haze takes it
     const grid = G.world === 'range' || G.world === 'bark', K = low ? 22 : 30, M = low ? 96 : 160, R0 = hs * 20, rv = [], ri = [];
     let e0 = 0; for (let k = 0; k < 64; k++) { const a = k / 64 * TAU; e0 += Hgt(max(-hs, min(hs, cos(a) * hs * 1.5)), max(-hs, min(hs, sin(a) * hs * 1.5))) / 64; }
+    let hm = 0, hx = -1e9; if (G.world === 'range') for (let k = 0; k < 400; k++) { const y = Hgt((k % 20 / 19 - 0.5) * S, (((k / 20) | 0) / 19 - 0.5) * S); hm += y / 400; hx = max(hx, y); }
+    const O = G.world === 'range' ? (x, z) => { const q = 1 - abs(2 * fbm(x * 9 / S + ox, 7, z * 9 / S + oz, 5) - 1), b = fbm(x * 1.5 / S + oz, 3, z * 1.5 / S + ox, 2); return hm * 0.5 + (hx - hm) * 1.2 * (0.35 + 0.65 * q * q) * sm3(b * 2 - 0.4); }   // ridges as high as the range's own, in belts
+      : (x, z) => e0 + L.amp * 1.6 * (fbm(x * L.f * 0.4 + ox, 7, z * L.f * 0.4 + oz, 4) - 0.5);
     const Hx = grid ? (x, z) => { const cx = max(-hs, min(hs, x)), cz = max(-hs, min(hs, z)), d = max(abs(x), abs(z)) - hs, t = min(1, max(0, d / (hs * 0.9))), u = t * t * (3 - 2 * t);
-      return Hgt(cx, cz) * (1 - u) + u * (e0 + L.amp * 1.6 * (fbm(x * L.f * 0.4 + ox, 7, z * L.f * 0.4 + oz, 4) - 0.5)); } : Hgt;   // (a ground drawn on a grid fades from its edge into the same kind of land)
+      return Hgt(cx, cz) * (1 - u) + u * O(x, z); } : Hgt;
+    if (G.world === 'range') vy.hx = Hx;   // (a ground drawn on a grid fades from its edge into the same kind of land)
     for (let k = 0; k <= K; k++) { const h = hs * 0.998 * pow(R0 / hs, k / K), e = h * 0.02;
-      for (let m = 0; m < 4 * M; m++) { const t = m / M, sd = floor(t), u = (t - sd) * 2 - 1, x = [u, 1, -u, -1][sd] * h, z = [-1, u, 1, -u][sd] * h, y = Hx(x, z), nn = nrm([Hx(x - e, z) - Hx(x + e, z), 2 * e, Hx(x, z - e) - Hx(x, z + e)]); rv.push(x, y, z, nn[0], nn[1], nn[2], 1, wet(x, z)); } }
+      for (let m = 0; m < 4 * M; m++) { const t = m / M, sd = floor(t), u = (t - sd) * 2 - 1, x = [u, 1, -u, -1][sd] * h, z = [-1, u, 1, -u][sd] * h, y = Hx(x, z), nn = nrm([Hx(x - e, z) - Hx(x + e, z), 2 * e, Hx(x, z - e) - Hx(x, z + e)]); rv.push(x, y, z, nn[0], nn[1], nn[2], 1, grid ? wet(max(-hs, min(hs, x)), max(-hs, min(hs, z))) * max(0, 1 - (max(abs(x), abs(z)) - hs) / (hs * 0.3)) : wet(x, z)); } }   // (a grid's rivers end at its edge)
     for (let k = 0; k < K; k++) for (let m = 0; m < 4 * M; m++) { const a = k * 4 * M + m, b = k * 4 * M + (m + 1) % (4 * M); ri.push(a, b, a + 4 * M, b, b + 4 * M, a + 4 * M); }
     vy.ring = { v: new Float32Array(rv), i: new Uint16Array(ri) };
     if (G.world === 'log') vy.lg = lg; if (G.world === 'leaf') vy.lv = lv;   // (for the squares beside it)

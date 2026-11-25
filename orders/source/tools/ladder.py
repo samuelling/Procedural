@@ -6,7 +6,7 @@ TRY = ['Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times 
        '<b>Places → Anywhere on Earth</b>, then click where you grew up',
        '<b>Happenings → Wolves</b>, then <b>Time → Fast forward</b>, and watch the seedlings come back',
        '<b>Places → Another age</b>, and stand among the coal swamps’ scale trees',
-       '<b>You → Walk</b> and keep going past the edge, at any scale. The forest, the log, the soil and the leaf all go on, grown around you as you come near']
+       '<b>You → Walk</b> and keep going past the edge, at any scale. The forest, the mountain range, the lake bed, the log, the soil and the leaf all go on, grown around you as you come near']
 R = [  # folder, allowance, built file, title, one line, as big as, things to try, everything in it
  ('0.2kb', 200, 'a/index.html', 'One formula',
   'Eighty firs fading into mist, from one loop. Each tree’s size, height and paleness come from its number in the line.',
