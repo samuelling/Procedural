@@ -288,11 +288,12 @@ if (TIER > 3) {
 const LAD = ['', 'log', 'moss', 'soil', 'leaf'];
 let home = 'mixed', dive = 0;
 const zoom = (dir) => {
-  if (dive) return; const i = max(0, LAD.indexOf(G.world || (key === 'moss' ? 'moss' : ''))), j = clamp(i + dir, 0, 4); if (i === j) return;
+  if (dive) return; const i = key === 'bark' ? 2 : max(0, LAD.indexOf(G.world || (key === 'moss' ? 'moss' : ''))), j = clamp(i + dir, 0, 4); if (i === j || (key === 'bark' && dir > 0)) return;
+  const nb = i === 1 && dir > 0 && B.Hgt(tgt[0], tgt[2]) > 6;                // diving at the log itself goes under its bark; anywhere else, into the moss
   if (!i) home = key; walking(0); dive = 1; fly = null; fz = 0; const fd2 = $('fade'); fd2.style.opacity = 1;
   const r0 = rad; let t = 0; const go = () => { t += 0.05; rad = r0 * (dir > 0 ? 1 - 0.95 * t : 1 + 6 * t); pitch += (0.9 - pitch) * 0.1; if (t < 1) return setTimeout(go, 30);
-    key = j ? LAD[j] : home; mut = 0; grow(); const r1 = rad, p1 = pitch; rad = dir > 0 ? r1 * 8 : r1 * 0.15; pitch = dir > 0 ? 0.9 : p1; fly = [tgt.slice(), r1, yaw, p1]; fz = 0; fd2.style.opacity = 0; dive = 0;
-    $('hint').textContent = ['×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j] + ' · + further in, − back out'; $('hint').hidden = false; };
+    key = nb ? 'bark' : j ? LAD[j] : home; mut = 0; grow(); const r1 = rad, p1 = pitch; rad = dir > 0 ? r1 * 8 : r1 * 0.15; pitch = dir > 0 ? 0.9 : p1; fly = [tgt.slice(), r1, yaw, p1]; fz = 0; fd2.style.opacity = 0; dive = 0;
+    $('hint').textContent = (nb ? '×1000: under the bark, 6.4 cm across' : ['×1: the plot, 64 m across', '×100: a rotting log, 64 cm across', '×1000: moss on the log, 6.4 cm across', '×10,000: the soil, 6.4 mm across', '×100,000: the underside of a leaf, 0.64 mm across'][j]) + (nb ? ' · − back out' : ' · + further in, − back out'); $('hint').hidden = false; };
   go();
 };
 const act = {

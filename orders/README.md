@@ -118,8 +118,9 @@ sky. Ants run up some trunks, and about one leaf in thirty has a ladybird on it.
 
 ## Powers of ten, inward (2 MB rung)
 
-Three more worlds, built from the same parts as the forest at other scales, and a way to dive between them: + (or In ×10)
-goes a step further in, − (or Out ×10) back out, along forest ×1 → rotting log ×100 → moss ×1000 → soil ×10,000 → leaf ×100,000. The
+Four more worlds, built from the same parts as the forest at other scales, and a way to dive between them: + (or In ×10)
+goes a step further in, − (or Out ×10) back out, along forest ×1 → rotting log ×100 → moss ×1000 → soil ×10,000 → leaf ×100,000.
+Diving at the log itself rather than the ground beside it goes under its bark instead of into the moss. The
 view rushes at the ground, whites out, and comes in on the next world from above.
 
 - **Rotting log ×100** (a unit is a centimetre, 64 cm across). The log is part of the ground, so animals, seedlings,
@@ -128,6 +129,17 @@ view rushes at the ground, whites out, and comes in on the next world from above
   (a new card type: one blade, tan, russet, gold or rotting brown), oak seedlings, and haircap moss on the log.
   Woodlice (seven plates, seven pairs of legs) graze; a centipede (fifteen rippling segments) hunts them; a ground
   beetle and slugs (soft bodies that swell and thin as they glide, a mantle, two pairs of tentacles).
+- **Under the bark ×1000** (a unit is a millimetre, 6.4 cm across): the sapwood of a dead spruce where the bark has
+  come away, pale with the grain along it, growth rings showing as broad flames, and patches of the blue-grey stain
+  the beetles carry in. On it, one family of engraver beetles' work, cut into the ground itself: a mating chamber, a
+  mother gallery each way along the grain, egg niches on alternate sides, and from each a grub's tunnel out across the
+  grain, wider as it grew, packed with brown frass, ending in an oval pupal chamber. The oldest eggs are nearest the
+  chamber, so those tunnels are longest and further along: eggs, then curled white grubs with brown heads, then pupae,
+  then pale young adults; the mother is still at the end of her gallery. A strip of bark still clings along one side
+  (red-brown scales on top, cream inner bark under cork at the torn edge, round exit holes through it) and the tunnels
+  run on beneath it. Ambrosia beetles' black pinholes, beads of resin along the edge, and honey fungus: a white fan of
+  mycelium from one corner and black bootlace rhizomorphs along the grain. Bark beetles walk over it all; checkered
+  beetles (black head, red front, banded wing cases) hunt them.
 - **Soil ×10,000** (a unit is a tenth of a millimetre, 6.4 mm across): sand grains; a fine root with root hairs
   behind its tip; fungal threads that grow tip-first, branch, follow the surface over the grains and wrap the root,
   with spores resting on them; pin moulds (a stalk a millimetre or two tall with a black ball of spores) and
@@ -174,9 +186,10 @@ Checked: every forest of every 3D rung grows with no non-finite geometry at both
 succession run with populations bounded and nothing non-finite; each rung renders without console errors in headless Chrome with software WebGL,
 at desktop and phone sizes; the published pages match the built files byte for byte and unpack on the live site.
 
-Inward worlds: all three seen in renders, the soil also after diving into it from the moss, the leaf from above and
+Inward worlds: all four seen in renders (under the bark from above and close in, and after diving at the log and
+back out), the soil also after diving into it from the moss, the leaf from above and
 from a few cell-widths away (jigsaw cells, stomata, hairs, pollen and both mites seen; the bacteria and the hypha's
-entry into the stoma not picked out); woodlice, beetles, slugs, the centipede, nematodes, tardigrades and both mites
+entry into the stoma not picked out); woodlice, beetles, slugs, the centipede, nematodes, tardigrades, both mites and both bark beetles
 confirmed in the simulation over fourteen years (births, deaths, arrivals) but the log and soil animals not looked at up close.
 
 Valley: seen in renders from the valley overview in summer, autumn and winter, from the plot overview, and from the
