@@ -20,6 +20,7 @@ const FUR = `if (kd > 3) {
     } else alb *= .8 + .4 * vn3(Q * 6.);
 ` + (TIER > 3 ? FEATHD + CROWND : '') + `  } else`;
 const WX = TIER > 2 ? WX3 : `float gst(vec3 p) { return 1.; } float cshd(vec3 p) { return 1.; } vec3 wxa(vec3 a, vec3 p, vec3 n) { return a; }`;
+const Z4 = [0, 0, 1, 0], mt = (M, X, Z) => { const o = M.slice(); for (let i = 0; i < 4; i++) o[12 + i] = M[i] * X + M[8 + i] * Z + M[12 + i]; return o; };
 const PRE = `#version 300 es
 precision highp float; precision highp sampler2DShadow;
 uniform mat4 uV, uSM; uniform mat3 uIV; uniform vec2 uK, uR, uNF; uniform float uOr, uT, uMoss;
@@ -47,7 +48,11 @@ float shd(vec3 p, vec3 n) {
   return s * .25;
 }
 vec3 amb(vec3 n, float ao) { return mix(vec3(.19, .16, .11) * (uHorC + .2), uSkyC * 1.1 + uHorC * .45, n.y * .5 + .5) * ao; }
-` + (TIER > 3 ? `uniform vec4 uCv;   // underground: how much of the sky's light is shut out, and the lamp (then the night's dew and rime) you carry
+` + (TIER > 3 ? `uniform vec4 uCv; uniform vec4 uHd; uniform highp int uHm;   // walking out: the squares round you (uHd: the middle one, their size, on) that have their own ground
+bool hid(vec2 p) { if (uHd.w < .5) return false; vec2 c = floor(p / uHd.z + .5) - uHd.xy; if (abs(c.x) > 2.5 || abs(c.y) > 2.5) return false; int b = int((c.y + 2.) * 5. + c.x + 2.5); return ((uHm >> b) & 1) == 1; }
+vec3 hd3(vec3 p) { return hid(p.xz) ? vec3(0., -1e5, 0.) : vec3(0.); }
+#define sway(p) (sway(p) + hd3(p))   // (everything that sways is a plant: where a square has its own, the far land's step aside, far below)
+   // underground: how much of the sky's light is shut out, and the lamp (then the night's dew and rime) you carry
 vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { vec3 l = uCam - p; float d = length(l) + 1e-3; return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao) * (1. - uCv.x) + uCv.y * vec3(1., .86, .68) * max(dot(n, l / d), 0.) / (1. + .15 * d * d)); }` : `vec3 lit(vec3 alb, vec3 n, vec3 p, float ao) { return wxa(alb, p, n) * (uSunC * max(dot(n, uSun), 0.) * shd(p, n) * cshd(p) + amb(n, ao)); }`) + `vec3 fogc(vec3 c, vec3 p) { vec3 d = p - uCam; float l = length(d), f = 1. - exp(-uFog.x * .4 * l * exp(-max(.5 * (p.y + uCam.y) - uFog.z, 0.) * uFog.y)); return mix(c, sky(normalize(vec3(d.x, .06 * l, d.z))) * .8, f); }
 // moss is a rule: it takes where a surface faces up, away from the sun, low down, and where the noise says it is damp
 float mossf(vec3 p, vec3 n, float k) { return smoothstep(.45, .72, n.y * .5 + fb3(p * 1.7) * .7 + k + uMoss - .78 - dot(n.xz, uSun.xz) * .15); }
@@ -119,7 +124,7 @@ const MSHF = PRE + `
 in vec3 pw, nw, po; in vec2 xx; in float vz; flat in vec2 ii;
 uniform float uMat; uniform vec3 uRA, uRB, uLit; uniform float uLa; out vec4 o;
 void main() {
-  vec3 n = normalize(nw), alb; float ao = 1.;` + (TIER > 3 ? ' float hh = 0.; FP = vz / (uK.y * uR.y * .5) / max(abs(dot(n, normalize(uCam - pw))), .25);' : '') + `
+  vec3 n = normalize(nw), alb; float ao = 1.;` + (TIER > 3 ? ' if (uMat > 2.5 && uMat < 3.5 && hid(pw.xz)) discard; float hh = 0.; FP = vz / (uK.y * uR.y * .5) / max(abs(dot(n, normalize(uCam - pw))), .25);' : '') + `
   if (uMat < .5) {                                                          // stone: strata, speckle, cracks, lichen, then moss
     vec3 fn = cross(dFdx(pw), dFdy(pw)); if (dot(fn, fn) > 1e-14) { fn = normalize(fn); if (dot(fn, n) < 0.) fn = -fn; n = normalize(mix(n, fn, .6)); }
     float st = vn3(po * vec3(1.1, 4.5, 1.1)), spk = vn3(po * 14.), cr = abs(fb3(po * 1.7) - .5);
@@ -252,6 +257,7 @@ void main() {
 }`;
 
 const COMMON = ['uV', 'uSM', 'uIV', 'uK', 'uR', 'uNF', 'uOr', 'uT', 'uMoss', 'uCam', 'uSun', 'uSunC', 'uSkyC', 'uHorC', 'uFog', 'uWd', 'uSh', 'uWx', 'uSe'];
+if (TIER > 3) COMMON.push('uHd', 'uHm');
 if (TIER > 3) COMMON.push('uCv');
 // how far away the surface under a point on the screen is: the view depth the main pass stored beside the colour
 export let pick;
@@ -299,6 +305,7 @@ export function mkRenderer(canvas, low) {
     x.swap = () => { free(); W = x.W2; x.W2 = null; };                    // hand over to it
     x.drop = () => { const W0 = W; W = x.W2; free(); W = W0; x.W2 = null; };   // or let it go
     x.keep = () => { if (x.W2) x.drop(); x.W2 = W; W = null; };          // going out: this world stays, beside, while the next is loaded
+    canvas.nb = { add: (R, B, G) => { const W0 = W; W = null; R.load(B, G); const Wn = W; W = W0; return Wn; }, drop: (Wn) => { const W0 = W; W = Wn; free(); W = W0; } };   // the squares you walk out into, each a world of its own
   }
   // above the 20 kB rung: water, things in the air, and a buffer of limbs that is rewritten every frame
   const PW = TIER > 2 && prog(PRE + WATV, PRE + WATF), PPT = TIER > 2 && prog(PRE + PTV, PRE + PTF, ['uPt']), lv = TIER > 2 && gl.createVertexArray(), lb = TIER > 2 && gl.createBuffer(); let ln = 0;
@@ -308,7 +315,7 @@ export function mkRenderer(canvas, low) {
     gl.useProgram(P.p); gl.uniformMatrix4fv(P.uV, false, view); gl.uniformMatrix4fv(P.uSM, false, f.SM); gl.uniformMatrix3fv(P.uIV, false, f.IV);
     gl.uniform2f(P.uK, K[0], K[1]); gl.uniform2f(P.uR, R[0], R[1]); gl.uniform2f(P.uNF, nf[0], nf[1]); gl.uniform1f(P.uOr, or); gl.uniform1f(P.uT, f.t); gl.uniform1f(P.uMoss, f.moss);
     gl.uniform3fv(P.uCam, f.cam); gl.uniform3fv(P.uSun, f.sun); gl.uniform3fv(P.uSunC, f.sunC); gl.uniform3fv(P.uSkyC, f.skyC); gl.uniform3fv(P.uHorC, f.horC); gl.uniform3fv(P.uFog, f.fog); gl.uniform3fv(P.uWd, f.wd);
-    gl.uniform1i(P.uSh, 1); gl.uniform4fv(P.uWx, f.wx); gl.uniform4fv(P.uSe, f.se); if (TIER > 3) gl.uniform4fv(P.uCv, f.cv || [0, 0, 1, 0]);
+    gl.uniform1i(P.uSh, 1); gl.uniform4fv(P.uWx, f.wx); gl.uniform4fv(P.uSe, f.se); if (TIER > 3) { gl.uniform4fv(P.uCv, f.cv || [0, 0, 1, 0]); gl.uniform4fv(P.uHd, f.hd || Z4); gl.uniform1i(P.uHm, f.hm || 0); }
   };
   if (TIER > 3) pick = (u, v) => {
     const t = T[0]; if (!t || !t.w) return 0; gl.bindFramebuffer(gl.READ_FRAMEBUFFER, t.f);
@@ -362,11 +369,13 @@ export function mkRenderer(canvas, low) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, smf); gl.viewport(0, 0, SMS, SMS); gl.clear(gl.DEPTH_BUFFER_BIT);
         gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4);
         geometry(PMS, PCS, PKS, f.LV, f.LK, [SMS, SMS], 1, f.LNF, 1);
+        if (TIER > 3) for (const n of f.nbs || []) f.gx(n.W, PMS, PCS, PKS, { ...f, hd: null, hm: 0 }, mt(f.LV, n.X, n.Z), f.LK, [SMS, SMS], 1, f.LNF, 1);
         gl.disable(gl.POLYGON_OFFSET_FILL);
       }
       // the next world's shadows, in its own units, from the same sun turned as its world is turned
-      if (TIER > 3 && canvas.win.W2 && f.win) f.win.geo = (PMx, PCx, PKx, fi, view, K, R, or, nf, shadow) => {
-        const Wx = canvas.win.W2, G = Wx.G, pal = Wx.pal;
+      // (and any other loaded world: the squares you walk out into)
+      if (TIER > 3) f.gx = (Wx, PMx, PCx, PKx, fi, view, K, R, or, nf, shadow) => {
+        const G = Wx.G, pal = Wx.pal;
         com(PMx, fi, view, K, R, or, nf);
         if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : 0); gl.uniform3fv(PMx.uStr, Wx.str); gl.uniform3fv(PMx.uFor, Wx.for); gl.uniform4fv(PMx.uTl, f.tl); gl.uniform1f(PMx.uNdl, 0); }
         gl.bindVertexArray(Wx.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, Wx.nTop, gl.UNSIGNED_SHORT, 0);
@@ -378,6 +387,7 @@ export function mkRenderer(canvas, low) {
         gl.bindVertexArray(Wx.cards.v); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, Wx.cards.n);
         if (!shadow && Wx.water) { com(PW, fi, view, K, R, or, nf); gl.bindVertexArray(Wx.water.v); gl.drawElements(gl.TRIANGLES, Wx.water.n, gl.UNSIGNED_SHORT, 0); }
       };
+      if (TIER > 3 && canvas.win.W2 && f.win) f.win.geo = (...a) => f.gx(canvas.win.W2, ...a);
       if (TIER > 3 && canvas.win.W2 && f.win && (f.shadow || f.win.sh)) {
         const x = canvas.win; f.win.sh = 0; gl.bindFramebuffer(gl.FRAMEBUFFER, x.smf2); gl.viewport(0, 0, x.SM2, x.SM2); gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4);
         f.win.geo(PMS, PCS, PKS, f.win.fi, f.win.fi.LV, f.LK, [x.SM2, x.SM2], 1, f.LNF, 1); gl.disable(gl.POLYGON_OFFSET_FILL);
@@ -387,6 +397,7 @@ export function mkRenderer(canvas, low) {
       gl.disable(gl.DEPTH_TEST); com(PSK, f, f.V, f.K, R, 0, nf); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST);
       if (TIER > 3 && W.hz) { com(PM, f, f.V, f.K, R, 0, [300, 2e5]); { gl.uniform3fv(PM.uRA, G.land.ra); gl.uniform3fv(PM.uRB, G.land.rb); gl.uniform3fv(PM.uLit, G.floor.lit); gl.uniform1f(PM.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PM.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PM.uStr, W.str); gl.uniform3fv(PM.uFor, W.for); gl.uniform4fv(PM.uTl, f.tl); } if (TIER > 3) gl.uniform1f(PM.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); } gl.uniform1f(PM.uMat, 3); gl.bindVertexArray(W.hz.v); gl.drawElements(gl.TRIANGLES, W.hz.n, gl.UNSIGNED_SHORT, 0); gl.clear(gl.DEPTH_BUFFER_BIT); }   // the horizon, 3 to 120 km off, in a depth range of its own, behind everything
       geometry(PM, PC, PK, f.V, f.K, R, 0, nf, 0);
+      if (TIER > 3) for (const n of f.nbs || []) f.gx(n.W, PM, PC, PK, { ...f, hd: null, hm: 0, cam: [f.cam[0] - n.X, f.cam[1], f.cam[2] - n.Z], SM: mt(f.SM, n.X, n.Z) }, mt(f.V, n.X, n.Z), f.K, R, 0, nf, 0);   // the squares round you, each moved to where it lies
       if (TIER > 2 && f.pts.length) {                                    // the air: drawn over the scene, hidden by what is nearer, leaving the stored depth alone
         gl.enable(gl.BLEND); gl.depthMask(false); com(PPT, f, f.V, f.K, R, 0, nf); gl.bindVertexArray(vQ);
         for (const p of f.pts) { gl.blendFuncSeparate(gl.SRC_ALPHA, p[0] === 3 ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE); gl.uniform4fv(PPT.uPt, p); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, p[3]); }

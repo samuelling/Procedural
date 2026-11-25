@@ -2,7 +2,7 @@
 import { rng } from '../src/noise.js';
 let fail = 0;
 for (const tier of [2, 3, 4]) {
-  globalThis.TIER = tier;
+  globalThis.TIER = tier; globalThis.LC = 0; globalThis.LE = 0;
   const { GENOMES, mutate, extra } = await import('../src/genome.js?t=' + tier), { build } = await import('../src/grow.js?t=' + tier), { MORE, mkLife } = await import('../src/fx.js?t=' + tier);
   const G = structuredClone(GENOMES); if (tier > 3) Object.assign(G, extra());
   if (tier > 2) for (const k in MORE) { G[k].land.stream = MORE[k].stream; G[k].life = MORE[k].life; if (tier > 3) G[k].floor.flower = MORE[k].flower; }

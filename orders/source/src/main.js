@@ -117,7 +117,7 @@ function sun2() {
 }
 function setSun() {
   const A = G.air; if (TIER > 2) sun3(); else sun2();
-  const C = [0, 12, 0], e = [C[0] + f.sun[0] * 95, C[1] + f.sun[1] * 95, C[2] + f.sun[2] * 95]; lookAt(LV, e, C);
+  const C = (TIER > 3 && f.lc) || [0, 12, 0], e = [C[0] + f.sun[0] * 95, C[1] + f.sun[1] * 95, C[2] + f.sun[2] * 95]; lookAt(LV, e, C);
   // world to shadow-map coordinates: the sun's view, squeezed into a unit cube
   const E = 58, n = f.LNF[0], d = f.LNF[1] - n;
   for (let c = 0; c < 4; c++) { SM[c * 4] = LV[c * 4] * 0.5 / E; SM[c * 4 + 1] = LV[c * 4 + 1] * 0.5 / E; SM[c * 4 + 2] = -LV[c * 4 + 2] / d; SM[c * 4 + 3] = 0; }
@@ -143,7 +143,8 @@ function grow(keepView, aged) {
   if (TIER > 3 && f.win && !f.pre) { canvas.win.drop(); f.win = null; }   // a window left open by anything else is closed
   if (!(TIER > 3 && aged)) G = mut ? mutate(GENOMES[key], rng(mut)) : GENOMES[key];   // a forest that has been living keeps the species it has evolved
   if (TIER > 3 && !aged) G = { ...G, trees: G.trees.map((s) => ({ ...s })) };
-  if (TIER > 3 && !aged && !G.span && !G.world) f.pk = null;                // a new forest of your own: nothing is waiting any more
+  if (TIER > 3 && !aged && !G.span && !G.world) f.pk = null;
+  if (TIER > 3 && !aged && f.nbm) nbClear();                                 // (a new forest: the squares round it are grown again)                // a new forest of your own: nothing is waiting any more
   if (TIER > 3 && !aged && G.span && f.si && !f.pre) G = siteG(G, key);
   if (TIER > 3 && f.pre) G = f.pre[0];                                     // the window built it already
   const t0 = performance.now(); if (TIER > 3 && !aged) world = { dam: 0, char: (x, z) => (fire ? fire.at(x, z) : 0) };
@@ -180,6 +181,38 @@ function grow(keepView, aged) {
   try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '') + (den !== 1 ? '-d' + round(den * 100) : '') + (TIER > 3 && key === 'earth' ? '@' + here.lat + ',' + here.lon + ',' + here.climb : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
 }
 
+// ---- walking out of the plot (2 MB rung): the land goes on. The squares round you are grown as you come near, each from
+// its own seed on the same ground the far valley shows (its height everywhere is the valley's), and the far land and its
+// simple trees step aside wherever one stands. The plot itself is where the animals live and the years are kept.
+function wand() { return B && B.farH && !G.world && !G.span && !G.ero; }
+function hAt(x, z) { const S = B.S, hs = S / 2; if ((Math.abs(x) <= hs && Math.abs(z) <= hs) || !wand()) return B.Hgt(x, z); const e = f.nbm && f.nbm.get(Math.round(x / S) + ',' + Math.round(z / S)); return e ? e.B.Hgt(x - e.X, z - e.Z) : B.farH(x, z); }
+function nbClear() { if (f.nbm) for (const e of f.nbm.values()) canvas.nb.drop(e.W); f.nbm = new Map(); f.nbs = []; f.colN = []; f.hd = null; f.hm = 0; if (f.lc) { f.lc = null; setSun(); } }
+function nbTick() {
+  if (!wand()) { if (f.nbm && f.nbm.size) nbClear(); return; }
+  if (!f.nbm) nbClear();
+  const S = B.S, m = f.nbm, c = fp ? wp : tgt, wx = Math.round(c[0] / S), wz = Math.round(c[2] / S), now = performance.now();
+  if (!m.size && Math.max(Math.abs(c[0]), Math.abs(c[2])) < S / 2 - 16) return;   // nothing needed until you come near the edge
+  let ch = 0;
+  for (const [k, e] of m) if (Math.max(Math.abs(e.cx - wx), Math.abs(e.cz - wz)) > 2) { canvas.nb.drop(e.W); m.delete(k); ch = 1; }   // squares well behind you are let go
+  if (now - (f.nbT || 0) > 400 && !dive && !f.win) {                       // one square at a time, the nearest (and the one ahead) first
+    let best = null, bd = 1e9;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const cx = wx + dx, cz = wz + dz; if ((!cx && !cz) || m.has(cx + ',' + cz)) continue;
+      const X = cx * S, Z = cz * S, d = hypot(X - c[0], Z - c[2]) + ((X - c[0]) * sin(yaw) + (Z - c[2]) * cos(yaw)) * 0.5; if (d < bd) { bd = d; best = [cx, cz, X, Z]; }
+    }
+    if (best) {
+      const [cx, cz, X, Z] = best, Bn = build({ ...G, off: { X, Z, H: B.farH, strm: B.strm, lake: B.lake } }, G.sd || seed, Q * 0.5, den);
+      const col = Bn.trees.filter((t) => t.st < 2 && t.H > 1.5).map((t) => [t.x + X, t.z + Z, 0.05 + 0.011 * t.H, Bn.Hgt(t.x, t.z) + t.H]);
+      for (const a of Bn.rocks) for (let i = 0; i < a.length; i += 12) if (a[i + 3] > 0.35) col.push([a[i] + X, a[i + 2] + Z, a[i + 3] * 0.8, a[i + 1] + a[i + 3] * 0.7]);
+      m.set(cx + ',' + cz, { cx, cz, X, Z, B: Bn, W: canvas.nb.add(R, Bn, G), col }); f.nbT = performance.now(); ch = 1;
+    }
+  }
+  if (ch) { f.nbs = [...m.values()].map((e) => ({ W: e.W, X: e.X, Z: e.Z })); f.colN = [].concat(...[...m.values()].map((e) => e.col)); dirty = 1; }
+  let hm = 0; for (const e of m.values()) { const dx = e.cx - wx, dz = e.cz - wz; if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) hm |= 1 << ((dz + 2) * 5 + dx + 2); }
+  f.hd = m.size ? [wx, wz, S, 1] : null; f.hm = hm;
+  const sx = Math.round(c[0] / 6) * 6, sz = Math.round(c[2] / 6) * 6;      // the sun's shadows follow you, in steps
+  if (m.size && (!f.lc || f.lc[0] !== sx || f.lc[2] !== sz)) { f.lc = [sx, hAt(sx, sz) + 12, sz]; setSun(); }
+}
 // ---- camera: orbits a point that walks on the ground
 const inside = (x, z) => Math.abs(x) < B.S / 2 && Math.abs(z) < B.S / 2;
 function view() {
@@ -191,15 +224,16 @@ function view() {
     tgt[0] = wp[0]; tgt[2] = wp[2]; return;
   }
   if (TIER > 3 && B.cave) B.ref = tgt[1] + 0.5;
-  const gy = B.Hgt(tgt[0], tgt[2]) + 1.5; if (!(TIER > 3 && fz)) tgt[1] += (gy - tgt[1]) * 0.2;
+  const gy = (TIER > 3 ? hAt(tgt[0], tgt[2]) : B.Hgt(tgt[0], tgt[2])) + 1.5; if (!(TIER > 3 && fz)) tgt[1] += (gy - tgt[1]) * 0.2;
   // above the horizon the eye orbits the point; below it the eye stays level and the gaze tilts up into the canopy
   const up = max(pitch, 0), cp = cos(up); eye[0] = tgt[0] + rad * cp * sin(yaw); eye[1] = tgt[1] + rad * sin(up); eye[2] = tgt[2] + rad * cp * cos(yaw);
-  if (inside(eye[0], eye[2]) && !(TIER > 3 && f.win)) eye[1] = max(eye[1], B.Hgt(eye[0], eye[2]) + 0.35);   // (coming down into a window, the eye may go as low as it needs)
+  if (inside(eye[0], eye[2]) && !(TIER > 3 && f.win)) eye[1] = max(eye[1], B.Hgt(eye[0], eye[2]) + 0.35);
+  if (TIER > 3 && !inside(eye[0], eye[2]) && f.nbs && f.nbs.length && !f.win) eye[1] = max(eye[1], hAt(eye[0], eye[2]) + 0.35);   // (coming down into a window, the eye may go as low as it needs)
   if (TIER > 3 && G.world === 'lake') eye[1] = min(eye[1], -0.25);
   lookAt(V, eye, [tgt[0], tgt[1] + rad * tan(max(-pitch, 0)), tgt[2]]); IV.set([V[0], V[4], V[8], V[1], V[5], V[9], V[2], V[6], V[10]]);
 }
 const walk = (r, fw) => {   // along the ground: right and forward as the camera sees them
-  const fx = -V[2], fz2 = -V[10], l = hypot(fx, fz2) || 1, h = B.S / 2 - 0.5;
+  const fx = -V[2], fz2 = -V[10], l = hypot(fx, fz2) || 1, h = TIER > 3 && wand() ? 1e5 : B.S / 2 - 0.5;
   if (TIER > 3) { fz = 0; fly = null; if (fp) return; }
   tgt[0] = clamp(tgt[0] + V[0] * r + fx / l * fw, -h, h); tgt[2] = clamp(tgt[2] + V[8] * r + fz2 / l * fw, -h, h);
 };
@@ -207,8 +241,9 @@ const perPx = () => rad / (F * canvas.clientHeight / 2);
 // walking (2 MB rung): WASD to move, the mouse to look; Space and C to rise and sink, Shift to run
 const walking = (on) => {
   if (!(on ^ fp)) return; const d = [-V[2], -V[6], -V[10]];
-  if (on) { fp = 1; wp[0] = clamp(eye[0], -B.S / 2 + 0.5, B.S / 2 - 0.5); wp[2] = clamp(eye[2], -B.S / 2 + 0.5, B.S / 2 - 0.5); wp[1] = B.Hgt(wp[0], wp[2]); wv.fill(0); ong = 1; hov = 0; yaw = Math.atan2(-d[0], -d[2]); pitch = clamp(asin(-d[1]), -1.2, 1.2); fz = 0; fly = null; fol = null; $('b-fol').textContent = 'Follow'; }
-  else { fp = 0; flo = 0; if (document.pointerLockElement) document.exitPointerLock(); tgt = [clamp(wp[0] - sin(yaw) * 3, -B.S / 2, B.S / 2), wp[1] + EYE, clamp(wp[2] - cos(yaw) * 3, -B.S / 2, B.S / 2)]; rad = 3; pitch = max(0.03, pitch); fz = 1; }
+  const hw = wand() ? 1e5 : B.S / 2 - 0.5;
+  if (on) { fp = 1; wp[0] = clamp(eye[0], -hw, hw); wp[2] = clamp(eye[2], -hw, hw); wp[1] = hAt(wp[0], wp[2]); wv.fill(0); ong = 1; hov = 0; yaw = Math.atan2(-d[0], -d[2]); pitch = clamp(asin(-d[1]), -1.2, 1.2); fz = 0; fly = null; fol = null; $('b-fol').textContent = 'Follow'; }
+  else { fp = 0; flo = 0; if (document.pointerLockElement) document.exitPointerLock(); tgt = [clamp(wp[0] - sin(yaw) * 3, -hw, hw), wp[1] + EYE, clamp(wp[2] - cos(yaw) * 3, -hw, hw)]; rad = 3; pitch = max(0.03, pitch); fz = 1; }
   $('b-walk').setAttribute('aria-pressed', !!fp); $('hint').textContent = fp ? HW : HO; $('hint').hidden = false; idle = 0;
 };
 // double-tap or double-click anything to fly up to it: the depth under the finger gives the point, and the camera
@@ -241,15 +276,15 @@ function frame(now) {
     const depth = st ? max(0, st.lvl(wp[0]) - B.Hgt(wp[0], wp[2])) * (st.dist(wp[0], wp[2]) < 0 ? 1 : 0) : 0, sp = (run ? 6.2 : sneak ? 1.6 : 3.6) * (depth > 0.2 ? 1 - min(0.5, depth * 0.4) : 1) * (flo ? 1.6 : 1);
     const tx = (-sin(yaw) * fw + cos(yaw) * fx) / n * sp * min(1, n), tz = (-cos(yaw) * fw - sin(yaw) * fx) / n * sp * min(1, n), gr = min(1, dt * 12);
     wv[0] += (tx - wv[0]) * gr; wv[2] += (tz - wv[2]) * gr;
-    const h = B.S / 2 - 0.4, deep = (x, z) => st && st.dist(x, z) < 0 && st.lvl(x) - B.Hgt(x, z) > 1.15 && !flo;
+    const h = wand() ? 1e5 : B.S / 2 - 0.4, deep = (x, z) => Math.max(Math.abs(x), Math.abs(z)) < B.S / 2 && st && st.dist(x, z) < 0 && st.lvl(x) - B.Hgt(x, z) > 1.15 && !flo;
     let nx = clamp(wp[0] + wv[0] * dt, -h, h), nz = clamp(wp[2] + wv[2] * dt, -h, h);
     if (TIER > 3 && !G.world && (deep(nx, wp[2]) || deep(nx, nz))) { under('lake'); nx = wp[0]; nz = wp[2]; }   // walk into deep water and you go under
     if (deep(nx, wp[2])) nx = wp[0]; if (deep(nx, nz)) nz = wp[2];
     if (TIER > 3 && B.mouth && hypot(nx - B.mouth[0], nz - B.mouth[1]) < 1.7) under('cave');   // into the cave mouth
-    if (TIER > 3 && !flo) { if (B.Hgt(nx, wp[2]) > wp[1] + 1.1) nx = wp[0]; if (B.Hgt(nx, nz) > wp[1] + 1.1) nz = wp[2]; }   // a rise of more than a metre is a cliff: you can drop down one, not walk up it                       // deep water is not for walking into
-    for (const c of col) if (wp[1] < c[3]) { const dx = nx - c[0], dz = nz - c[1], d = hypot(dx, dz), m = c[2] + 0.3; if (d < m) { nx = c[0] + dx / (d || 1e-4) * m; nz = c[1] + dz / (d || 1e-4) * m; } }   // round trunks and boulders: slide past them
+    if (TIER > 3 && !flo) { if (hAt(nx, wp[2]) > wp[1] + 1.1) nx = wp[0]; if (hAt(nx, nz) > wp[1] + 1.1) nz = wp[2]; }   // a rise of more than a metre is a cliff: you can drop down one, not walk up it                       // deep water is not for walking into
+    for (const c of f.colN && f.colN.length ? col.concat(f.colN) : col) if (wp[1] < c[3]) { const dx = nx - c[0], dz = nz - c[1], d = hypot(dx, dz), m = c[2] + 0.3; if (d < m) { nx = c[0] + dx / (d || 1e-4) * m; nz = c[1] + dz / (d || 1e-4) * m; } }   // round trunks and boulders: slide past them
     const moved = hypot(nx - wp[0], nz - wp[2]); wp[0] = nx; wp[2] = nz;
-    const g = B.Hgt(nx, nz);
+    const g = hAt(nx, nz);
     if (flo || hov) { if (flo) wp[1] += ((keys.Space || keys.KeyE ? 1 : 0) - (keys.KeyC || keys.KeyQ ? 1 : 0)) * sp * dt; wp[1] = clamp(wp[1], g, 60); wv[1] = 0; ong = wp[1] <= g + 0.01; }
     else if (!ong || wp[1] > g + 0.03) { wv[1] -= 14 * dt; wp[1] += wv[1] * dt; if (wp[1] <= g) { wp[1] = g; if (!ong && wv[1] < -3 && audio && audio.step) audio.step(depth > 0.1 ? 4 : 2, 1); wv[1] = 0; ong = 1; } else if (wp[1] > g + 0.12) ong = 0; }
     else wp[1] += (g - wp[1]) * min(1, dt * 18);                                                                        // step up and down the ground gently
@@ -305,6 +340,7 @@ function frame(now) {
   if (TIER > 3) { f.nf = rad > 300 && !fp ? [2, 9000] : [0.1, 4000]; f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke) * (fp || G.span ? 1 : clamp(70 / rad, 0.08, 1)) * (f.fogE || 1); if (f.fogE) f.fogE = Math.abs(f.fogE - 1) < 0.01 ? 0 : f.fogE + (1 - f.fogE) * 0.04; }   // (after a window the new world's air thickens from what the window showed to its own)   // from high up the valley's air is clear
   f.focus = TIER > 3 && fp ? f.focus + (fd - f.focus) * 0.15 : rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
   if (TIER > 3) glideStep(now);
+  if (TIER > 3) nbTick();
   if (TIER > 3 && f.win) winFrame();
   R.draw(f);
   if (TIER > 3 && snapNext) { const g = snapNext; snapNext = null; g(); }   // the last frame of a world, kept to dissolve from

@@ -43,16 +43,28 @@ import { horizon } from './horizon.js';
 import { mkErosion } from './erosion.js';
 import { lakeLand, underBuild, sheet } from './under.js';
 import { cave3 } from './cave3.js';
+// G.off (2 MB rung): a neighbouring square of the same land, for walking out of the plot. X, Z: where it lies; H: the
+// height the valley gives everywhere (so it meets the far land exactly); strm, lake: the plot's own water, for keeping
+// out of it. Its contents come from its own seed; the stream and lake are drawn by the far land already.
 export function build(G, seed, q = 1, den = 1, stand) {
   let rnd = rng(seed); const rr = (a, b) => a + (b - a) * rnd(), gs = () => sqrt(-2 * log(1 - rnd())) * cos(TAU * rnd());
   const S = G.size, hs = S / 2, L = G.land, F = G.floor, ox = rnd() * 100, oz = rnd() * 100, low = q < 1;
   // the two fields everything else reads: height of the ground, and how wet it is (hollows are wetter)
   let Hgt = (x, z) => L.amp * 2 * (fbm(x * L.f + ox, 0, z * L.f + oz, 4) - 0.5) + L.tilt * x + L.amp * 0.3 * (fbm(x * L.f * 3.3 + oz, 9, z * L.f * 3.3 + ox, 2) - 0.5);
   let wet = (x, z) => min(1, max(0, fbm(x * 0.045 + oz + 31, 3, z * 0.045 + ox, 3) * 1.5 - 0.25 - Hgt(x, z) / (L.amp * 6)));
+  if (TIER > 3 && G.off) {
+    const off = G.off, { X, Z } = off, H0 = Hgt, ws = off.strm, lk = off.lake;
+    rnd = rng((seed ^ Math.imul(X | 0, 73856093) ^ Math.imul(Z | 0, 19349663)) >>> 0);
+    const wd = (x, z) => min(ws ? ws.dist(x, z) : 1e9, lk ? (sqrt(((x - lk.x) / lk.rx) ** 2 + ((z - lk.z) / lk.rz) ** 2) - 1.05) * lk.rz : 1e9);   // metres from the water, stream or lake
+    Hgt = (x, z) => off.H(x + X, z + Z);
+    wet = (x, z) => { const a = x + X, b = z + Z; return max(min(1, max(0, fbm(a * 0.045 + oz + 31, 3, b * 0.045 + ox, 3) * 1.5 - 0.25 - H0(a, b) / (L.amp * 6))), 1 - max(0, wd(a, b)) / 6); };   // as damp as the plot's own ground would be there
+    if (ws || lk) off.s = { dist: (x, z) => wd(x + X, z + Z), zc: (x) => (ws ? ws.zc(x + X) : 1e9) - Z, wid: (x) => (ws ? ws.wid(x + X) : 0), lvl: (x) => (ws ? ws.lvl(x + X) : -1e9), xd: -1e9, px: -1e9, fl: 0, deep: () => false };
+  }
   // above the 20 kB rung a stream crosses the plot. It falls steadily from one side to the other, the land is drawn
   // down to it over a few metres to make a valley, it widens into a pool, and everything nearby is wetter.
   let strm = null;
-  if (TIER > 2 && L.stream) {
+  if (TIER > 3 && G.off) strm = G.off.s || null;
+  else if (TIER > 2 && L.stream) {
     const [sw, sa, sp, sr] = L.stream, H0 = Hgt, W0 = wet, ph = rnd() * TAU, px = sp * hs, sm = (t) => { t = min(1, max(0, t)); return t * t * (3 - 2 * t); };
     const zc = (x) => sa * (sin(x * 0.085 + ph) + 0.45 * sin(x * 0.21 + ph * 2.3)), wid = (x) => sw + sr * exp(-(((x - px) / (sr * 0.9 + 1)) ** 2));
     let y0 = 1e9; for (let x = -hs; x <= hs; x += 2) y0 = min(y0, H0(x, zc(x)) + 0.006 * (x + hs));
@@ -92,7 +104,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
     for (let j = 0; j < 3; j++) rock(3, x + gs() * s * 1.4, z + gs() * s * 1.4, rr(0.08, 0.26), 0.6, rr(0.4, 1));
   }
   for (let n = round(L.peb * (low ? 0.5 : 1)); n > 0; n--) rock(3, rr(-hs, hs), rr(-hs, hs), rr(0.04, 0.14), rr(0.5, 0.9), rnd());
-  if (TIER > 3 && !G.world && !G.span) {                                   // a cave mouth in a limestone outcrop near one corner: walk into it and you go in
+  if (TIER > 3 && !G.world && !G.span && !G.off) {                                   // a cave mouth in a limestone outcrop near one corner: walk into it and you go in
     const ex = -hs + 6; let ez = -hs + 10; if (strm && abs(ez - strm.zc(ex)) < strm.wid(ex) + 6) ez = strm.zc(ex) + strm.wid(ex) + 9;
     const ey = Hgt(ex, ez); for (let k = 0; k < 9; k++) rock(k % 3, ex - 2.4 - rr(0, 1.2), ez + (k - 4) * 0.85, rr(1.2, 2.3), rr(0.75, 1), 0.35);
     cap([ex - 1.5, ey + 0.1, ez - 0.9], 1, [ex - 1.5, ey + 0.1, ez + 0.9], 1, 0, 0, 0.5, 18); placed.push({ x: ex - 1.5, z: ez, cr: 4 }); lv = { mouth: [ex - 1.5, ez] };
@@ -291,10 +303,12 @@ export function build(G, seed, q = 1, den = 1, stand) {
       const y = Hgt(x, z) - 0.03, a = rnd() * TAU, sz = rr(0.7, 1.5); st.under++;
       for (let k = 0; k < 2; k++) card([x, y, z], sz, nrm([gs() * 0.1, 1, gs() * 0.1]), 4, 0.8, [cos(a + k * 1.6), 0, sin(a + k * 1.6)], 7, rnd());
     }
+    if (!(TIER > 3 && G.off)) {
     const wv = [], wi = [], nx = 128, ny = strm.fl > 0 ? 16 : 8;
     for (let i = 0; i <= nx; i++) { const x = -hs + S * i / nx, y = strm.lvl(x), ww = strm.wid(x) + 0.6 + (x < strm.xd ? strm.fl * 10 : 0); for (let j = 0; j <= ny; j++) { const z = min(hs, max(-hs, strm.zc(x) + (TIER > 3 && strm.ero ? strm.ero.zo(x) : 0) + (j / ny * 2 - 1) * ww)); wv.push(x, y, z, 0, 1, 0, y - Hgt(x, z), x); } }
     for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) { const a = i * (ny + 1) + j; wi.push(a, a + 1, a + ny + 1, a + 1, a + ny + 2, a + ny + 1); }
     water = { v: new Float32Array(wv), i: new Uint16Array(wi) };
+    }
   }
 
   // ---- the ground itself, shaded where things stand on it, and the plot's cut sides
@@ -317,7 +331,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   const pal = { la: new Float32Array(24), lb: new Float32Array(24), ba: new Float32Array(24), bb: new Float32Array(24), bp: new Float32Array(32) };
   G.trees.forEach((sp, i) => { pal.la.set(sp.leaf.a, i * 3); pal.lb.set(sp.leaf.b, i * 3); pal.ba.set(sp.bark.a, i * 3); pal.bb.set(sp.bark.b, i * 3); pal.bp.set([sp.bark.t, sp.bark.sc, TIER > 3 && sp.leaf.t === 1 ? 1 : 0, 0], i * 4); });
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
-  const vy = TIER > 3 && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' ? { cave: lv } : G.world === 'range' && { spot: lv.spot });
+  const vy = TIER > 3 && !G.off && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' ? { cave: lv } : G.world === 'range' && { spot: lv.spot });
   if (TIER > 3 && vy && lv && lv.mouth) vy.mouth = lv.mouth; if (TIER > 3 && vy && !G.span && G.cl && G.cl.elev != null) vy.hz = horizon(G.cl);   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
   const sr = rng(seed ^ 0x77);
   if (TIER > 3 && G.world === 'lake') water = sheet(Hgt, 0, -hs, hs, -hs, hs, 96);   // the lake's surface, seen from below

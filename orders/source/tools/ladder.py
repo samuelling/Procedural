@@ -1,11 +1,12 @@
 # Assembles site/: each rung's page under its own folder, the thumbnails, and an index that reports real bytes
 # against each allowance. The index is a staircase: each rung's picture grows as the allowance does.
-import os, shutil, html
+import os, shutil, html, re, markdown
 E = html.escape
 TRY = ['Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time',
        '<b>Places → Anywhere on Earth</b>, then click where you grew up',
        '<b>Happenings → Wolves</b>, then <b>Time → Fast forward</b>, and watch the seedlings come back',
-       '<b>Places → Another age</b>, and stand among the coal swamps’ scale trees']
+       '<b>Places → Another age</b>, and stand among the coal swamps’ scale trees',
+       '<b>You → Walk</b> and keep going past the edge of the plot. The land goes on, grown around you as you come near']
 R = [  # folder, allowance, built file, title, one line, as big as, things to try, everything in it
  ('0.2kb', 200, 'a/index.html', 'One formula',
   'Eighty firs fading into mist, from one loop. Each tree’s size, height and paleness come from its number in the line.',
@@ -27,7 +28,7 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
    ('Time', 'Day and night, aurora, four seasons, storms. Rewind and fast forward. Nine other ages, from the first trees of the Devonian to mammoths and the wildwood.'),
    ('Places', 'Anywhere on Earth, from measured heights, months, rain and tree ranges. Ten forests, a kelp forest, under a lake, inside a limestone cave.'),
    ('Scales', 'Mountain range, plot, rotting log, moss or under the bark, soil, the underside of a leaf: ten times smaller each step, each world seen through a window into the next.'),
-   ('Look closer', 'Walk it on foot, with animals that hear you coming. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.')]),
+   ('Look closer', 'Walk it on foot, with animals that hear you coming, and out past the plot as far as you like: the squares around you grow as you come near. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.')]),
 ]
 os.makedirs('site/thumbs', exist_ok=True)
 for f in os.listdir('thumbs'): shutil.copyfile('thumbs/' + f, 'site/thumbs/' + f)
@@ -48,6 +49,30 @@ for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
 <div class="fill"><div class="jar"><i style="width:{max(pct, .4):.2f}%"></i></div><p><b>{pct:.1f}% full</b> · {n:,} of {lim:,} bytes, {E(like)}</p></div>
 {extra}</div></section>
 '''
+# ---- the two agents, readable in a pop-up on this page: each round as turns, Ash on the left and Rowan on the right
+exec(re.search(r'(?ms)^ROUNDS = \[.*?^\]', open('tools/story.py').read()).group(0))
+def render(md):
+    out = []
+    for part in re.split(r'(?m)^(?=## )', md):
+        h = re.match(r'## (\w+)', part); who = h and h.group(1).lower()
+        cls = {'ash': 'ash', 'rowan': 'rowan', 'builder': 'builder'}.get(who)
+        if h: part = part[h.end():]
+        part = re.sub(r'(?m)^(  +)(?=[-*] |\d+\. )', lambda m: '    ' * (len(m.group(1)) // 2), part)
+        part = re.sub(r'(?m)^((?![ \t]*(?:[-*] |\d+\. |\|))[^\n]*\S[^\n]*)\n(?=[ \t]*(?:[-*] |\d+\. ))', r'\1\n\n', part)
+        x = markdown.markdown(part, extensions=['tables', 'fenced_code'])
+        if cls: out.append(f'<section class="turn {cls}"><b class="who">{h.group(1)}</b>{x}</section>')
+        else: out.append('<div class="note">' + re.sub(r'<h1>.*?</h1>', '', x) + '</div>')
+    return '\n'.join(out)
+chips, tpls = '', ''
+for k, (fn, t, w, n) in enumerate(ROUNDS):
+    chips += f'<button role="tab" data-r="{k}" aria-selected="{"true" if k == 0 else "false"}"><b>{k + 1}</b>{E(t)}</button>'
+    tpls += f'<template id="rd{k}"><p class="settled"><b>Round {k + 1}: {E(t)}.</b> {E(w)} After it, the 2 MB rung stood at {n:,} bytes.</p>{render(open(f"dialogue/{fn}.md").read())}</template>\n'
+talk = f'''<dialog id="talk" aria-labelledby="talk-h"><div class="tk">
+<header><h2 id="talk-h">Ash and Rowan</h2><button class="x" aria-label="Close">×</button>
+<p>The 2 MB rung was filled by an argument. Overnight, two Claude agents took turns, six rounds of them. <b class="a">Ash</b> proposed: a naturalist and builder, ranking ideas by what each bought per byte. <b class="r">Rowan</b> checked: a sceptical engineer who read the code, measured the data, and pushed back on anything fake. Then the main session built what they agreed. Their own words, unedited except for typos.</p>
+<nav role="tablist" aria-label="Rounds">{chips}</nav></header>
+<div class="body" id="talk-b" tabindex="0"></div></div></dialog>
+{tpls}'''
 page = '''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orders of Magnitude: one forest, five sizes</title>
@@ -61,7 +86,8 @@ header { max-width: 640px; margin-bottom: 44px; }
 h1 { margin: 0 0 14px; font: italic 600 clamp(40px, 7vw, 64px)/1 var(--serif); letter-spacing: -.01em; }
 h1 small { display: block; margin-top: 10px; font: italic 400 clamp(19px, 2.6vw, 24px)/1.2 var(--serif); color: var(--lichen); letter-spacing: 0; }
 .lede { margin: 0 0 22px; font-size: 17px; color: var(--ink); text-wrap: pretty; }
-.story { display: inline-block; padding: 10px 18px; border: 1px solid var(--amber); border-radius: 999px; color: var(--ink); text-decoration: none; font: italic 500 17px/1.2 var(--serif); }
+.how { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .how > p { width: 100%; margin: 0 0 2px; font: italic 400 15px/1 var(--serif); color: var(--lichen); }
+.story { display: inline-block; background: none; cursor: pointer; padding: 10px 18px; border: 1px solid var(--amber); border-radius: 999px; color: var(--ink); text-decoration: none; font: italic 500 17px/1.2 var(--serif); }
 .story:hover, .story:focus-visible { background: var(--amber); color: #1b160c; outline: none; }
 .rung { display: grid; grid-template-columns: minmax(0, var(--w)) minmax(260px, 1fr); gap: 22px 28px; align-items: start; }
 .r4 { grid-template-columns: 1fr; }
@@ -94,6 +120,32 @@ dt { font: italic 600 16px/1.2 var(--serif); color: var(--lichen); } dd { margin
 .step { position: relative; height: 74px; }
 .step::before { content: ''; position: absolute; left: 18px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(var(--line), var(--amber), var(--line)); }
 .step span { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); font: italic 400 14px/1 var(--serif); color: var(--lichen); }
+dialog { padding: 0; border: 1px solid var(--line); border-radius: 16px; background: #121a12; color: var(--ink); width: min(900px, calc(100% - 24px)); max-height: calc(100dvh - 40px); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+dialog::backdrop { background: rgba(5,8,5,.72); backdrop-filter: blur(3px); }
+dialog[open] { animation: pop .22s cubic-bezier(.2,.8,.2,1); } @keyframes pop { from { transform: translateY(14px) scale(.98); opacity: 0; } }
+.tk { display: flex; flex-direction: column; max-height: calc(100dvh - 42px); }
+.tk header { max-width: none; margin: 0; padding: 22px 24px 0; border-bottom: 1px solid var(--line); position: relative; }
+.tk h2 { margin: 0 0 8px; font: italic 600 28px/1.1 var(--serif); } .tk header p { margin: 0 0 14px; font-size: 14.5px; color: var(--dim); max-width: 70ch; text-wrap: pretty; }
+.tk .a { color: var(--amber); } .tk .r { color: var(--lichen); }
+.x { position: absolute; right: 14px; top: 12px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; } .x:hover { border-color: var(--amber); }
+.tk nav { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: thin; }
+.tk nav button { flex: none; display: flex; align-items: baseline; gap: 7px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--dim); font: 400 14px/1.2 var(--serif); cursor: pointer; }
+.tk nav button b { font-style: normal; font-weight: 700; color: var(--amber); }
+.tk nav button[aria-selected="true"] { background: var(--amber); border-color: var(--amber); color: #1b160c; } .tk nav button[aria-selected="true"] b { color: #1b160c; }
+.body { overflow-y: auto; padding: 18px 24px 30px; display: flex; flex-direction: column; gap: 14px; }
+.settled { margin: 0; padding: 12px 14px; border-radius: 10px; background: rgba(168,201,154,.08); font-size: 14px; color: var(--dim); } .settled b { color: var(--ink); font-weight: 600; }
+.note { font-size: 13.5px; color: var(--dim); } .note p { margin: 0 0 8px; }
+.turn { position: relative; max-width: 88%; padding: 12px 16px 6px; border-radius: 16px; font-size: 14.5px; line-height: 1.55; text-wrap: pretty; }
+.turn .who { display: block; margin-bottom: 4px; font: italic 700 16px/1 var(--serif); }
+.turn.ash { align-self: flex-start; background: rgba(232,178,90,.08); border: 1px solid rgba(232,178,90,.35); border-bottom-left-radius: 4px; } .turn.ash .who { color: var(--amber); }
+.turn.rowan { align-self: flex-end; background: rgba(168,201,154,.08); border: 1px solid rgba(168,201,154,.35); border-bottom-right-radius: 4px; } .turn.rowan .who { color: var(--lichen); }
+.turn.builder { align-self: center; max-width: 94%; background: rgba(238,240,226,.05); border: 1px dashed var(--line); } .turn.builder .who { color: var(--ink); }
+.turn p, .turn ul, .turn ol { margin: 0 0 10px; } .turn ul, .turn ol { padding-left: 20px; } .turn li { margin-bottom: 4px; }
+.turn code { font: 12.5px ui-monospace, Menlo, Consolas, monospace; background: rgba(0,0,0,.3); padding: 1px 4px; border-radius: 4px; word-break: break-word; }
+.turn pre { overflow-x: auto; background: rgba(0,0,0,.3); padding: 10px; border-radius: 8px; } .turn pre code { background: none; padding: 0; }
+.turn table { border-collapse: collapse; font-size: 13px; margin: 0 0 10px; display: block; overflow-x: auto; } .turn th, .turn td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; }
+.turn strong { color: var(--ink); }
+@media (max-width: 720px) { .tk header p { font-size: 13.5px; } dialog { width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; margin: 0; max-width: none; } .tk { max-height: 100dvh; height: 100%; } .turn { max-width: 96%; } .tk header, .body { padding-left: 16px; padding-right: 16px; } }
 footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; max-width: 70ch; text-wrap: pretty; }
 footer a { color: var(--ink); }
 @media (max-width: 720px) {
@@ -105,10 +157,19 @@ footer a { color: var(--ink); }
 <header>
 <h1>Orders of Magnitude<small>one forest, five sizes</small></h1>
 <p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules. At the top there are also measurements of the real Earth. Smallest first:</p>
-<a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a>
+<div class="how"><p>How it works</p><a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a><button class="story" id="talk-o" type="button">Listen in: two agents arguing over how to fill 2 MB</button></div>
 </header>
-''' + rows + '''<footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Little’s range maps (USGS) and Caudullo et al. 2017; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
-</main></body></html>
+''' + rows + talk + '''<footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Little’s range maps (USGS) and Caudullo et al. 2017; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
+</main>
+<script>
+const d = document.getElementById('talk'), b = document.getElementById('talk-b'), tabs = d.querySelectorAll('nav button');
+const show = (k) => { for (const t of tabs) t.setAttribute('aria-selected', t.dataset.r == k); b.replaceChildren(document.getElementById('rd' + k).content.cloneNode(true)); b.scrollTop = 0; };
+document.getElementById('talk-o').addEventListener('click', () => { if (!b.firstChild) show(0); d.showModal(); });
+d.querySelector('.x').addEventListener('click', () => d.close());
+d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+for (const t of tabs) t.addEventListener('click', () => show(t.dataset.r));
+if (location.hash === '#agents') { show(0); d.showModal(); }
+</script></body></html>
 '''
 open('site/index.html', 'w').write(page)
-print(open('site/index.html').read().count('<section'), 'rungs listed;', sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk('site') for f in fs), 'bytes in site/')
+print(open('site/index.html').read().count('<section class="rung'), 'rungs listed;', sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk('site') for f in fs), 'bytes in site/')

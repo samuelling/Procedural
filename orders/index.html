@@ -11,7 +11,8 @@ header { max-width: 640px; margin-bottom: 44px; }
 h1 { margin: 0 0 14px; font: italic 600 clamp(40px, 7vw, 64px)/1 var(--serif); letter-spacing: -.01em; }
 h1 small { display: block; margin-top: 10px; font: italic 400 clamp(19px, 2.6vw, 24px)/1.2 var(--serif); color: var(--lichen); letter-spacing: 0; }
 .lede { margin: 0 0 22px; font-size: 17px; color: var(--ink); text-wrap: pretty; }
-.story { display: inline-block; padding: 10px 18px; border: 1px solid var(--amber); border-radius: 999px; color: var(--ink); text-decoration: none; font: italic 500 17px/1.2 var(--serif); }
+.how { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .how > p { width: 100%; margin: 0 0 2px; font: italic 400 15px/1 var(--serif); color: var(--lichen); }
+.story { display: inline-block; background: none; cursor: pointer; padding: 10px 18px; border: 1px solid var(--amber); border-radius: 999px; color: var(--ink); text-decoration: none; font: italic 500 17px/1.2 var(--serif); }
 .story:hover, .story:focus-visible { background: var(--amber); color: #1b160c; outline: none; }
 .rung { display: grid; grid-template-columns: minmax(0, var(--w)) minmax(260px, 1fr); gap: 22px 28px; align-items: start; }
 .r4 { grid-template-columns: 1fr; }
@@ -44,6 +45,32 @@ dt { font: italic 600 16px/1.2 var(--serif); color: var(--lichen); } dd { margin
 .step { position: relative; height: 74px; }
 .step::before { content: ''; position: absolute; left: 18px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(var(--line), var(--amber), var(--line)); }
 .step span { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); font: italic 400 14px/1 var(--serif); color: var(--lichen); }
+dialog { padding: 0; border: 1px solid var(--line); border-radius: 16px; background: #121a12; color: var(--ink); width: min(900px, calc(100% - 24px)); max-height: calc(100dvh - 40px); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+dialog::backdrop { background: rgba(5,8,5,.72); backdrop-filter: blur(3px); }
+dialog[open] { animation: pop .22s cubic-bezier(.2,.8,.2,1); } @keyframes pop { from { transform: translateY(14px) scale(.98); opacity: 0; } }
+.tk { display: flex; flex-direction: column; max-height: calc(100dvh - 42px); }
+.tk header { max-width: none; margin: 0; padding: 22px 24px 0; border-bottom: 1px solid var(--line); position: relative; }
+.tk h2 { margin: 0 0 8px; font: italic 600 28px/1.1 var(--serif); } .tk header p { margin: 0 0 14px; font-size: 14.5px; color: var(--dim); max-width: 70ch; text-wrap: pretty; }
+.tk .a { color: var(--amber); } .tk .r { color: var(--lichen); }
+.x { position: absolute; right: 14px; top: 12px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; } .x:hover { border-color: var(--amber); }
+.tk nav { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: thin; }
+.tk nav button { flex: none; display: flex; align-items: baseline; gap: 7px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--dim); font: 400 14px/1.2 var(--serif); cursor: pointer; }
+.tk nav button b { font-style: normal; font-weight: 700; color: var(--amber); }
+.tk nav button[aria-selected="true"] { background: var(--amber); border-color: var(--amber); color: #1b160c; } .tk nav button[aria-selected="true"] b { color: #1b160c; }
+.body { overflow-y: auto; padding: 18px 24px 30px; display: flex; flex-direction: column; gap: 14px; }
+.settled { margin: 0; padding: 12px 14px; border-radius: 10px; background: rgba(168,201,154,.08); font-size: 14px; color: var(--dim); } .settled b { color: var(--ink); font-weight: 600; }
+.note { font-size: 13.5px; color: var(--dim); } .note p { margin: 0 0 8px; }
+.turn { position: relative; max-width: 88%; padding: 12px 16px 6px; border-radius: 16px; font-size: 14.5px; line-height: 1.55; text-wrap: pretty; }
+.turn .who { display: block; margin-bottom: 4px; font: italic 700 16px/1 var(--serif); }
+.turn.ash { align-self: flex-start; background: rgba(232,178,90,.08); border: 1px solid rgba(232,178,90,.35); border-bottom-left-radius: 4px; } .turn.ash .who { color: var(--amber); }
+.turn.rowan { align-self: flex-end; background: rgba(168,201,154,.08); border: 1px solid rgba(168,201,154,.35); border-bottom-right-radius: 4px; } .turn.rowan .who { color: var(--lichen); }
+.turn.builder { align-self: center; max-width: 94%; background: rgba(238,240,226,.05); border: 1px dashed var(--line); } .turn.builder .who { color: var(--ink); }
+.turn p, .turn ul, .turn ol { margin: 0 0 10px; } .turn ul, .turn ol { padding-left: 20px; } .turn li { margin-bottom: 4px; }
+.turn code { font: 12.5px ui-monospace, Menlo, Consolas, monospace; background: rgba(0,0,0,.3); padding: 1px 4px; border-radius: 4px; word-break: break-word; }
+.turn pre { overflow-x: auto; background: rgba(0,0,0,.3); padding: 10px; border-radius: 8px; } .turn pre code { background: none; padding: 0; }
+.turn table { border-collapse: collapse; font-size: 13px; margin: 0 0 10px; display: block; overflow-x: auto; } .turn th, .turn td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; }
+.turn strong { color: var(--ink); }
+@media (max-width: 720px) { .tk header p { font-size: 13.5px; } dialog { width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; margin: 0; max-width: none; } .tk { max-height: 100dvh; height: 100%; } .turn { max-width: 96%; } .tk header, .body { padding-left: 16px; padding-right: 16px; } }
 footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; max-width: 70ch; text-wrap: pretty; }
 footer a { color: var(--ink); }
 @media (max-width: 720px) {
@@ -55,7 +82,7 @@ footer a { color: var(--ink); }
 <header>
 <h1>Orders of Magnitude<small>one forest, five sizes</small></h1>
 <p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules. At the top there are also measurements of the real Earth. Smallest first:</p>
-<a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a>
+<div class="how"><p>How it works</p><a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a><button class="story" id="talk-o" type="button">Listen in: two agents arguing over how to fill 2 MB</button></div>
 </header>
 <section class="rung r0" style="--w:30%">
 <a class="pic" href="0.2kb/"><img src="thumbs/0.2kb.webp" alt="" loading="eager" width="720" height="450"><span>Open ↗</span></a>
@@ -79,13 +106,1152 @@ footer a { color: var(--ink); }
 <a class="pic" href="200kb/"><img src="thumbs/200kb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
 <div class="txt"><h2><a href="200kb/"><b>200 kB</b> The whole world, seen coarser</a></h2>
 <p class="line">Everything the top rung does: every animal, every age, every scale. Only the Earth is blurrier, measured in 300 km squares.</p>
-<div class="fill"><div class="jar"><i style="width:96.25%"></i></div><p><b>96.2% full</b> · 192,492 of 200,000 bytes, a novella</p></div>
+<div class="fill"><div class="jar"><i style="width:97.01%"></i></div><p><b>97.0% full</b> · 194,023 of 200,000 bytes, a novella</p></div>
 <div class="try"><p>Try</p><ul><li>Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time</li><li><b>Places → Anywhere on Earth</b>, then click where you grew up</li></ul></div></div></section>
 <div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r4" style="--w:100%">
 <a class="pic" href="2mb/"><img src="thumbs/2mb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
 <div class="txt"><h2><a href="2mb/"><b>2 MB</b> A world that keeps time and place</a></h2>
 <p class="line">A forest where things happen to each other, from 640 km of mountains down to the mites on a leaf, grown on the real climate of anywhere you click.</p>
-<div class="fill"><div class="jar"><i style="width:87.23%"></i></div><p><b>87.2% full</b> · 1,744,577 of 2,000,000 bytes, one photo from your phone</p></div>
-<div class="try"><p>Try</p><ul><li>Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time</li><li><b>Places → Anywhere on Earth</b>, then click where you grew up</li><li><b>Happenings → Wolves</b>, then <b>Time → Fast forward</b>, and watch the seedlings come back</li><li><b>Places → Another age</b>, and stand among the coal swamps’ scale trees</li></ul></div><details><summary>Everything in it</summary><dl><dt>Lives</dt><dd>Deer, wolves, foxes, hares, beavers and birds, each with hunger, an age and two inherited genes. Does fawn in spring, stags roar, wolves hunt, deer remember where the kills were.</dd><dt>A wood that changes</dt><dd>Trees grow, age, fall and burn. Lightning fires run on the wind and stop at water. Beavers drown a stand under their pond. Over centuries the trees evolve into new species, with a tree of life to prove it.</dd><dt>Time</dt><dd>Day and night, aurora, four seasons, storms. Rewind and fast forward. Nine other ages, from the first trees of the Devonian to mammoths and the wildwood.</dd><dt>Places</dt><dd>Anywhere on Earth, from measured heights, months, rain and tree ranges. Ten forests, a kelp forest, under a lake, inside a limestone cave.</dd><dt>Scales</dt><dd>Mountain range, plot, rotting log, moss or under the bark, soil, the underside of a leaf: ten times smaller each step, each world seen through a window into the next.</dd><dt>Look closer</dt><dd>Walk it on foot, with animals that hear you coming. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.</dd></dl></details></div></section>
+<div class="fill"><div class="jar"><i style="width:87.30%"></i></div><p><b>87.3% full</b> · 1,746,013 of 2,000,000 bytes, one photo from your phone</p></div>
+<div class="try"><p>Try</p><ul><li>Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time</li><li><b>Places → Anywhere on Earth</b>, then click where you grew up</li><li><b>Happenings → Wolves</b>, then <b>Time → Fast forward</b>, and watch the seedlings come back</li><li><b>Places → Another age</b>, and stand among the coal swamps’ scale trees</li><li><b>You → Walk</b> and keep going past the edge of the plot. The land goes on, grown around you as you come near</li></ul></div><details><summary>Everything in it</summary><dl><dt>Lives</dt><dd>Deer, wolves, foxes, hares, beavers and birds, each with hunger, an age and two inherited genes. Does fawn in spring, stags roar, wolves hunt, deer remember where the kills were.</dd><dt>A wood that changes</dt><dd>Trees grow, age, fall and burn. Lightning fires run on the wind and stop at water. Beavers drown a stand under their pond. Over centuries the trees evolve into new species, with a tree of life to prove it.</dd><dt>Time</dt><dd>Day and night, aurora, four seasons, storms. Rewind and fast forward. Nine other ages, from the first trees of the Devonian to mammoths and the wildwood.</dd><dt>Places</dt><dd>Anywhere on Earth, from measured heights, months, rain and tree ranges. Ten forests, a kelp forest, under a lake, inside a limestone cave.</dd><dt>Scales</dt><dd>Mountain range, plot, rotting log, moss or under the bark, soil, the underside of a leaf: ten times smaller each step, each world seen through a window into the next.</dd><dt>Look closer</dt><dd>Walk it on foot, with animals that hear you coming, and out past the plot as far as you like: the squares around you grow as you come near. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.</dd></dl></details></div></section>
+<dialog id="talk" aria-labelledby="talk-h"><div class="tk">
+<header><h2 id="talk-h">Ash and Rowan</h2><button class="x" aria-label="Close">×</button>
+<p>The 2 MB rung was filled by an argument. Overnight, two Claude agents took turns, six rounds of them. <b class="a">Ash</b> proposed: a naturalist and builder, ranking ideas by what each bought per byte. <b class="r">Rowan</b> checked: a sceptical engineer who read the code, measured the data, and pushed back on anything fake. Then the main session built what they agreed. Their own words, unedited except for typos.</p>
+<nav role="tablist" aria-label="Rounds"><button role="tab" data-r="0" aria-selected="true"><b>1</b>Binding the scales</button><button role="tab" data-r="1" aria-selected="false"><b>2</b>Measured ground and months</button><button role="tab" data-r="2" aria-selected="false"><b>3</b>The horizon</button><button role="tab" data-r="3" aria-selected="false"><b>4</b>The place’s year at every scale</button><button role="tab" data-r="4" aria-selected="false"><b>5</b>Weather, water, and the foot of the ladder</button><button role="tab" data-r="5" aria-selected="false"><b>6</b>Which trees, and stopping</button></nav></header>
+<div class="body" id="talk-b" tabindex="0"></div></div></dialog>
+<template id="rd0"><p class="settled"><b>Round 1: Binding the scales.</b> The plot waits while you dive; you dive at a real log of its own species; the range is the plot’s surroundings; worlds open from the spot. After it, the 2 MB rung stood at 114,327 bytes.</p><div class="note">
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p></div>
+<section class="turn ash"><b class="who">Ash</b><p>Rowan, bytes aren't the limit: all of this is about 9 kB minified against 1.88 MB spare, inside existing <code>TIER &gt; 3</code> branches, so the 20 kB rung never sees it. Frame time and honesty are the limits. The cheap ones rank first because they fix things that are actually broken.</p>
+<p><strong>1. Pass a site record down every dive (≈700 B).</strong> <code>zoom()</code> calls a bare <code>grow()</code>, so <code>day</code> resets from <code>G.air.sun</code>, <code>G.cl</code> is lost (the micro genomes lack it, so <code>sun3</code> uses the generic sun, not the place's), and <code>seed</code> never changes, so every log is the same log. My fix: in <code>zoom()</code>, before the swap, build <code>site = { cl: G.cl, day, seed: hash(seed, round(tgt[0]*4), round(tgt[2]*4)), sp, wet, ndl }</code>. <code>grow()</code> then takes <code>G = inherit(GENOMES[LAD[j]], site)</code>, ten lines in genome.js, and skips the <code>day</code> reset; <code>build()</code> must also return its <code>wet</code> closure. You'd see dawn on the plot stay dawn on the leaf, two spots give two logs, and the same spot gives the same log back. No frame or build cost.</p>
+<p><strong>2. Park the plot instead of regrowing it (≈300 B).</strong> A real bug: zooming out runs <code>key = home; grow()</code> without <code>aged</code>, which resets <code>year = 1</code>, clears the tape, drops the evolved species, burn and dam, and calls <code>mkLife</code> again. One round trip wipes out two centuries. Keep <code>{G, B, LIFE, stand, world, fire, year, yearF, tape}</code> when leaving i=1; on return, <code>R.load(B, G)</code> and restore them. Nothing is rebuilt, so the way out gets instant too. The cost is one plot's Float32Arrays held while you're deeper in; I'd guess 5 to 15 MB, so please measure it on a phone.</p>
+<p><strong>3. The inner worlds are made of what you dived at (≈2.5 kB).</strong> <code>site.sp</code> is the species of whatever is nearest <code>tgt</code>. That's a kind-1 log capsule (its <code>id</code> already encodes the species index) or a record in <code>B.trees</code>. It drives:</p>
+<ul>
+<li><strong>Log</strong>: the wood and bark colours come from <code>G.trees[sp].bark</code>. Seedlings are the plot's species within 10 m, scaled as <code>oakling</code> is; litter cards (<code>card(..., 8, ..., pal)</code>) take <code>pal</code> from those species by distance, so spruce needles under spruce; acorns only near an oak, mast only near a beech.</li>
+<li><strong>Bark</strong>: Ips-style two-armed galleries along the grain fit only spruce and pine. <code>barkLand()</code> could take <code>{arms, axis}</code> per host: one mother gallery along the grain for elm (Scolytus), and a short one across the grain on oak (S. intricatus, which I'm working from memory on, so it's marked unverified). On a broadleaf with no entry, the hint says so instead of showing spruce under oak.</li>
+<li><strong>Leaf</strong>: <code>LEAFG</code> hard-codes a dicot epidermis and its colour. Feed it <code>sp.leaf.a/b</code> through one uniform, and add a needle branch for <code>leaf.t === 1 || 5</code>: stomata in rows within two pale wax bands, which the plot's close-detail needles already draw, so the scales agree.</li>
+</ul>
+<p>Build cost: one scan of <code>B.caps</code>, a few ms; nothing per frame.</p>
+<p><strong>4. The range is the plot's own range (≈600 B).</strong> The out-dive always lands at <code>tgt = [0,0,0]</code> on an unrelated range. Instead, seed <code>rangeLand</code> from the home seed, and once erosion is done (it's cached in <code>HIST</code>), pick the river cell nearest the centre whose flow runs roughly along +x, like <code>strm.zc</code> does in the plot, and point <code>tgt</code> there. The camera moves, not the land. On Earth, put the treeline at the height where the warmest month in <code>G.cl.T</code> reaches about 6.5 °C at a 6.5 °C/km lapse rate, replacing the fixed <code>tl = 460.</code> in fx.js ~761; likewise the snowline. Also, <code>uFor</code> (the range canopy colour) seems to be bound only in the <code>W.far</code> draw, so the range may get a leftover value; please check, and if so set it from the home stand. You'd rise out of the valley and land on a real river among real ridges, with the plot marked and the forest its own colour.</p>
+<p><strong>5. Dissolve from the spot, and a viewfinder (≈400 B).</strong> Two cheap ways to see the next world before the swap. First, swap the global opacity fade on <code>#snap</code> for an animated CSS radial mask centred on where <code>tgt</code> projects, so the new world opens outward from the point you chose. Second, in the last 40 % of the glide, draw a thin square of the next world's true extent at <code>tgt</code> (64 cm for the log, 6.4 cm for the moss), four projected corners stroked on a 2D overlay. Neither adds a draw call. Drawing the inner world's real ground inset at 1/F is the fuller version, but it needs two builds and a second land buffer in gl.js, so it goes in the queue.</p>
+<p><strong>6. The state you carry changes the small worlds (≈1.5 kB).</strong> Once #1 is in, give each small world one honest response to <code>night</code>, <code>f.wx</code> and season:</p>
+<ul>
+<li>Leaf: stomata close at night and in drought; <code>uSe.x</code> yellows the chloroplasts in autumn; in leaf fall, the dive lands on a fallen leaf with hyphae in it.</li>
+<li>Moss: dry haircap folds its leaves to the stem (lower <code>dr</code>); rain falls as drops about 3 units across.</li>
+<li>Soil: when dry, tardigrades curl into tuns (a resting mode in fx.js) and nematodes slow.</li>
+</ul>
+<p><strong>7. Things that cross scales (≈1.8 kB, queue).</strong></p>
+<ul>
+<li>Falling leaves (<code>uSe.y</code> particles) keep falling in the log world at true scale.</li>
+<li>A deer within 2 m of <code>tgt</code> sends one hoof, its own capsules ×100, stepping through the log world.</li>
+<li>The plot's springtail and mite density near <code>tgt</code> sets the moss world's counts.</li>
+<li><code>audio.fx</code> keeps the home key's birds, muffled, audible from the leaf.</li>
+</ul>
+<p>Ranked as numbered. Items 1, 2, 4 and 5 come to about 2 kB and one sitting. Where does this break on a phone?</p></section>
+<section class="turn rowan"><b class="who">Rowan</b><p>Ash, I checked each claim against the code. Most hold; three readings are wrong and two fixes would break things.</p>
+<p><strong>Confirmed.</strong> <code>zoom()</code> calls a bare <code>grow()</code> (main.js:346), which resets the day from <code>G.air.sun</code> (:144). The way back up resets <code>year = 1</code> and the tape (:141), calls <code>mkFire</code> (:139) and <code>mkLife</code> (:149), and rebuilds <code>world</code> (:133). You missed one: <code>zoom</code> sets <code>mut = 0</code> (:346), so a mutant comes home unmutated. For kind-1 capsules, <code>floor(id)</code> is the species index (grow.js:112, :210). But plain logs and stumps draw theirs at random (:248, :258), so acorns must follow live trees, not the log.</p>
+<p><strong>Corrected.</strong></p>
+<ul>
+<li>The range never reads <code>uFor</code>. The <code>tl = 460.</code> shader is FARD (fx.js:759), the valley round the plot. The range is RANGEG (fx.js:820), with fixed colours and <code>tl = 1.85</code> (heights ×10, so 1 unit is 1 km).</li>
+<li>The range already gets the home seed, since <code>seed</code> never changes in a dive. What it lacks is position.</li>
+<li><code>build()</code> already returns its wetness function as <code>B.trees.wet</code> (grow.js:230).</li>
+<li>Season and weather already carry (they're globals). What's lost is <code>G.cl</code>: snow falls back to <code>G.cl ? G.cl.snow : 1</code> (:267), so a tropical winter snows on the leaf, which is the better case for #1. With the clock running, <code>day</code> comes from <code>dayPh</code> every frame (:248), so the reset shows only when the clock is stopped.</li>
+<li>Treeline: about 6.5 °C is Körner's growing-season mean, not the warmest month. earth.js uses Köppen's 10 °C warmest month for ET (:61), and <code>G.cl.T</code> already includes the climb (:67). Use (Tmax − 10)/6.5 km above the plot so the shading agrees with the class.</li>
+</ul>
+<p><strong>Where it breaks.</strong></p>
+<ul>
+<li>The #1 hash must not overwrite the global <code>seed</code>, which regrows home and writes the URL (:162). And two dives at one log rarely share a 25 cm bin. Seed from the object: trees carry <code>sd</code> (grow.js:224); logs have their capsule index.</li>
+<li>The clock runs in small worlds. <code>pass(1)</code> (:250) and clock 3's <code>spool(); pass(5)</code> (:252) act on <code>stand</code>, now the log's oaklings, and push them onto the plot's tape. Parking must stop that, count the years away, and on return run <code>pass(n); LIFE.lapse(n)</code>. Otherwise we lie about time the other way.</li>
+<li>
+<h1>5: the dive pitch is ≥ 0.75 (:343), so <code>lookAt</code> centres <code>tgt</code> (:181) and the mask needs no projection. On phones, a full-screen masked layer is the risk: fall back to the fade when <code>ema &gt; 0.03</code>. Draw the viewfinder on <code>#snap</code>, which is empty during the glide.</h1>
+</li>
+</ul>
+<p><strong>Memory, measured</strong> (node, <code>build()</code> typed arrays): mixed plot 8.8 MB at Q 1, 5.0 MB at Q 0.5; boreal 10.7 / 6.2 MB; moss world 7.0 / 4.5 MB. A parked boreal plot plus the moss world is about 11 MB on a phone, which is fine. Park the JS arrays only and re-<code>R.load</code> on return: one upload, not a 430 ms build. <code>HIST</code> (range.js:10) never evicts, so keep site seeds out of the range.</p>
+<p><strong>Renderer and bytes.</strong> gl.js:259 asks only for <code>webgl2</code>; there is no WebGL1 path, so the phone risk is fill rate. Bytes are fine. Rule: after every change, rebuild all rungs; 0.2/2/20/200 kB must be byte-identical. Site data goes through G, never through a new <code>build()</code> or <code>grow()</code> parameter.</p>
+<p><strong>Honesty.</strong></p>
+<ul>
+<li>
+<h1>6: nothing records drought, so drought-closing stomata, haircap folding and tardigrade tuns need a wetness memory first. Stomata are built once (micro.js:133), so closing them at night per frame needs a CAPV branch.</h1>
+</li>
+<li>
+<h1>7: at true scale, leaf fall over 64 cm is about 10⁻⁴ of 600 particles, essentially none; a hoof made of capsules ×100 is a blob.</h1>
+</li>
+<li>A ×100 dive shows "a rotting log" even when none is in view.</li>
+</ul>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>Park the plot.</strong> Keep <code>{G, B, LIFE, stand, world, fire, year, yearF, tape, mut}</code> on leaving i=1; on return, <code>R.load(B, G)</code> and restore. No <code>pass</code>, <code>spool</code> or deep time in small worlds; catch up the years away on return.</li>
+<li><strong>Site record in G.</strong> Carry <code>cl</code>, <code>sp</code>, the home canopy colour and a seed from the object's <code>sd</code> or capsule index; leave the global <code>seed</code> alone. Skip the day reset when diving.</li>
+<li><strong>Dive at a real log.</strong> For ×100, glide <code>tgt</code> to the nearest kind-1 capsule (one pass over <code>B.caps</code>, about 1 ms) and say how far it was. The site species joins the log genome's <code>trees</code> with <code>n = 0</code> for a bark palette slot; log capsules use that index. Acorns only within 10 m of a live oak.</li>
+<li><strong>Range out-dive onto a headwater.</strong> <code>rangeLand</code> exposes <code>spot()</code>: the nearest cell with small drainage <code>A</code> (not a 600 km² river), flowing roughly along ±x; set <code>tgt</code> there after <code>grow()</code>. RANGEG takes <code>uFor</code> from home; on Earth, <code>tl = h_spot + (Tmax − 10)/6.5</code>.</li>
+<li><strong>Open from the centre.</strong> A radial mask replaces the fade; the viewfinder square is drawn on <code>#snap</code> over the last 40 % of the glide, with the <code>ema</code> fallback. Cut first if time runs short.</li>
+</ol>
+<p>After each item: lower rungs byte-identical, <code>grow_test</code> passes, a round-trip shot shows the plot unchanged.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>A wetness memory, then haircap folding, tardigrade tuns and stomata closing in the dry.</li>
+<li>Per-frame night closing of stomata; autumn yellowing in LEAFG for deciduous <code>sp</code>.</li>
+<li>A needle leaf: stomata in rows within wax bands, matching fx.js:652.</li>
+<li>Galleries by host in <code>barkLand</code>: Ips on conifers, Scolytus ratzeburgi on birch, S. intricatus on oak (to be checked), and "none modelled" for the rest.</li>
+<li>Plot seedlings and litter by distance in the log world; mite and springtail density sets the moss world.</li>
+<li>FARD treeline and snowline from <code>cl</code>.</li>
+<li>Park the whole stack of small worlds (at most about 13 MB on a phone).</li>
+<li>An inner-world inset at 1/F (second land buffer).</li>
+<li>Muffled home birds; rare true-scale leaf fall; a real hoof.</li>
+</ol></section>
+<section class="turn builder"><b class="who">Builder</b><p>(the main Claude session), after building</p>
+<p>Built all five, with these departures from the agreed list:</p>
+<ul>
+<li>
+<p><strong>Parking keeps less than Rowan asked.</strong> It keeps <code>G</code>, the animals, the stand, the fire, the dam, the year, the tape
+  and the mutant number, but not <code>B</code>'s arrays: on return the plot is rebuilt from the kept stand (<code>grow(1, 1)</code>, as the
+  clock already does each year). That costs one build, about 0.3 s, and none of the 5–11 MB Rowan measured. The years
+  away are counted rather than run (one a year on the slow clocks, five a stride on decades, 250 on millennia) and
+  lived on return, up to sixty at once; the chronicle says how many.</p>
+</li>
+<li>
+<p><strong>The log is found from the stand, not the capsules.</strong> Fallen trunks are <code>stand</code> records with <code>st === 2</code>, which
+  carry species, seed and direction, so the nearest point along each trunk is exact and the species comes free.</p>
+</li>
+<li>
+<p><strong>The seed rule.</strong> Only the small worlds (log, bark, moss, soil, leaf) take the log's seed. The range, lake and cave
+  keep the home seed, as Rowan warned (<code>HIST</code> never evicts).</p>
+</li>
+<li>
+<p><strong>No Earth treeline.</strong> <code>G.cl</code> holds the climate class, not the warmest month's temperature, so Rowan's
+  <code>(Tmax − 10)/6.5</code> can't be computed without more data. Left in the queue.</p>
+</li>
+<li>
+<p><strong>No viewfinder.</strong> The radial opening is in; the viewfinder square was cut, as agreed.</p>
+</li>
+<li><strong>Added: under the bark says whose log it is.</strong> Diving at a birch log went under the bark into a spruce engraver's
+  galleries, which was false. The blurb now names the log and says so on a broadleaf.</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>the 20 kB and 200 kB rungs are byte-identical to before;</li>
+<li><code>grow_test</code> is clean;</li>
+<li>renders:<ul>
+<li>plot (year 41) → log (oak, legend shows it) → plot (same view, year 41) → range → plot;</li>
+<li>beech plot → birch log (white bark) → under the bark → log → plot, year kept;</li>
+<li>a boreal plot's range, landing on a forested headwater;</li>
+<li>on the decades clock, five years counted in the log world and lived on return ("5 years went by while you were away").</li>
+</ul>
+</li>
+</ul>
+<p>Not seen: the radial opening (headless frames are too slow to catch it mid-dissolve), and anything on a phone.</p></section></template>
+<template id="rd1"><p class="settled"><b>Round 2: Measured ground and months.</b> ETOPO 2022 heights and CRU CL 2.0 months under every Earth place; the range becomes the real 640 km; treeline from the warmest month. After it, the 2 MB rung stood at 919,258 bytes.</p><div class="note">
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p></div>
+<section class="turn ash"><b class="who">Ash</b><p>Rowan, round 1 mended the ladder; this round should make it true, which means spending bytes on measured data. One correction first. The Builder wrote that <code>G.cl</code> lacks the warmest month, but <code>earthGenome</code> spreads <code>...p</code> into <code>cl</code> (earth.js:124), so <code>G.cl.T</code> is there. It's <em>modelled</em>, nudged until Köppen agrees, so a treeline from it would match the class without being true. That's the gap the data closes. Every grid below stores land cells only, in KG order, so the sea costs nothing. Data sizes are guesses until you test-pack a sample.</p>
+<p><strong>1. A measured height for every land cell (data ≈180–250 kB, code ≈1 kB).</strong> ETOPO 2022 (NOAA, public domain), block-averaged to the KG's own 15′ grid. About 350 k land cells, one √-scaled byte each (~15 m steps low, ~60 m on peaks), row-delta coded, deflated. Three uses:</p>
+<ul>
+<li><code>place()</code> gets real altitude; the climb slider becomes "above the ground".</li>
+<li>In <code>rangeLand()</code>, the measured 640 km window replaces the three noise belts as the uplift field (bilinear, ~23 cells across). Erosion carves the 2.5 km detail, then a mean-preserving correction per 15′ cell keeps it faithful: big shapes measured, valleys modelled, and the README says so.</li>
+<li><code>spot()</code> becomes the clicked point, with the sampling rotated so local downhill runs along +x like the plot's stream.</li>
+</ul>
+<p>Innsbruck zooms out onto the Inn valley between the Alps; Iowa is flat. Build cost unchanged.</p>
+<p><strong>2. Measured monthly climate (data ≈150–250 kB, code ≈1.5 kB).</strong> CRU CL 2.0 (New et al. 2002, 10′, 1961–90 normals) or WorldClim 2.1 (the licence needs checking), at 0.5°, about 90 k land cells. Temperature is reduced to sea level with #1's heights (T + 6.5·z), which is smoother, deflates better, and lets <code>place()</code> lapse it to any height. Per cell: T mean, amplitude, phase (3 B); P log total plus two harmonics, enough for monsoons (4 B). The sketch becomes a fallback. Honesty check: re-derive Köppen from the measured months and publish agreement with KG per class. It unlocks:</p>
+<ul>
+<li>your <code>(Tmax − 10)/6.5</code> treeline in RANGEG and FARD;</li>
+<li>the snowline from the months below 0 °C;</li>
+<li><code>G.cl.snow</code> from measured winters;</li>
+<li>the bird table by month.</li>
+</ul>
+<p>Quito's range is forested to 3.5 km, Tromsø's birch stops near 400 m. Per-dive arithmetic only.</p>
+<p><strong>3. The Earth as the top rung (code ≈3 kB, data reused).</strong> Put <code>'globe'</code> at <code>LAD[0]</code>, ÷1,000,000: 64,000 km across, the whole planet in frame. It's a sphere mesh shaded from a runtime <code>RGBA8</code> texture, <code>texImage2D</code> from Uint8Arrays (R the KG class, G the height from #1, B the snow months from #2). Measured data uploaded as data, not a stored image. Sun direction comes from the <code>sun3</code> declination and the hour, so you see the real terminator and the season, and the place you're in is marked. Zoom in anywhere: <code>earthAt(lat, lon)</code> runs, then the range of that place (#1), then its plot. The Earth dialog becomes the way out instead of a side door. GPU: one sphere, a 4 MB texture, one cheap pass. It needs #1, or the range under a point is still invented.</p>
+<p><strong>4. One water budget that every scale reads (code ≈1.2 kB, no data).</strong> Your queue item 1, and the real binding. One bucket, <code>soilW</code> in main.js: rain from <code>f.wx</code> fills it; evaporation scaled by the month's temperature (<code>G.cl.T</code> or the genome) and daylight drains it; it rides into the site record through G. Then:</p>
+<ul>
+<li>Plot: mushroom flushes follow it.</li>
+<li>Moss: haircap folds below a threshold.</li>
+<li>Soil: tardigrades enter a tun mode (a new mode in fx.js life) and nematodes slow.</li>
+<li>Leaf: stomatal aperture is a uniform read in a CAPV branch for kind 13 (the stomata built at micro.js:133), closing at night <em>and</em> in drought.</li>
+</ul>
+<p>A dry week on the plot shows as closed pores at 0.64 mm. Cost: one float a tick, one uniform.</p>
+<p><strong>5. Measured soil under the soil world (data ≈30–50 kB, code ≈800 B).</strong> SoilGrids 2.0 (CC BY 4.0) at 0–5 cm, aggregated to 1°. Per cell: sand/silt/clay (2 B), organic carbon (1 B) and pH (1 B). In the soil world, <code>L.rock</code> and <code>peb</code> sizes are drawn from the texture triangle, so grains run from 150 units of sand down to fine silt films. Organic carbon sets hyphal density and dark crumb. pH tilts fungi against bacteria, which is a real trend, gently applied. It also replaces <code>soil()</code>'s unverified colour table. Labrador's soil world is bleached podzol sand; Iowa's is dark silt thick with hyphae.</p>
+<p><strong>6. Tree genera by measured range (data ≈10–20 kB, code ≈600 B).</strong> Store presence bits for the ~30 genera the grammar can draw, per 1° cell. Little's North American range maps (USGS, public domain) and the EUFORGEN maps for Europe are the measured sources; elsewhere it stays the realm sketch, flagged per cell. <code>earthGenome</code> picks from what's actually present, and the log, bark and leaf worlds inherit it through <code>site.sp</code>. That makes your queue item 4 (galleries by host) worth doing next.</p>
+<p><strong>7. Finish the inward species binding (code ≈2 kB).</strong> These are your queue items 3 to 5:</p>
+<ul>
+<li>the needle LEAFG branch, which matches fx.js:652;</li>
+<li>host galleries in <code>barkLand</code> (Ips, S. ratzeburgi, S. intricatus once checked, otherwise "none modelled");</li>
+<li>plot seedlings and litter by distance in the log world.</li>
+</ul>
+<p>Ranking: 1, 3, 2, 4, 7, 5, 6. Data ≈400–600 kB, leaving over a megabyte. This sitting: #1 at 15′ with the range rewired, plus #4; #3 after #1 passes a render check over the Alps and Andes. From you: test-pack ETOPO at 15′ and 10′, and say whether a phone takes the globe's texture fetch at full screen.</p></section>
+<section class="turn rowan"><b class="who">Rowan</b><p>Ash, you're right and the Builder was wrong: earth.js:124 spreads <code>...p</code> into <code>cl</code>, so <code>G.cl.T</code> exists. Its months are modelled, though (earth.js:7–10), so a treeline built from them would only restate the class. I fetched the data, so these numbers are measured.</p>
+<p><strong>What reached us.</strong> NOAA NCEI answered. I pulled ETOPO 2022 60″ surface elevation over OPeNDAP, every third arc-minute: 104 MB in <code>tmp/data/etopo2022_60s_s3_band*.dods</code>. CRU CL 2.0 also answered, and I have the 10′ <code>tmp</code>, <code>pre</code> and <code>elv</code> files and the readme. WorldClim answered too, but its licence says "Redistribution or commercial use is not allowed without prior permission", so it's out. NOAA PSL refused the connection, and I didn't retry it. SoilGrids' 5 km aggregates are listed (sand, silt, clay, soc, phh2o) but I haven't downloaded them. Licences: ETOPO is US-government data (cite NOAA NCEI 2022, doi:10.25921/fd45-gt74). CRU is ODbL plus DbCL, attribution and share-alike, so the packed grid itself must ship under ODbL with a notice.</p>
+<p><strong>#1 packed.</strong> The KG grid has 356,253 land cells, as you said. Each cell is a mean of 25 three-arc-minute samples, stored as a √ byte (error 26 m at most, 6 m on average), delta-coded from the left neighbour, then zopfli. That is 149.5 kB, and <strong>149.9 kB in the page</strong> as base64 inside the page's deflate, unpacked with <code>DecompressionStream('deflate-raw')</code>, which the bootstrap already uses. Raw base64 under the outer deflate costs 188 kB and raw UTF-8 bytes 173 kB, so pre-compress the data. At 10′ it's 801 k cells and 314 kB, which is twice the cost for detail the range's erosion invents anyway. Stay at 15′.</p>
+<p>Two corrections:</p>
+<ul>
+<li>I first averaged all samples in a cell, and that put 11,187 "land" cells below sea level, because coastal cells pick up sea floor. Average land samples only; that leaves 2,025, mostly the Caspian and Dead Sea basins.</li>
+<li>A cell mean is not where a plot stands. Innsbruck's cell mean is 1,433 m; its lowest sample is 579 m, which is the valley floor (574 m). Plots sit on streams, so add a floor byte (floor as a fraction of the mean). Mean plus floor is <strong>218 kB</strong>.</li>
+</ul>
+<p><strong>#2 packed.</strong> CRU has 67,129 land cells at 0.5°, not 90 k, because it leaves out Antarctica. Reduce temperature to sea level with CRU's <em>own</em> <code>elv</code> offline, not ETOPO's: they differ by 122 m rms (about 0.8 °C). Then lapse at run time to the #1 floor.</p>
+<p>Your 7-byte code (one temperature harmonic) is 167 kB, but it moves 12.5 % of cells to a different Köppen class from CRU's own months: ET drops from 93 % to 82 % agreement with KG, and Dwb from 67 % to 41 %. The one harmonic flattens the warmest month, which is the very month the 10 °C rule reads. Two temperature harmonics (9 B) cost <strong>197 kB</strong> and keep 90.7 %. All twelve months cost 507 kB.</p>
+<p>The honesty problem is bigger than the coding. Measured CRU 1961–90 months reproduce the KG class (Rubel 2017, 1986–2010) in only <strong>78 %</strong> of cells, and the first letter in 92 %. If the class comes from KG and the months from CRU, a fifth of places would show months that contradict their label. So keep KG as the class, start <code>place()</code>'s nudge from the CRU months instead of the zonal sketch, and publish the size of the nudge. Agreement by class is in <code>tmp/rowan_scripts/kop.mjs</code>'s output: Dsc agrees 12 % of the time and Aw 51 %.</p>
+<p><strong>A rule question for Sam.</strong> ETOPO calls itself a "Global Relief <em>Model</em>", and CRU is splined from station data. I read the brief's "no model" as "no meshes or assets", but that's the owner's call. Ask before shipping.</p>
+<p><strong>#3 globe.</strong> No WebGL1 concern (gl.js:259 is WebGL2-only), and one texture fetch per fragment is nothing on a phone. The trouble is elsewhere:</p>
+<ul>
+<li>Linear filtering of a class channel blends class indices, and mipmaps average them. Keep class (or its palette colour, computed at run time) NEAREST in its own texture, and height LINEAR in another.</li>
+<li><code>sun3</code> declination comes in four steps (<code>[0, 23.44, 0, -23.44][season]</code>, main.js:95), so the terminator jumps between seasons. Call it seasonal, not "real".</li>
+<li>The ladder is index-bound: <code>LAD</code>/<code>STEP</code> at :333, and <code>i === 1</code>, <code>i + j === 1</code>, <code>j === 1</code> at :366–371. Putting the globe at index 0 renumbers all of them.</li>
+<li>A <code>mixed</code> or <code>boreal</code> home has no place on Earth. The globe rung must exist only for Earth homes, or it marks a fiction on a real planet.</li>
+<li>Build the sphere as <code>B.xm</code> meshes (gl.js:334, as the cave does), not as the heightfield.</li>
+</ul>
+<p><strong>#4 water.</strong> The bucket's inputs aren't physical: the weather is whatever the user clicked, and a clock "day" is an eighth of a year (main.js:247). A "dry week" doesn't exist in this sim. Do it after CRU: run a Thornthwaite balance from the place's months, T and day length (<code>G.cl.day</code>), on <code>yearF</code>, with current rain as a short decaying term. The stomata are kinds 12 (guard cells) and 13 (pore) at micro.js:136–137. A vertex shader can't find the pore centre for kind 12, so snapshot the aperture at dive time. Real stomata take tens of minutes to close anyway.</p>
+<p><strong>#6.</strong> <code>extra.pool</code> has 13 species (genome.js:139), not ~30 genera. For Europe, cite Caudullo et al. 2017 (CC BY 4.0, figshare, which I didn't test) rather than the EUFORGEN maps. <strong>#1 range:</strong> <code>HIST</code> (range.js:10) keeps 11 × 256² floats, which is 2.9 MB per place, and never evicts. Key it on lat/lon and keep three places. Longitude spans need cos(lat): 640 km at Tromsø is 16.6°.</p>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>Measured ground.</strong> Ship <code>etopo.js</code>: the 15′ land mean plus a floor byte (218 kB measured), base64 of raw deflate, decoded once on first use. <code>place()</code> takes the floor at the clicked cell, and the climb slider means "above the ground". The README states the source, how it was sampled and the licence.</li>
+<li><strong>Range from the measured window</strong> (Earth homes only). Build the uplift bilinearly from the 15′ means over a cos(lat)-correct 640 km window. Erosion carves it, and a mean-preserving correction per measured cell follows. <code>spot()</code> is the clicked point, with sampling rotated so downhill runs +x and the hint giving north. Key <code>HIST</code> on the place, evicting past three. Fictional genomes keep their belts and say so.</li>
+<li><strong>Treeline from months.</strong> In RANGEG and FARD, <code>tl = h_plot + (Tmax − 10)/6.5</code> km from <code>G.cl.T</code>, with a uniform carrying it. Label it "modelled months" until item 4 lands.</li>
+<li><strong>CRU months as the starting point.</strong> 9 B per cell (197 kB), reduced to sea level with CRU's own elevation offline and lapsed to the floor at run time. <code>place()</code> nudges from these months instead of the sketch. The README gives agreement with KG per class and the median nudge. ODbL notice in the page.</li>
+</ol>
+<p>Checks: lower rungs byte-identical, <code>grow_test</code> clean, renders of Innsbruck (valley floor, Inn range), Quito and Tromsø, and Sam's ruling on "model" before publishing.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>A Thornthwaite water bucket from the measured months, then haircap folding, tardigrade tuns and stomata snapshotted at dive time.</li>
+<li>The globe at the top, for Earth homes only: re-index the ladder, NEAREST class and LINEAR height textures, a mesh in <code>B.xm</code>, a seasonal terminator.</li>
+<li>SoilGrids 5 km at 1° (CC BY 4.0; reachable, not yet packed) under the soil world.</li>
+<li>Genera by measured range: Little (USGS) and Caudullo et al. 2017, mapped onto the 13 species in the pool, flagged elsewhere.</li>
+<li>The needle leaf, galleries by host, and plot seedlings and litter by distance.</li>
+<li>Snowline and <code>G.cl.snow</code> from the measured months below 0 °C.</li>
+</ol></section>
+<section class="turn builder"><b class="who">Builder</b><p>, after building</p>
+<p>Built items 1–4. Where I departed from the plan:</p>
+<ul>
+<li>
+<p><strong>All twelve months, not two harmonics.</strong> Rowan measured the 9-byte harmonic code at 197 kB, keeping 90.7% of
+  cells in their class. Storing all twelve months costs 505 kB, and the 2 MB rung has room. I chose the measured
+  months over a fit to them, so the only loss is quantisation (half a degree; a log byte for rain). Elevation (mean
+  plus floor) and climate together come to 802 kB of deflate in one string, inflated once in about 0.1 s. The 2 MB
+  rung went from 114 kB to 919 kB.</p>
+</li>
+<li>
+<p><strong>The nudge works on the months themselves.</strong> It searches a shift, a stretch of the yearly swing and a rain scale,
+  in that cost order, and the place's line prints the result. The old sketch is kept only as the fallback, for
+  Antarctica and the instant before the grids are inflated.</p>
+</li>
+<li>
+<p><strong>The snowline as well as the treeline.</strong> Both are in one <code>uTl</code> vec4: treeline at a warmest month of 10 °C,
+  snowline roughly at 1 °C. Without the snowline, Quito's valley would have shown snow below its own forest. The
+  1 °C rule is mine and isn't checked against glacier data; the README says so.</p>
+</li>
+<li>
+<p><strong>The range window is north-up, not rotated.</strong> Rowan wanted downhill turned along +x. The plot sits at the window's
+  centre, which is the clicked point.</p>
+</li>
+<li>
+<p><strong>One bug worth recording.</strong> The range's priority flood marks a cell as visited by giving it a height of zero or
+  more, so a sea at −0.3 km was pushed again forever and the tab ran out of memory. Heights in the range are now
+  kept above zero.</p>
+</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The 20 kB and 200 kB rungs are byte-identical.</li>
+<li><code>grow_test</code> is clean.</li>
+<li>Place lines read right:<ul>
+<li>Innsbruck: no nudge, 10.2 °C a year, 2 to 19 °C by month, 1,084 mm, ground 585 m.</li>
+<li>Quito: nudged −1 °C, ground 2,095 m, which is the cell floor, below the city.</li>
+<li>Tromsø: Dfc, −4 to 12 °C by month, ground 18 m.</li>
+</ul>
+</li>
+<li>The ranges, rendered:<ul>
+<li>Quito: the Andes, with the Pacific to the west.</li>
+<li>Innsbruck: the Alps, with the Adriatic to the south. They are lower and greener than the real Alps, because a
+28 km mean flattens the peaks.</li>
+</ul>
+</li>
+</ul>
+<p>Not done: Tromsø's range, the globe, the bucket, and anything on a phone.</p>
+<p>Open question for Sam: ETOPO calls itself a relief model. Is a DEM a "model" under the page's rules? It is shipped
+as data and labelled, it is easy to remove, and the README says it is the borderline case.</p></section></template>
+<template id="rd2"><p class="settled"><b>Round 3: The horizon.</b> Measured land to 120 km behind the valley, the Earth curving away; valley relief from data; true north and a smooth year in every world. After it, the 2 MB rung stood at 1,084,760 bytes.</p><div class="note">
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p></div>
+<section class="turn ash"><b class="who">Ash</b><p>Rowan, the top of the ladder is true and the rest isn't. From Innsbruck the real Alps arrive only after a dissolve, the valley is still <code>420 * ridge()</code> noise (valley.js:20), and nothing below the plot reads the measured months. This round is about the seams.</p>
+<p>Five of seven reuse the 802 kB we ship; only #6 and #7 need new data. Ranked by one world per byte and per hour:</p>
+<p><strong>1. Put the range on the valley's horizon (reuse; code ≈1.2 kB; one sitting).</strong> Today the valley stops at 3 km and the range appears only after the cut. Instead:</p>
+<ul>
+<li>Build the range lazily after an Earth plot's first frame (<code>HIST</code> caches it).</li>
+<li>Add a third band of rings to <code>valley()</code>, from 3 km out to about 150 km, sampling the range's eroded <code>Hgt</code> at true height (the range draws heights ×10, so divide here).</li>
+<li>Inside 3 km, drive the valley's ridge amplitude from ETOPO's mean minus floor at the clicked cell, which is 854 m at Innsbruck, instead of the fixed 420 m. Label it "relief measured, shape modelled".</li>
+</ul>
+<p>You'd see the Nordkette above the plot's own trees, and zooming out becomes one camera move; valley to range just sheds the near rings. Cost: the range build, maybe 0.3–0.8 s off the critical path, plus one far, fogged mesh of about 4N×K vertices. <strong>The biggest seam for the fewest bytes.</strong></p>
+<p><strong>2. One sky, one calendar (reuse; ≈500 B; two hours).</strong> Three jumps at every dive:</p>
+<ul>
+<li><strong>North rotates.</strong> With <code>G.cl</code>, <code>sun3</code> puts the azimuth at <code>A.sun[1]*RAD + …</code> (main.js:96), and every world has its own <code>A.sun[1]</code>: an Earth plot inherits its base forest's 35, the range uses 150, the log 140, the soil 200. Carry the home <code>A.sun[1]</code> in the site record, so the sun stands in the same part of the sky at every scale.</li>
+<li><strong>The year moves in quarters.</strong> <code>season = floor(yearF*4)</code> (main.js:253) and the declination comes from a four-entry table. Use <code>decl = 23.44·sin(2π(yearF − 0.22))</code>, read the measured month as <code>T[floor(yearF*12)]</code>, and interpolate between months. <code>uTl</code> then rises and falls through the year instead of in steps. Keep <code>season</code> for the buttons.</li>
+<li><strong>Snow, rain and the treeline</strong> read the current month, not the class.</li>
+</ul>
+<p><strong>3. A Thornthwaite bucket from the shipped months (reuse; ≈1.5 kB; one sitting).</strong> Your queue item 1. Compute PET from the month's T and <code>G.cl.day</code>, take the monthly P from CRU, and step soil water on <code>yearF</code>, with rain the user clicked as a short decaying term on top. Pass <code>soilW</code> down through G at each dive. Then:</p>
+<ul>
+<li>Plot: stream level and mushroom flushes follow it.</li>
+<li>Moss: haircap folds its leaves when dry.</li>
+<li>Soil: tardigrade tuns and slow nematodes.</li>
+<li>Leaf: stomatal aperture is snapshotted at dive time, as you said, for kinds 12 and 13.</li>
+</ul>
+<p>Innsbruck in August and Quito in its dry season differ at 0.64 mm: the first measured number to reach the bottom.</p>
+<p><strong>4. The next world in a window before the swap (reuse; ≈3 kB; a full sitting).</strong> This makes the transition itself continuous:</p>
+<ul>
+<li>Build the inner world as the glide starts (about 0.3 s, so the stall comes before the camera moves).</li>
+<li>Give gl.js a second loaded world, drawn with one model transform: scale 1/F, translated to <code>tgt</code>, offset so its ground meets the outer <code>Hgt(tgt)</code>.</li>
+<li>Add one <code>uHole</code> vec4 to the mesh, cap and card fragment shaders, so the outer world discards inside a disc of radius 0.4·S/F around <code>tgt</code>.</li>
+</ul>
+<p>As the camera closes, the real 64 cm log already lies in the plot's floor with its moss; at the hand-off the outer world stops drawing. No dissolve, no frozen frame. Memory: two worlds, about 11 MB by your phone figures. The inner world's vertices all run but fill a small disc; time the boreal moss step. Fit the inner rim to a plane through the outer ground. This is what turns the slideshow into one world, but #1–#3 are cheaper.</p>
+<p><strong>5. The globe as the top rung, Earth homes only (reuse; ≈3 kB; a sitting).</strong> Your queue item 2, as scoped:</p>
+<ul>
+<li>KG class NEAREST and height LINEAR, in two textures;</li>
+<li>the sphere in <code>B.xm</code>;</li>
+<li>the ladder re-indexed;</li>
+<li>the terminator from #2's continuous declination, so it's no longer seasonal steps.</li>
+</ul>
+<p>It binds upward only, so it ranks below the inward work.</p>
+<p><strong>6. SoilGrids under the soil world and the plot floor (new data; ~40–60 kB guessed, not packed; a sitting).</strong> Sand, silt, clay, SOC and pH from the 5 km aggregates at 1°, about 22 k land cells × 4 B.</p>
+<ul>
+<li>The soil world: grain sizes from the texture triangle, hyphal density from SOC.</li>
+<li>The plot: <code>G.floor.lit</code> and the soil colour from the same numbers, so the plot floor and the soil world agree.</li>
+</ul>
+<p>It replaces <code>soil()</code>'s unverified table; CC BY 4.0. Pack it before we decide.</p>
+<p><strong>7. Genera by measured range, then the hosts below (new data ~10–20 kB; two sittings).</strong> Little (USGS) plus Caudullo et al. 2017, mapped onto the 13 pool species and flagged per cell where neither source covers it. Then the needle LEAFG branch and galleries by host, so the measured tree carries on into its log, its bark and its leaf.</p>
+<p><strong>Not proposing</strong> a hydrology chain, the range's drainage area setting the plot's stream width. The range's <code>A</code> is modelled erosion over a 28 km mean, so the number would look measured and isn't.</p>
+<p>This sitting: #1 and #2, which share the site record; #3 and #4 next. Three checks: time <code>rangeLand</code> under an Earth plot; confirm the per-world <code>A.sun[1]</code> rotation in a render; and tell me whether the <code>uHole</code> discard breaks early-z badly enough on a phone to matter.</p></section>
+<section class="turn rowan"><b class="who">Rowan</b><p>Ash, I ran your three checks. Your line readings hold: valley.js:20 is the fixed <code>420 * ridge</code>, main.js:96 adds <code>A.sun[1]</code>, and main.js:253 quarters the year. The fixes need changing in four places.</p>
+<p><strong>Check 1: timing.</strong> In Node I gave <code>rangeLand</code> the real <code>elev</code> window, the same call grow.js:73 makes, after <code>ready</code> inflated (58 ms).</p>
+<table>
+<thead>
+<tr>
+<th>Place</th>
+<th>Cold</th>
+<th>Cached in <code>HIST</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Innsbruck</td>
+<td>778 ms</td>
+<td>83 ms</td>
+</tr>
+<tr>
+<td>Quito</td>
+<td>666 ms</td>
+<td>77 ms</td>
+</tr>
+<tr>
+<td>Tromsø</td>
+<td>596 ms</td>
+<td>77 ms</td>
+</tr>
+<tr>
+<td>Iowa</td>
+<td>770 ms</td>
+<td>88 ms</td>
+</tr>
+</tbody>
+</table>
+<p>That is on this sandbox's CPU; a phone is likely 3–5× slower, so 2–4 s. "Off the critical path" isn't true: it's one synchronous call on the main thread, so the plot freezes while it runs. A Worker won't help in a minified single-file IIFE, because <code>rangeLand.toString()</code> loses its closure. Turn the 30 erosion passes (range.js:33–47) into a generator and run one per frame. That's about 25 ms a pass here.</p>
+<p><strong>Check 2: north.</strong> Confirmed in code; the render doesn't show it.</p>
+<ul>
+<li>The range is north-up: grow.js:73 maps −z to north.</li>
+<li>The solar term in <code>sun3</code> is measured from south, so <code>A.sun[1] = 0</code> puts the noon sun at +z, which is south.</li>
+<li>So the range's own <code>150</code> lights the measured Alps from 150° off true. The plot's inherited <code>35</code> and the log's <code>140</code> are arbitrary too.</li>
+</ul>
+<p>Your fix of carrying the home azimuth down is backwards for the range: the range is the one world with a true north. Set <code>A.sun[1] = 0</code> in <code>earthGenome</code> and carry that down. Then every Earth world shares one north, and the valley rings need no rotation.</p>
+<p>The render (tmp/r3/inn.png, Innsbruck at noon, range from above) is too coarse at render scale 0.44 to read the shading. It does show something else: <strong>the measured window is blocky</strong>, squares a cell wide. The cause is grow.js:73 calling <code>elev()</code>, which returns the nearest cell (earth.js:38). The blur correction (range.js:45) keeps the steps because they're already in <code>h</code> (range.js:21). Interpolate between the four nearest cells.</p>
+<p><strong>Check 3: <code>uHole</code> and early-z.</strong> I can't measure a phone here; this is from the code. Capsules already write <code>gl_FragDepth</code> (gl.js:80, :105), and cards already <code>discard</code> (gl.js:204, :208), so both already lose early-z and Apple's hidden-surface removal. Adding <code>discard</code> to MSHF costs it only for the land. The land is drawn first (gl.js:332), but its shader is the heaviest per pixel (FARD noise). Use a stencil instead: draw the inner world where stencil = 1 and the outer world where it isn't. Then nothing discards, and neither world's depth has to agree with the other's. That needs <code>DEPTH24_STENCIL8</code> at gl.js:284.</p>
+<p><strong>#1, the horizon.</strong> Three problems you missed:</p>
+<ul>
+<li><strong>Far plane.</strong> At plot range <code>f.nf</code> is <code>[0.1, 4000]</code> (main.js:288), so nothing beyond 4 km draws at all. Pushing the far plane to 150 km with a 0.1 m near plane leaves a 24-bit depth step of about 13 km out there, so ridges would mis-sort. Draw the far band in its own pass with near/far <code>[1000, 150000]</code>, clear depth, then draw the near world.</li>
+<li><strong>Earth's curvature.</strong> The drop is d²/2R: about 200 m at 50 km and 1.8 km at 150 km. Without it, distant peaks loom far too high. Subtract d²/(2 · 1.15 R), where the 1.15 allows for refraction.</li>
+<li><strong>Index range.</strong> Fog won't hide the band, because <code>fogc</code> thins with height at a 14 m scale (<code>uFog.y</code> = 0.07, gl.js:51). So the peaks will show and the low ground will haze out, which is right. The valley's mesh is 49 rings of 512 vertices with <code>Uint16</code> indices (valley.js:74). A separate band mesh stays under 65,536 vertices up to about 120 rings.</li>
+</ul>
+<p>The range's centre sits 740 m above the plot at Innsbruck (1,325 m against a 585 m floor). The band has to ramp from the valley rim up to it; that wall is real (the Nordkette). Peaks top out at 2,903 m in that window, against 3,768 m for the Wildspitze, because the 15′ mean flattens them. Say so, or add a cell-maximum byte. The floor byte cost about 68 kB, so expect something similar.</p>
+<p><strong>#2, the calendar.</strong> Your <code>23.44·sin(2π(yearF − 0.22))</code> assumes year 0 is 1 January. But <code>season = floor(yearF·4)</code> with <code>SEA[0] = 'Spring'</code> (main.js:24) means year 0 is the start of spring. Take 1 March:</p>
+<ul>
+<li>the declination is <code>23.44·sin(2π(yf − 0.054))</code>;</li>
+<li>the calendar month is <code>(floor(yf·12) + 2) % 12</code> in the north and <code>+ 8</code> in the south, because <code>season</code> is local (main.js:95 flips the declination's sign for the south), while CRU months are calendar months;</li>
+<li>interpolate <code>uTl</code> from the two nearest months.</li>
+</ul>
+<p><strong>#3, the bucket.</strong> <code>G.cl.day</code> holds two numbers, the solstice day lengths (earth.js:109). Thornthwaite needs a day length for every month, which is one line from latitude and declination. The stream level is fixed at build time (<code>strm.lvl</code>), so it can follow the bucket only when the plot regrows. Say so.</p>
+<p><strong>#4, the window.</strong> It's about 5–6 kB, not 3:</p>
+<ul>
+<li>The capsules are ray-cast in world space from <code>uCam</code> (gl.js:105), so one model transform won't do. Draw the inner world with its own scaled camera.</li>
+<li>Its pick and DoF depth (<code>vz/300</code>) has to be divided by F.</li>
+<li>It needs its own shadow pass, which doubles shadow cost for the length of the glide.</li>
+<li>It needs a rotation as well as scale and translation. The log in the window has to lie along the trunk you dived at (<code>stand</code> records carry its direction), or the 64 cm log will cross the outer trunk at an angle.</li>
+</ul>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>One north and a continuous year.</strong> Set <code>A.sun[1] = 0</code> in <code>earthGenome</code> and carry it down in the site record. Make the declination continuous with year 0 = 1 March, and read the calendar month as <code>+2</code> north and <code>+8</code> south. Interpolate <code>uTl</code> and snow between months. Keep <code>season</code> for the buttons and the chronicle.</li>
+<li><strong>A smooth measured window built in steps.</strong><ul>
+<li>Interpolate <code>elev</code> across the four nearest 15′ cells, so the range has no cell-sized steps.</li>
+<li>Make <code>rangeLand</code>'s erosion a generator that runs one pass per frame and caches into <code>HIST</code>.</li>
+<li>After an Earth plot's first frame, build its range that way in the background.</li>
+</ul>
+</li>
+<li><strong>The range on the plot's horizon.</strong><ul>
+<li><strong>Mesh:</strong> a separate band mesh from 3 km out to about 120 km. Heights are <code>rangeHgt·1000 − floor − d²/(2·1.15R)</code>, ramping from the valley rim.</li>
+<li><strong>Drawing:</strong> its own pass at near/far <code>[1000, 150000]</code>, drawn first, then clear depth.</li>
+<li><strong>Near relief:</strong> set the near ridge amplitude from mean minus floor, labelled "relief measured, shape modelled".</li>
+</ul>
+</li>
+</ol>
+<p>Check it with a render of Innsbruck looking north at the Nordkette, and time it with the clock running.</p>
+<p>Each item needs: lower rungs byte-identical, <code>grow_test</code> clean, and renders of Innsbruck, Quito and Iowa (where the far band must show flat ground).</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>A Thornthwaite bucket with day length per month, snapshotted to stomata, haircap and tardigrades at dive time; stream and mushrooms follow it only on regrow.</li>
+<li>The next world in a window: stencil, not <code>discard</code>; a scaled inner camera with its own shadow pass; aligned to the trunk's axis. Time it on boreal → moss.</li>
+<li>A cell-maximum height byte, so real peaks reach the range and the horizon (about 70 kB).</li>
+<li>The globe, for Earth homes only, with the terminator from item 1.</li>
+<li>SoilGrids, packed and measured before deciding.</li>
+<li>Genera by measured range, then the needle leaf and galleries by host.</li>
+</ol></section>
+<section class="turn builder"><b class="who">Builder</b><p>, after building</p>
+<p>Built items 1 and 3, half of item 2, and one extra.</p>
+<ul>
+<li>
+<p><strong>One north and a continuous year: built as agreed.</strong> The site record carries the place's azimuth (<code>G.cl.az = 0</code>)
+  down every dive, and the solar azimuth's sign is flipped for real places so afternoon light comes from the west
+  (+x is east). The declination is continuous. Snow on the ground follows the interpolated month at the plot. The
+  valley and range snowlines are now computed per frame on the CPU, so the shaders just read <code>uTl</code>. Fictional forests
+  get the same numbers as before.</p>
+</li>
+<li>
+<p><strong>Smooth window: half done.</strong> The bilinear four-cell lookup is in, so the range is no longer one cell blocky and the
+  coast steps half as hard. Not done: the erosion generator. The range still builds all at once on zoom-out (about
+  0.8 s on a laptop), because the horizon turned out not to need the range at all.</p>
+</li>
+<li>
+<p><strong>The horizon: built differently.</strong> Rowan planned it as the range sampled out to 120 km. Instead it is a band
+  built straight from the measured cells (14,600 vertices, a few ms to build, using the valley's vertex layout and
+  shader). For relief within a cell I added each cell's highest point as a third plane. It cost 164 kB, not
+  Rowan's ~70; I measured it. The band is drawn first with near/far [300, 200,000] and the depth buffer is then
+  cleared, as Rowan proposed. Its inner edge sinks 40 m so the valley's rim hides the seam.</p>
+</li>
+<li>
+<p><strong>Extra: valley relief from data.</strong> The ridge amplitude is (mean − floor) × 0.9, clamped to 40–1,500 m.</p>
+</li>
+<li><strong>A trap for next time.</strong> Pulling the land uniforms into a helper <code>const lu = TIER &gt; 3 &amp;&amp; (...)</code> left <code>lu=!1</code> in
+  the 20 kB build and reshuffled every minified name. Only inlining the T4 copy kept the lower rungs byte-identical.</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The lower rungs are byte-identical, and <code>grow_test</code> is clean.</li>
+<li>Renders from 3.2 km out:<ul>
+<li>Innsbruck, north and south: the valley, then hills to the skyline, with pale tops far off to the south.</li>
+<li>Des Moines: flat to the edge.</li>
+<li>Quito: green relief to the west.</li>
+</ul>
+</li>
+</ul>
+<p>Honestly, the renders are too low-resolution to judge how the band's ridges read. Its canopy pattern at 50 km may
+shimmer on a real screen. Not seen at all: a phone, and the horizon at night or in winter.</p></section></template>
+<template id="rd3"><p class="settled"><b>Round 4: The place’s year at every scale.</b> Snowpack, leaf-out and leaf-fall, dew and rime from measured humidity and diurnal range; winter inversions. After it, the 2 MB rung stood at 1,313,751 bytes.</p><div class="note">
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p></div>
+<section class="turn ash"><b class="who">Ash</b><p>Rowan, the measured world now stops at the plot. Below it, Innsbruck in January and Manaus in July differ only through <code>G.cl.T</code> feeding snow and <code>uTl</code>: both have a living leaf, a bare log, and dew every dawn (gl.js:211, <code>DEW = max(smoothstep(.5,.15,uSun.y), uWx.x)</code>, so even the Atacama gets dew). I mark each change <strong>M</strong> (measured number), <strong>R</strong> (rule applied to measured numbers) or <strong>S</strong> (sketch).</p>
+<p><strong>1. Two buckets, water and snow, from the shipped months (reuse; ≈2 kB code).</strong> Stepped beside <code>yearF</code> (main.js:252), passed down in the site record (main.js:134) as <code>sw</code> and <code>swe</code>.</p>
+<ul>
+<li><strong>Water:</strong> Thornthwaite PET from <code>mon()</code>'s T, with day length per month from latitude and the continuous declination you specified.</li>
+<li><strong>Snow:</strong> a degree-day snowpack. P is stored as SWE when T &lt; 0 and melts at about 3 mm/°C/day.</li>
+</ul>
+<p>Both R over M:</p>
+<ul>
+<li><strong>Plot:</strong> snow cover from SWE, not the month's T, so late March at Innsbruck still has snow lying; mushrooms follow <code>sw</code>; the stream only on regrow.</li>
+<li><strong>Log (64 cm):</strong> Innsbruck's January pack (20–30 cm if the rule holds) is a white land layer at <code>Hgt + depth</code> with only the log's top showing; slugs (kind 9) dormant, active only at high <code>sw</code>. Manaus: always wet, unchanged.</li>
+<li><strong>Moss (6.4 cm):</strong> under a pack, a dim blue space below a snow ceiling near 0 °C, where springtails really winter; dry haircap folds its leaves (lower <code>dr</code>).</li>
+<li><strong>Soil (6.4 mm):</strong> unfrozen under snow, so nematodes stay active; still on bare frozen ground; tardigrades tun when dry.</li>
+<li><strong>Leaf:</strong> stomatal aperture is snapshotted from <code>sw</code> at dive time.</li>
+</ul>
+<p><strong>2. Phenology from the measured months (reuse; ≈1 kB).</strong> Replace the four-step leaf calendar with dates from <code>G.cl.T</code>: leaf-out at about 5 °C plus a degree-day sum, fall below about 10 °C; evergreens (<code>ev</code>) never. All R; thresholds from memory, marked unverified.</p>
+<ul>
+<li><strong>Plot:</strong> <code>uSe.x/.y</code> from the dates: Innsbruck colours in October, Manaus never.</li>
+<li><strong>Log:</strong> litter freshness follows days since fall: gold in November, skeletal by June.</li>
+<li><strong>Moss:</strong> open canopy between fall and leaf-out, so more light in spring.</li>
+<li><strong>Leaf:</strong> between fall and leaf-out a deciduous dive lands on a fallen leaf with hyphae, or a needle; LEAFG's chloroplasts yellow on the same date.</li>
+</ul>
+<p>No data, all five scales: the best value here.</p>
+<p><strong>3. Relative humidity and diurnal range from CRU (new data; I'd guess ≈40–60 kB each as three harmonics; please pack them).</strong> Dawn is T − DTR/2; the dew point comes from <code>reh</code> by Magnus; dew when dawn is below it, hoar frost when also below 0 °C. R over M, replacing gl.js:211 with a <code>uDew</code> vec2 (dew, rime).</p>
+<ul>
+<li><strong>Plot:</strong> dew only on nights that earn it; white needle tips; valley fog at saturated dawns (Innsbruck's January inversion).</li>
+<li><strong>Log:</strong> rime along the bark edges, and the elf cups beaded.</li>
+<li><strong>Moss:</strong> drops of about 1–3 mm on the shoot tips, as lenses at true scale.</li>
+<li><strong>Leaf:</strong> dew droplets of about 100 µm, which is 10 units, sitting on the cuticle. Frost shows as a feathery rime on the hairs.</li>
+</ul>
+<p>Check: harmonics may flatten DTR as they flattened Tmax; measure dew-night misclassification against twelve months before choosing the coding.</p>
+<p><strong>4. Wet-day frequency and sunshine from CRU (new data; ≈40–60 kB each).</strong> The clock's weather becomes a two-state Markov chain with wet probability <code>wet/days</code> (R over M); sunshine sets the baseline overcast <code>f.wx[2]</code> (M); the button stays as an override.</p>
+<ul>
+<li><strong>Plot:</strong> the counts decide, not my memory: Manaus's wet March against its drier August, Innsbruck's summer storms.</li>
+<li><strong>Log:</strong> slugs out after rain.</li>
+<li><strong>Moss:</strong> raindrops.</li>
+<li><strong>Bucket:</strong> #1 gets real rain events instead of clicks.</li>
+</ul>
+<p>It binds less than #3, but makes the weather itself measured.</p>
+<p><strong>5. SoilGrids under the soil world (new data, guessed ≈40–60 kB; pack it).</strong> Sand, silt, clay, SOC and pH at 1°.</p>
+<ul>
+<li><strong>Soil world:</strong> grain sizes from the texture triangle (M, mapped by R), and hyphal density from SOC (R).</li>
+<li><strong>Plot:</strong> the floor's litter and mineral colour from the same numbers, so the plot and the soil world agree (R).</li>
+<li><strong>Moss:</strong> low pH favours <em>Sphagnum</em> or haircap. That rule is S, so I'll keep it gentle.</li>
+</ul>
+<p><strong>6. Genera by measured range (new data ≈10–20 kB).</strong> Little plus Caudullo, mapped onto the pool. M for presence; everything below inherits it through <code>site.sp</code>, then the needle leaf and host galleries.</p>
+<p><strong>Not proposed:</strong></p>
+<ul>
+<li>CRU wind: below the plot the air is near-still everywhere.</li>
+<li>CRU ground-frost days: CRU partly derives them from tmp and DTR, so with #3 we compute them (R) rather than ship a derived layer as measured.</li>
+</ul>
+<p><strong>Ranked by one world per byte:</strong> 2, 1, 3, 4, 5, 6. #1 and #2 are about 3 kB of code and no data, and make January and July differ at every rung. #3 adds about 100 kB and is the most visible, dew and rime at every scale. This sitting: #2 and #1, with render checks of the snow-covered log (Innsbruck, 15 January) and the leaf (Manaus, 15 July); then #3 once packed.</p></section>
+<section class="turn rowan"><b class="who">Rowan</b><p>Ash, I checked your readings against the code, fetched the humidity and diurnal-range data, and tested your snow rule on the data we ship. One finding stops the Innsbruck render check before it starts.</p>
+<p><strong>Your readings of the code.</strong></p>
+<ul>
+<li><strong>Dew.</strong> The dew term is in CRDF, the card shader, only (gl.js:211). It is multiplied by <code>(1 − uWx.y)</code>, and it draws only on cards seen from very close (<code>FP &lt; .004</code>, fx.js:666). So the Atacama does get dew, but only on close-up leaves.</li>
+<li><strong>Evergreens.</strong> <code>ev</code> is set only on Earth's evergreen broadleaves (earth.js:139–146). The pool's conifers don't carry it, and larch is deciduous. Use <code>ev || (leaf.t === 1 &amp;&amp; id !== 'larch')</code>.</li>
+<li><strong>Animals.</strong> Slugs are life kind 9 (fx.js:135), as you said.</li>
+</ul>
+<p><strong>Innsbruck has no snow at the floor in our data.</strong> The shipped months, lapsed at 6.5 °C/km from the half-degree cell's mean height (about 1.65 km) down to the 585 m floor, give a January mean of <strong>+1.9 °C</strong>. The real valley is around −1.5 °C (from memory, unverified). Winter valleys pool cold air, and a fixed free-air lapse can't know that. Run with the degree-day rule, the plot builds <strong>0 mm</strong> of snow water by January and 0 by March (tmp/rowan_scripts/snow_test.py), so a render of the snow-covered log on 15 January would show bare ground.</p>
+<p>We need a lapse rate that is weaker in winter; I recall Rolland (2003) reporting lower Alpine lapse rates in winter than in summer, unverified. And the README should state the bias. Until then, check the snow log at Tromsø.</p>
+<p><strong>The snow rule.</strong> Your 3 mm per °C per day is inside Hock's (2003) range for snow, "2 to 7 mm d⁻¹ °C⁻¹" (<a href="https://cambridge.org/core/services/aop-cambridge-core/content/view/S0022143000003087">Hock 2003, J. Glaciol.</a>). The weak part is using the monthly mean, not the rate. I compared two versions:</p>
+<table>
+<thead>
+<tr>
+<th>Place</th>
+<th>Month-mean rule, Jan / Mar SWE</th>
+<th>Days spread ±4 °C (σ), Jan / Mar SWE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tromsø</td>
+<td>291 / 440 mm</td>
+<td>54 / 69 mm</td>
+</tr>
+<tr>
+<td>Boston</td>
+<td>206 / 47 mm</td>
+<td>45 / 0 mm</td>
+</tr>
+</tbody>
+</table>
+<p>The choice of rule moves snow water by up to five times. With the diurnal range shipped (below), take the daily spread from each month's own range instead of my arbitrary 4 °C (still a rule, labelled). Convert snow water to depth at a stated density.</p>
+<p>Under snow: at "around a half-foot or more", the subnivium stays "just around freezing", and "some invertebrates remain active" (<a href="https://grow.cals.wisc.edu/departments/front-list/five-features-of-the-secret-ecosystem-under-the-snow">UW–Madison CALS</a>). That page doesn't name springtails; that part is unverified, though snow fleas are springtails.</p>
+<p><strong>Phenology thresholds.</strong></p>
+<ul>
+<li><strong>Spring.</strong> "A forcing temperature threshold of 5 °C is commonly used in temperate regions" (<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3468505">Fu et al., PMC3468505</a>). But the sum needed (F*) is fitted per species and depends on winter chilling, so any number we pick is a sketch. Mark it S.</li>
+<li><strong>Autumn.</strong> I found no source for a 10 °C monthly-mean rule. Delpierre et al. model leaf colouring as triggered by photoperiod, followed by a cold-degree-day sum (<a href="https://modis.gsfc.nasa.gov/sci_team/pubs/abstract_new.php?id=01144">abstract</a>); no numbers there. Mark it S.</li>
+<li><strong>A better rule.</strong> Jolly, Nemani &amp; Running's (2005) Growing Season Index (<a href="https://scholarworks.umt.edu/ntsg_pubs/148">record</a>) multiplies three ramps: minimum temperature, photoperiod and vapour-pressure deficit. The photoperiod ramp of 10–11 h is confirmed through Daham et al. (2018) (<a href="https://core.ac.uk/download/151188326.pdf">pdf</a>), who use their own 0–20 °C and 125–5,100 Pa for the other two. Jolly's own −2 to 5 °C and 900–4,100 Pa are from my memory, unverified. All three inputs come from tmp plus the new two grids: minimum temperature is T − DTR/2, and the deficit comes from vapour pressure and Tmax. That turns your rule into one fed by measured inputs, and it also handles savannas that drop leaves in the dry season, which a temperature rule can't. Ship the temperature-only version now, labelled S, and switch to GSI once the grids land.</li>
+</ul>
+<p><strong>Humidity and diurnal range: measured.</strong> Both came from https://crudata.uea.ac.uk/cru/data/hrg/tmc/ and are in tmp/data/:</p>
+<ul>
+<li><code>cru_cl2_grid_10min_reh.dat.gz</code> (11.8 MB)</li>
+<li><code>cru_cl2_grid_10min_dtr.dat.gz</code> (8.6 MB)</li>
+</ul>
+<p>Both have all 566,262 cells and the same licence as before (ODbL plus DbCL). Packed in pack_data.py's month layout (12 planes, change from the month before, then change from the cell before) over the 67,129 half-degree cells, zopfli sizes:</p>
+<table>
+<thead>
+<tr>
+<th>Coding</th>
+<th>zopfli</th>
+<th>Dew/no-dew flips</th>
+<th>Worst error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>reh 1 % + dtr 0.5 °C</td>
+<td>338 kB</td>
+<td>0.53 %</td>
+<td>0.62 °C</td>
+</tr>
+<tr>
+<td>dew-point depression + dtr, 0.5 °C</td>
+<td>295 kB</td>
+<td>1.75 %</td>
+<td>0.37 °C</td>
+</tr>
+<tr>
+<td>dew-point depression + dtr, 1 °C</td>
+<td><strong>226 kB</strong></td>
+<td>3.5 %</td>
+<td>0.75 °C</td>
+</tr>
+<tr>
+<td>mean + 2 harmonics of each, 0.25 °C</td>
+<td>122 kB</td>
+<td>1.7 %</td>
+<td>10.6 °C</td>
+</tr>
+</tbody>
+</table>
+<p>Flips are cell-months where the dew answer differs from the unquantised field. Separately, reh at 1 % alone is 181 kB, and dtr at 0.25/0.5 °C alone is 197/157 kB.</p>
+<p>The harmonic form breaks badly in some cells. New et al. warn RH errors of "up to ±15 %", which is about ±2–3 °C in dew point, so 1 °C steps sit inside the data's own error. My pick is <strong>226 kB</strong>, which takes the rung from 1,085 to about 1,311 kB. Your guess of 40–60 kB each was low.</p>
+<p><strong>How the dew rule should use them.</strong></p>
+<ol>
+<li><strong>Vapour pressure.</strong> CRU made its RH as 100·e/es(T mean) (New et al. 2002), so e = RH/100 · es(T) inverts it exactly. es is Magnus: 6.1094·exp(17.625T/(T + 243.04)) hPa. Compute it at the cell's own height (offline, so we ship the depression T − Td). At the plot, keep RH and recompute at the lapsed T. That step is a rule, R.</li>
+<li><strong>Dew point.</strong> Td is the inverse of Magnus.</li>
+<li><strong>Leaf surface at dawn.</strong> Tsurf = T − DTR/2 − ΔT. ΔT is about 2 °C on clear, calm nights ("a few degrees", <a href="https://weather.metoffice.gov.uk/learn-about/weather/types-of-weather/frost-and-ice/forecasting-frost">Met Office</a>; the 2 is unverified) and about 0 when overcast, windy or raining.</li>
+<li><strong>Classify on the margin, don't scale by it.</strong> Margin = Tsurf − Td, and dew = smoothstep(1, −1, margin). The size of a negative margin means nothing: Quito's months put Td 6 °C above dawn, and air can't be that supersaturated.</li>
+<li><strong>Frost.</strong> If also Td &lt; 0 °C, it's hoar frost (rime). If Td ≥ 0 but Tsurf &lt; 0, it's dew that then freezes. Strictly, frost needs the frost point over ice, which is a little above Td.</li>
+<li><strong>Timing.</strong> Multiply by the existing dawn envelope (<code>smoothstep(.5, .15, uSun.y)</code>) and send it as <code>uDew = (dew, rime)</code>.</li>
+</ol>
+<p>The shipped months give:</p>
+<ul>
+<li>Manaus: margin −3 in both January and July, so dew on every clear night.</li>
+<li>Calama: +3.7 and +5.6, so never.</li>
+<li>Innsbruck's cell: January −1.3, hoar frost; July −1.7, dew.</li>
+</ul>
+<p>Coastal fog in the Atacama (camanchaca) is outside this rule. Say so.</p>
+<p><strong>Agreeing with you:</strong> frost days computed from our own grids, not shipped (CRU derives them); no wind.</p>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>Phenology from the months, as a sketch.</strong><ul>
+<li>Leaf-out at a 5 °C base plus a degree-day sum, leaf-fall on a cold-season rule, evergreen = <code>ev || (leaf.t === 1 &amp;&amp; id !== 'larch')</code>. Thresholds labelled S with these citations.</li>
+<li>It drives <code>uSe.x/.y</code>, the log world's litter freshness, and the leaf world's fallen-leaf case.</li>
+<li>Render check: Manaus in July stays green; a beech plot at Innsbruck colours in October.</li>
+</ul>
+</li>
+<li><strong>Winter valley temperatures, then the snowpack.</strong><ul>
+<li>A month-dependent lapse to the floor, weaker in winter, numbers marked unverified. Print January at the Innsbruck floor next to the station value in the place line's check.</li>
+<li>Then the degree-day pack at 3 mm per °C per day (Hock's 2–7) and Thornthwaite water, both carried down in the site record.</li>
+<li>Plot snow cover from snow water, the log under snow, snowpack depth at a stated density.</li>
+<li>Render check: the snowy log at Tromsø; Innsbruck only once item 2's January is believable.</li>
+</ul>
+</li>
+<li><strong>Dew and rime from measured months.</strong><ul>
+<li>Ship dew-point depression and DTR, 12 months each at 1 °C (226 kB, measured), labelled CRU plus Magnus.</li>
+<li>Feed <code>uDew</code> (dew, rime) by the rule above, replacing gl.js:211's always-dew.</li>
+<li>Render check: Manaus at a July dawn, dew; Calama, dry; Innsbruck in January, rime.</li>
+</ul>
+</li>
+</ol>
+<p>Each item needs: lower rungs byte-identical, <code>grow_test</code> clean.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>Phenology on the Growing Season Index (minimum temperature, photoperiod, deficit), once item 3's grids are in; the snowpack's daily spread from DTR.</li>
+<li>Wet days (rd0, 10 MB source) for a Markov weather chain, and sunshine for the cloud baseline. Pack and measure first; my guess, unmeasured, is 100–150 kB each at 12 months.</li>
+<li>The bucket's effects below the plot: haircap folding, tardigrade tuns, stomata snapshot, dormant slugs.</li>
+<li>SoilGrids, then genera by measured range and the host-specific inward details.</li>
+<li>The next world in a window, and the globe.</li>
+</ol></section>
+<section class="turn builder"><b class="who">Builder</b><p>, after building</p>
+<p>Built all three items. Where the build departs from the plan:</p>
+<ul>
+<li>
+<p><strong>Dew and rime: as agreed.</strong> I packed both variables into <code>pack_data.py</code>'s month layout (12 planes each) and
+  measured the cost: 228 kB, against Rowan's 226. At the plot the dew-point depression is kept as shipped rather
+  than recomputed at the lapsed temperature; humidity held, that is close enough at whole degrees. Dew and rime
+  ride in <code>uCv.zw</code>, which is now a vec4: rime whitens the leaves at dawn, and the dew drops are gated by <code>uCv.z</code>.
+  Fictional forests keep dew at every dawn, as before.</p>
+</li>
+<li>
+<p><strong>Snowpack: as agreed, with DTR spreading the day.</strong> Eight points through each day, 3 mm of melt per degree-day,
+  and snow below 1 °C, spun up over two years. The Thornthwaite water bucket isn't built yet. It moves to round 5
+  with the small worlds that would read it.</p>
+</li>
+<li>
+<p><strong>Winter lapse: built, and still short.</strong> The lapse rate is 5.4 − 1.2·cos(month) °C/km, scaled by latitude up to
+  30°, applied from the 15′ cell mean (not CRU's half-degree height, which isn't shipped) down to the floor. That
+  brings Innsbruck's January from +1.9 to −0.2 °C. Rowan's −1.5 for the station is from memory. Either way, the
+  snow test is Tromsø's, as Rowan said.</p>
+</li>
+<li>
+<p><strong>Phenology: a sketch, labelled as one.</strong> I used Ash's thresholds; for the colouring rule Rowan found no source.
+  Only deciduous broadleaves are affected (<code>uSe</code> is already gated by the needle fraction in the shaders).
+  Evergreen broadleaves on Earth hold their leaves. The Growing Season Index stays queued.</p>
+</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The lower rungs are byte-identical, and <code>grow_test</code> is clean.</li>
+<li>In Node, <code>place()</code> gives:<ul>
+<li>Tromsø: 123 and 261 mm of snow water in mid-January and mid-March.</li>
+<li>Innsbruck: leaves out on 11 May and bare on 18 November; dew depression 4 °C in January; rime.</li>
+<li>Calama: depression 10–16 °C, no dew at any season.</li>
+</ul>
+</li>
+<li>Renders:<ul>
+<li>Tromsø in mid-January: snow on the spruce, the sun below the horizon at noon.</li>
+<li>Innsbruck on 1 November: crowns orange.</li>
+<li>Innsbruck at a January dawn: bare, no snow.</li>
+</ul>
+</li>
+</ul>
+<p>The rime itself is too subtle to see at the render tool's resolution.</p></section></template>
+<template id="rd4"><p class="settled"><b>Round 5: Weather, water, and the foot of the ladder.</b> Daily weather from wet days and sunshine; a soil-water bucket the moss reads; a fallen leaf at the bottom, aged since autumn. After it, the 2 MB rung stood at 1,608,157 bytes.</p><div class="note">
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p></div>
+<section class="turn ash"><b class="who">Ash</b><p>Rowan, the measured world now reaches every surface the plot draws, and almost nothing below it, and the cuts are still cuts. I only noticed this time that the ladder is incoherent at its foot. <code>LAD = [..., 'soil', 'leaf']</code> (main.js:336) dives from 6.4 mm of soil into the underside of a <em>living</em> leaf. No living leaf lies in the soil. A fallen one does.</p>
+<p>Ranked by how much each makes it one world:</p>
+<p><strong>1. The next world in a window (code only, ≈6 kB, a full sitting).</strong> Sam's core complaint; nothing else fixes it. Your round-3 design:</p>
+<ul>
+<li>the stencil, using <code>DEPTH24_STENCIL8</code> at gl.js:284;</li>
+<li>the inner world drawn with its own camera scaled by 1/F, with DoF and pick depths divided by F;</li>
+<li>its own shadow pass, for the length of the glide only;</li>
+<li>the log rotated to lie along the dived trunk's <code>stand</code> direction;</li>
+<li>inner rim heights fitted to a plane through <code>Hgt(tgt)</code>.</li>
+</ul>
+<p>Build the inner world as the glide starts. Closing in, the real 64 cm log already lies in the plot's floor, then moss on the log, then grains among the moss; at the hand-off the outer world stops drawing. The dissolve stays as the <code>ema &gt; 0.03</code> fallback. Time it on boreal → moss.</p>
+<p><strong>2. Make the foot of the ladder a fallen leaf (code only, ≈1.5 kB).</strong> From the soil, ×100,000 becomes the underside of a <em>litter</em> leaf. Its age comes from the shipped leaf-fall date, which is R over the measured months:</p>
+<ul>
+<li><strong>Fresh</strong> (under a month): the jigsaw cells are intact but browning (LEAFG chloroplasts → tannin brown), and the first hyphae enter through stomata.</li>
+<li><strong>Old</strong> (six months or more): cell walls are broken, mats of hyphae, springtail frass and fungal spores, and the vein ridge stands proud as a skeleton.</li>
+<li><strong>Evergreen or needle stands:</strong> a needle fragment.</li>
+</ul>
+<p>The living leaf stays reachable by diving at a seedling's leaf in the log world (<code>oakling</code>), between leaf-out and leaf-fall only, so the ladder branches by what you aimed at. The same age drives the log world's litter cards (agreed in round 4, not built). A January dive at Innsbruck ends on a rotting beech leaf; Manaus in July, from a seedling, on a living one.</p>
+<p><strong>3. Wet days, the water bucket, and the small worlds that read it (data ≈100–150 kB guessed for CRU rd0 at 12 months, 1 day steps; code ≈2.5 kB).</strong></p>
+<ul>
+<li><strong>The weather chain.</strong> A two-state Markov chain with p(wet) = wet/days for the month, with persistence about 0.6 (that figure is mine, labelled S). The button overrides; with the clock running the weather is the place's.</li>
+<li><strong>The bucket.</strong> Thornthwaite with per-month day length, filled by the chain's rain and the snowpack's melt; stream and mushrooms follow only on regrow.</li>
+<li><strong>What reads the bucket's <code>sw</code> at dive time</strong>, all R over M:<ul>
+<li>log: slugs (kind 9) out only above a wetness;</li>
+<li>moss: haircap folds its leaves when dry (lower <code>dr</code>);</li>
+<li>soil: tardigrade tuns and slow nematodes below a threshold, nematodes still when the ground is frozen and bare, active under more than 15 cm of snow (the subnivium, your citation);</li>
+<li>leaf: stomatal aperture snapshot for kinds 12/13.</li>
+</ul>
+</li>
+<li><strong>Seen:</strong> tuns in Calama's soil, thrashing nematodes at Manaus, closed pores after an Innsbruck dry spell.</li>
+</ul>
+<p><strong>4. Sunshine for the light at every scale (data ≈100 kB guessed for CRU sunp at 12 months, 5 % steps).</strong> It sets the baseline overcast <code>f.wx[2]</code> (M), and through that <code>sunC</code> and the shadows in every world. (Thornthwaite's PET ignores it; a radiation-based PET could use it later.) A dark Tromsø December shows at the moss too.</p>
+<p><strong>5. CRU's own elevation as the lapse base (data ≈40–60 kB guessed, 0.5°).</strong> CRU temperatures are lapsed from the 15′ ETOPO mean, but they represent CRU's own <code>elv</code>: your 122 m rms, about 0.8 °C, is a known error we can buy back, before any cold-pool fix.</p>
+<p><strong>6. SoilGrids under the soil world and the plot floor (data ≈40–60 kB at 1°, or ≈120–160 kB at 0.5° on the CRU grid; both guesses).</strong></p>
+<ul>
+<li><strong>Soil world:</strong> grain sizes from the texture triangle; hyphal density and dark crumb from SOC.</li>
+<li><strong>Plot floor:</strong> mineral colour, so the plot and the soil world agree.</li>
+</ul>
+<p>Honesty flag: SoilGrids 2.0 is a machine-learning prediction from about 240 k profiles, so it needs Sam's same ruling as ETOPO's "relief model".</p>
+<p><strong>7. Genera by measured range (data ≈15–30 kB).</strong> Little (USGS) and Caudullo et al. 2017, mapped onto the pool and flagged per cell elsewhere. Below the plot it feeds the needle leaf and galleries by host, which turns #2's needle-stand case from S into M.</p>
+<p><strong>Deferred: the globe.</strong> It binds upward only; 3 kB, no new data, after #1 if wanted.</p>
+<p><strong>Total:</strong> data ≈300–500 kB (1.31 MB now, ≈1.65–1.8 MB after), every layer CRU or a citable grid, labelled; code ≈12 kB.</p>
+<p><strong>This sitting:</strong> #2 (small, and it fixes a real incoherence), then #1. Please pack rd0, sunp and <code>elv</code> first: every size I've guessed has come in low.</p></section>
+<section class="turn rowan"><b class="who">Rowan</b><p>Ash, you're right about the foot of the ladder: main.js:336 goes <code>'soil'</code> → <code>'leaf'</code>, and the leaf genome's blurb says "on the underside of a leaf", a living one. I measured the three data layers and worked the window out down to the calls. One finding changes the window's geometry before any stencil work.</p>
+<p><strong>Data, measured.</strong> Source: https://crudata.uea.ac.uk/cru/data/hrg/tmc/. Files in tmp/data/: <code>cru_cl2_grid_10min_rd0.dat.gz</code> (9.9 MB) and <code>cru_cl2_grid_10min_sunp.dat.gz</code> (12.2 MB), all 566,262 cells, ODbL plus DbCL. Packed in pack_data.py's month layout over 67,129 half-degree cells (zopfli; script tmp/rowan_scripts/pack_rd0_sunp_elv.py):</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Step</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wet days (rd0, days above 0.1 mm)</td>
+<td>0.5 day</td>
+<td>187 kB</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>1 day</strong></td>
+<td><strong>150 kB</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>2 days</td>
+<td>114 kB</td>
+</tr>
+<tr>
+<td></td>
+<td>as p(wet) in 1/32</td>
+<td>151 kB</td>
+</tr>
+<tr>
+<td>Sunshine (% of possible)</td>
+<td>1 %</td>
+<td>194 kB</td>
+</tr>
+<tr>
+<td></td>
+<td>2 %</td>
+<td>155 kB</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>5 %</strong></td>
+<td><strong>107 kB</strong></td>
+</tr>
+<tr>
+<td>Both together (5 % + 1 day)</td>
+<td></td>
+<td>257 kB</td>
+</tr>
+<tr>
+<td>Both together (5 % + 2 days)</td>
+<td></td>
+<td>221 kB</td>
+</tr>
+</tbody>
+</table>
+<p>New et al. give errors of about 1–4 days a month for wet days and 3–7 % absolute for sunshine, so 1 day and 5 % sit inside the data's own error. Two facts from the paper to label:</p>
+<ul>
+<li>Some wet-day normals were converted from a 1.0 mm threshold.</li>
+<li>"Cloud cover was converted to sunshine" to fill gaps, so turning sunshine back into overcast is partly circular. Label it R.</li>
+</ul>
+<p>Your guesses came in low again for wet days and close for sunshine. With both, the rung goes from 1,314 to about 1,571 kB.</p>
+<p><strong>CRU's elevation, measured.</strong> As a √ byte plane it costs <strong>37 kB</strong> (2-byte 10 m steps: 59 kB). Today the lapse starts from the plot's one 15′ ETOPO cell, which is 211 m rms from CRU's half-degree height (95th percentile 287 m), about 1.4 °C rms. There's also a free fix: averaging the four 15′ land means inside the half-degree cell is 54 m rms from CRU (median 11 m, 99th percentile 195 m, max 1,510 m), about 0.35 °C. Shipping the plane makes the base exact, to the byte's ±16 m (0.1 °C). It's worth 37 kB, because it inverts the reduction we applied at pack time. Innsbruck's cell: CRU 1,653 m, four-cell ETOPO mean 1,689 m.</p>
+<p><strong>#2, the fallen leaf.</strong> Agreed, with three checks against the code:</p>
+<ul>
+<li><strong>Branching.</strong> The ladder is index-arithmetic (main.js:366–367). The one existing branch is <code>nb</code>, the bark case: <code>i === 2 &amp;&amp; dir &gt; 0 &amp;&amp; Hgt &gt; 6</code>, with its own F of 10. A seedling-leaf branch is the same pattern: in the log world, if a <code>B.trees</code> oakling stands within its crown radius of <code>tgt</code>, the key is <code>'leaf'</code> with F = 1000. The hint must say ×100,000.</li>
+<li><strong>Needle stands.</strong> There's no needle LEAFG branch; it has been queued since round 1, so "a needle fragment" has nothing to draw. Either build the needle branch with this item (about 1 kB), or land on the stand's broadleaf if it has one and say "needle litter not modelled" if it doesn't.</li>
+<li><strong>Leaf age.</strong> Litter age comes from the shipped leaf-fall date, a rule over measured months. Fresh means under a month; old, six months or more. Both thresholds are S.</li>
+</ul>
+<p><strong>#1, the window, in buildable form.</strong> First, the finding. <code>view()</code> keeps the orbit point 1.5 units above the ground (main.js:180), in each world's own units. So the outer glide ends 1.5 m above the floor, and the inner world starts 1.5 cm above its floor (1.5 inner units). Today's dissolve hides a 100× jump in camera height. For the window to meet, glide <code>tgt</code> to <code>c_out + (0, 1.5/F, 0)</code> with <code>fz = 1</code>, so that <code>view()</code> stops pulling it back. Here <code>c_out</code> is the contact point: the top of the dived trunk on its axis, or the ground at <code>tgt</code>.</p>
+<p><em>Matrices.</em> θ is the trunk's yaw from its <code>stand</code> record, or 0 when there's no trunk. <code>c_in</code> is the inner contact point; in the log world that's <code>(0, cy(0) + R(0), zc(0))</code> from <code>logLand</code>. Inner to outer is <code>p_out = c_out + Ry(θ)·(p_in − c_in)/F</code>. Don't put the 1/F into the view matrix: the capsule ray-caster needs an orthonormal <code>uIV</code>, and fog and <code>zs</code> must stay in inner units. Instead move the camera:</p>
+<ul>
+<li><code>eye_in = c_in + Ry(−θ)·(eye_out − c_out)·F</code>, and the same for the look point.</li>
+<li><code>lookAt(V_in, eye_in, look_in)</code> (main.js:84) and <code>IV_in</code> from V_in's 3×3, as <code>view()</code> does.</li>
+<li><code>K</code> unchanged, so the window lands exactly where the outer camera would see it.</li>
+<li>Near/far in inner units, <code>[0.05, 600]</code>.</li>
+<li><code>sun_in = Ry(−θ)·f.sun</code>. At hand-off, set the inner world's <code>cl.az</code> to −θ in degrees so <code>sun3</code> keeps that sun. Then hand over <code>tgt = look_in</code>, <code>rad = rad·F</code>, <code>yaw − θ</code>, and pitch unchanged, so nothing jumps.</li>
+</ul>
+<p><em>Renderer (gl.js).</em></p>
+<ol>
+<li>Split <code>load</code> (gl.js:308) into <code>mk(B, G)</code>, which returns a world record <code>{bufs, vaos, caps, cards, land, stones, water, xm, far, hz, pal, G, str, for}</code>. <code>load</code> becomes free W, then <code>W = mk(…)</code>.</li>
+<li>Add <code>R.inner(B, G)</code> (sets W2), <code>R.drop()</code>, and <code>R.swap()</code>, which frees W, then sets <code>W = W2</code> and <code>W2 = null</code>. The hand-off then uploads nothing.</li>
+<li><code>geometry()</code> takes the world record as a parameter instead of closing over <code>W</code>, <code>G</code> and <code>pal</code> (gl.js:327–329).</li>
+<li>Renderbuffer <code>DEPTH24_STENCIL8</code> at gl.js:284, attached as <code>DEPTH_STENCIL_ATTACHMENT</code> at :285.</li>
+<li>A second shadow depth texture <code>sm2</code> at SMS/2: 1024² is 4 MB, 512² on coarse devices.</li>
+</ol>
+<p><em>Frame order while W2 exists.</em></p>
+<ol>
+<li>Outer shadow pass, as now.</li>
+<li>Inner shadow pass into <code>sm2</code> with <code>LV_in</code>/<code>SM_in</code>. Factor <code>setSun</code>'s shadow-matrix block (main.js:120–123) into <code>shadowM(sun)</code> and call it with <code>sun_in</code> in inner units. Render it at glide start, then on the outer cadence (<code>f.shadow</code>).</li>
+<li>Clear the main framebuffer's depth and stencil (gl.js:354). Draw the sky, the horizon band, the outer <code>geometry(W)</code>, then particles. Particles move up from gl.js:358 so the inner pass overwrites them inside the hole.</li>
+<li><strong>Mark the hole.</strong><ul>
+<li>Set <code>colorMask</code> off, <code>depthMask(false)</code>, <code>depthFunc(LESS)</code>, cull back faces.</li>
+<li>Turn on <code>STENCIL_TEST</code> with <code>stencilFunc(ALWAYS, 1, 0xff)</code> and <code>stencilOp(KEEP, KEEP, REPLACE)</code>.</li>
+<li>Draw a hemisphere of radius <code>0.4·64/F</code> at <code>c_out</code>. Use <code>PMS</code>, the mesh vertex shader with the NONE fragment shader, so no new shader is needed; about 128 triangles.</li>
+</ul>
+</li>
+</ol>
+<p>Outer things in front of the dome keep stencil 0, and the part of the trunk inside the dome is cut.</p>
+<ol>
+<li><strong>Reset depth in the hole.</strong> Set <code>stencilFunc(EQUAL, 1, 0xff)</code>, <code>stencilOp(KEEP, KEEP, KEEP)</code>, <code>depthRange(1, 1)</code>, <code>depthFunc(ALWAYS)</code>, <code>depthMask(true)</code>, and turn <code>colorMask</code> back on. Draw the sky program's full-screen triangle, which repaints sky inside the hole and sets depth to 1. Then restore <code>depthRange(0, 1)</code> and <code>depthFunc(LESS)</code>.</li>
+<li><strong>Inner pass.</strong> Keep the stencil at EQUAL 1. Set <code>gl.scissor</code> to the dome's projected bounding box. Capsules write <code>gl_FragDepth</code> (gl.js:105) and cards <code>discard</code>, so their stencil test runs after shading, and only the scissor saves the cost outside the hole. Bind <code>sm2</code> to TEXTURE1 and call <code>geometry(W2)</code> with a frame object <code>fi = {...f, V, IV, cam, sun, SM, fog, nf}</code> for the inner values. Then disable the stencil test and the scissor.</li>
+<li><strong>Post.</strong> The inner alpha depth is in inner units, F× too far. With focus ≈ rad the DoF would blur the whole window to its limit (gl.js:243: <code>k = aperture·|1/focus − 1/z|</code>). Set the aperture through a field that only the T4 arm of the ternary reads, <code>TIER &gt; 3 ? (f.ap ?? …) : 2.5</code> (gl.js:369), so lower rungs don't change. Then <code>f.ap = 0</code> and <code>f.shafts *= 1 − w</code> while the window is open.</li>
+<li><strong>Hand-off.</strong> When all four screen corners fall inside the dome's projection, call <code>R.swap()</code>, set the camera as in <em>Matrices</em>, and run the existing post-arrival glide.</li>
+</ol>
+<p><em>Cost, honestly.</em></p>
+<ul>
+<li><strong>Build.</strong> Building the inner world at glide start measured 221 ms (log) and 243 ms (moss) at Q 1 in Node in round 1. On a phone, call it 1 s, so stall before the camera moves.</li>
+<li><strong>GPU.</strong> For the last third of the glide the frame is roughly two full worlds, because stencil and depth tests can't run early on the ray-cast capsules. Keep the dissolve when <code>ema &gt; 0.03</code>.</li>
+<li><strong>Memory.</strong> About 18 MB of buffers (boreal plot plus moss world) plus <code>sm2</code>.</li>
+<li><strong>What isn't in the window.</strong> No animals (their buffer is per world; they appear at hand-off, so say so), and the inner rim isn't bent to the outer plane. I'd skip that fit, because it would leave a permanent ring in the inner world's ground after hand-off; the dome hides the rim.</li>
+</ul>
+<p><strong>#3 and #4.</strong> Agreed as rules, with a correction to the bucket. Your 0.6 persistence is S, and CRU gives only frequency. Fill the bucket from the chain's rain and the snowpack's melt (the Builder's 8-point days). The chain overrides the weather button only while the clock runs.</p>
+<p><strong>#6.</strong> Agreed: SoilGrids is a machine-learning prediction, so it goes to Sam with the same question as ETOPO's "model". Budget: with wet days, sunshine and elevation shipped, the rung is about 1.61 MB, leaving about 390 kB for SoilGrids, the genera and code. Pack SoilGrids before promising both.</p>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>The ladder's foot is a fallen leaf.</strong><ul>
+<li>Soil → leaf lands on a litter leaf whose age comes from the leaf-fall date: fresh means browning cells and hyphae entering at the stomata; old means a vein skeleton, hyphal mats and frass (thresholds S).</li>
+<li>A seedling-leaf branch from the log world (<code>B.trees</code> oakling within crown radius, F = 1000, between leaf-out and leaf-fall) reaches the living leaf.</li>
+<li>The needle LEAFG branch goes in with it, or the hint says "needle litter not modelled".</li>
+</ul>
+</li>
+<li><strong>CRU's own elevation as the lapse base (37 kB measured).</strong> Ship CRU elevation as one √ byte plane, and lapse from it to the floor. Print Innsbruck's January before and after.</li>
+<li><strong>The next world in a window.</strong><ul>
+<li>Build the stencil, matrices, <code>sm2</code> and frame order exactly as above, with the <code>tgt</code> height glide to <code>c_out + 1.5/F</code>.</li>
+<li>Time it on boreal → moss.</li>
+<li>Render at 30 %, 60 % and 90 % of the glide, and confirm the hand-off has no jump in camera, sun or scale.</li>
+</ul>
+</li>
+</ol>
+<p>Each item needs: lower rungs byte-identical, <code>grow_test</code> clean.</p>
+<h3>Queue toward 2 MB</h3>
+<ol>
+<li>Wet days (1 day, 150 kB) and sunshine (5 %, 107 kB), both measured: the Markov weather (persistence S), sunshine as the baseline overcast (R; partly derived from cloud), the Thornthwaite bucket, and the small worlds reading <code>sw</code> at dive time.</li>
+<li>Animals in the window: an inner <code>LIFE</code> with its own limb buffer for the glide.</li>
+<li>SoilGrids, packed and measured, pending Sam's ruling; then genera by measured range.</li>
+<li>Phenology on the Growing Season Index once the dew grids feed the deficit.</li>
+<li>The globe.</li>
+</ol></section>
+<section class="turn builder"><b class="who">Builder</b><p>, after building</p>
+<p>I built items 1 and 2, and took the head of the queue (wet days, sunshine, the bucket) in place of item 3.</p>
+<ul>
+<li><strong>Why no window.</strong> It is the right idea, and it is what Sam asked for most directly. But Rowan's design needs:<ul>
+<li>the renderer split into world records;</li>
+<li>a second shadow map;</li>
+<li>stencil depth;</li>
+<li>a scaled inner camera;</li>
+<li>a frame order that touches every pass.</li>
+</ul>
+</li>
+</ul>
+<p>That is a lot to change unattended in the small hours with only low-resolution headless renders to check it. A
+  half-working window would be worse than today's dissolve. It is the whole of round 6, with Rowan's text as the
+  spec.</p>
+<ul>
+<li>
+<p><strong>Data, measured.</strong> Wet days at 1 day, sunshine at 5 % and CRU's height as one square-root byte came to 293 kB,
+  against Rowan's 257 + 37. The 2 MB rung now holds 1,608,157 bytes.</p>
+</li>
+<li>
+<p><strong>The fallen leaf.</strong> Its age rides in <code>uStr.x</code>, which is unused in the leaf world, with <code>uStr.z = 2</code> as the flag.
+  The shader browns the cells, draws hyphae, and rots the tissue between the veins once it is old. The guard cells
+  are drawn dead brown, and the bacteria are up to three times as many. Needle litter isn't modelled. Since the
+  dive into the litter doesn't know whose leaf it is, the leaf is always broadleaf.</p>
+</li>
+<li>
+<p><strong>The living-leaf branch.</strong> A dive at an oak seedling in the log world goes ×1000 to <code>leafl</code>, a copy of the leaf
+  genome, but only while the place's leaves are out. Zooming out returns to the log.</p>
+</li>
+<li>
+<p><strong>The bucket.</strong> Thornthwaite evaporation is scaled down as the soil dries (a sketch), and the bucket holds 150 mm
+  (a sketch). Only the moss (folded haircap) and the soil world's text read it. The tardigrades and stomata still
+  don't.</p>
+</li>
+<li>
+<p><strong>The weather chain.</strong> Runs only while the clock runs in days or seasons, and it overrides the weather button the
+  next day.</p>
+</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The lower rungs are byte-identical, and <code>grow_test</code> is clean.</li>
+<li>In Node, the bucket gives:<ul>
+<li>Innsbruck full all year.</li>
+<li>Manaus 26 % in October.</li>
+<li>Calama 2–4 %.</li>
+<li>Tromsø 41 % in July.</li>
+</ul>
+</li>
+<li>Renders:<ul>
+<li>Innsbruck, dived four times: a brown fallen leaf, "fallen last autumn".</li>
+<li>The seedling branch: "a living leaf of the oak seedling you dived at", and back out to the log.</li>
+</ul>
+</li>
+</ul></section></template>
+<template id="rd5"><p class="settled"><b>Round 6: Which trees, and stopping.</b> Tree genera from measured range maps carried down to the log; measured wind; a moving frozen frame; and why to stop short. After it, the 2 MB rung stood at 1,740,098 bytes.</p><div class="note">
+<p>Ash and Rowan are two Claude agents; Ash proposes, Rowan checks against the code. Unedited except for typos.</p></div>
+<section class="turn ash"><b class="who">Ash</b><p>Rowan, the Builder was right to hold the window back, but most of its effect needs no gl.js change. Today: glide, copy to <code>#snap</code>, <code>grow()</code> stalls 0.2–1 s on a frozen frame, then <code>opn()</code> opens the hole. Three faults: the frozen frame stops while the camera moves; the stall sits <em>between</em> worlds; and, your finding, the inner camera starts 1.5 <em>inner</em> units up (main.js:180), so the match is off by F in height.</p>
+<p><strong>1. A moving frozen frame (code only, about 1 kB; main.js and template.html; renderer untouched).</strong></p>
+<ul>
+<li><strong>Build first.</strong> Split <code>grow()</code> into <code>prep()</code> (<code>build()</code>, <code>mkLife</code>) and <code>commit()</code> (<code>R.load</code>, view, labels); run <code>prep()</code> at glide start, so the swap is only an upload and the hole opens about a second sooner.</li>
+<li><strong>Match the height.</strong> Glide <code>tgt</code> to your <code>c_out + (0, 1.5/F, 0)</code> with <code>fz = 1</code>.</li>
+<li><strong>Match the turn.</strong> Hand over <code>yaw − θ</code> and inner <code>cl.az = −θ</code> (θ from <code>f.si.log</code>), so the 64 cm log lies along the frozen trunk under the same sun.</li>
+<li><strong>Keep the frame moving.</strong> During <code>opn()</code>, <code>transform: scale(rad_swap/rad)</code> on <code>#snap</code>, centred (pitch ≥ 0.75 centres <code>tgt</code>), so the outer image zooms in step with the live inner camera: exact at the centre, off by parallax at the edges, for 1.3 s. Hold the inner pitch change until the mask is open.</li>
+</ul>
+<p>Seen: the camera never stops; the trunk swells, opens onto itself at 100×, and the rim keeps coming toward you as it falls away. Most of the window, little of its risk.</p>
+<p><strong>2. Measured genera, carried all the way down (data ≈20–40 kB guessed; code ≈3 kB).</strong> Rasterise Little's USGS range maps and Caudullo et al. 2017 (CC BY) into one presence bit per genus per 15′ KG land cell, over about 14 genera that match the pool (<em>Quercus, Fagus, Betula, Pinus, Picea, Larix, Pseudotsuga, Tsuga, Acer, Populus, Alnus, Salix, Sequoia, Juniperus</em>). Elsewhere the sketch, flagged per cell.</p>
+<ul>
+<li><strong>Plot:</strong> the species present are M; their mix stays R.</li>
+<li><strong>Log and bark:</strong> the log's species follows; galleries by host (Ips on <em>Picea/Pinus</em>, the Scolytus pair once checked, else "none modelled").</li>
+<li><strong>Leaf:</strong> the litter leaf picks a broadleaf by abundance near <code>tgt</code>; under conifers, the needle LEAFG branch (queued since round 1).</li>
+</ul>
+<p>The one data layer that binds Earth to the leaf in a single chain.</p>
+<p><strong>3. Carry the outer frame into the inner world (code only, ≈1.2 kB).</strong></p>
+<ul>
+<li><strong>Shade at the spot.</strong> At <code>leave()</code>, one ray from <code>tgt</code> toward <code>f.sun</code> through <code>col</code>; if shaded, the inner <code>sunC</code> dims (R).</li>
+<li><strong>Shadows passing over.</strong> The parked <code>LIFE</code> keeps stepping; up to four nearby animals become a <code>vec4[4]</code> of occluders in land and card shading, so a deer passing at 3 m sweeps its shadow across the 64 cm frame.</li>
+<li><strong>Muffled home birds.</strong> <code>audio.fx</code> keeps the home key's bird table, low-passed.</li>
+</ul>
+<p><strong>4. The bucket and the Growing Season Index reach the bottom (code only, ≈1.2 kB).</strong>
+Tardigrade tuns and the stomatal snapshot read <code>sw</code> (agreed, unbuilt). Phenology moves to the Growing Season Index, the deficit now coming from shipped dew-point depression and DTR, so savannas drop leaves in the dry season and the litter's age follows.</p>
+<p><strong>5. A 10′ mountain plane (data ≈60–90 kB guessed).</strong> 10′ means and floors only where the 15′ cell's max − floor exceeds about 500 m, roughly a sixth of land. It sharpens range and horizon, and above all moves the plot's floor toward the clicked point's real height (Quito's 15′ floor is about 750 m below the city), which feeds the lapse, snow and dew below.</p>
+<p><strong>6. CRU wind (data ≈100–150 kB guessed; please pack it).</strong> Its honest use is your dew rule's calm-night test (ΔT → 0 under wind), then sway, fog persistence and fire; below the plot, near nothing.</p>
+<p><strong>Not proposed:</strong> ground-frost days (partly derived from tmp and DTR, which we ship); cloud (not in CRU CL 2.0, and sunshine was filled from it); full 10′ ETOPO (about 164 kB for relief the erosion invents); SoilGrids (waits for Sam).</p>
+<p><strong>Ranking:</strong> 1–6 as numbered. Data ≈180–280 kB, ending near 1.8–1.9 MB; I'd stop there and say why in the README rather than fill the last 100 kB with something unearned. <strong>This sitting:</strong> #1, rendered at 30/60/90 % of the swap; then pack #2 and #6 so their sizes are measured.</p></section>
+<section class="turn rowan"><b class="who">Rowan</b><p>Ash, #1 is the right move for tonight, and it can be exact. Below are the split points, a corrected turn and height, and the scale formula. Then the measured data, which changes the case for #5.</p>
+<p><strong>#1, the moving frozen frame: split points in <code>grow()</code> (main.js:130–173).</strong></p>
+<ul>
+<li><strong><code>prep(k)</code></strong>, a new pure function. It returns <code>{G, B}</code> and touches no globals.<ul>
+<li>It takes lines 131–132 and 134–143, assembling the genome from <code>GENOMES[k]</code> and <code>f.si</code>, with <code>key → k</code>, <code>mut → 0</code>, and a local <code>g</code> in place of <code>G</code>.</li>
+<li>Then line 146, <code>build(g, g.sd || seed, Q, den)</code>, and line 147, the cave patch (harmless here).</li>
+<li>Leave out line 133 (<code>f.pk = null</code>). It only fires for home forests, and those come back through <code>back()</code>, never <code>prep</code>.</li>
+</ul>
+</li>
+<li><strong>Commit.</strong> <code>grow(keepView, aged, pre)</code>: when <code>pre</code> is given, <code>G = pre.G; B = pre.B</code> and lines 131–147 are skipped, except line 144. Line 144 (<code>world = {dam: 0, …}</code>) is a global side effect, so it moves to just after the build, which is safe because <code>build</code> reads <code>world</code> only when <code>aged</code>. Everything from line 148 on is the commit: <code>f.cv</code>, <code>R.load</code>, <code>mkFire</code>, <code>col</code>, <code>stand</code>, fog, view, <code>mkLife</code> (under 1 ms, measured in round 1), <code>setSun</code>, and labels.</li>
+<li><strong>Call site.</strong> In <code>zoom()</code>, after line 377 (<code>leave()</code>, which sets the <code>f.si</code> that <code>prep</code> reads):</li>
+</ul>
+<p><code>js
+  const nk = nb ? 'bark' : sl ? 'leafl' : LAD[j];
+  requestAnimationFrame(() =&gt; { pre = j === 1 ? null : prep(nk); glide(…); });</code></p>
+<p>The button paints first, then the stall happens before the glide's clock starts, so the glide doesn't jump. At line 382, call <code>grow(0, 0, pre)</code>. The way home stays <code>back()</code>.</p>
+<p><strong>Height.</strong> Today the glide target is <code>[L[1], tgt[1], L[2]]</code> (line 387) with <code>fz = 0</code> (line 377). So <code>view()</code> (line 180) holds the outer camera 1.5 m above the floor while the inner one starts 1.5 units, that is 1.5 cm, above its own. Instead, glide <code>tgt</code> to <code>c_out + (0, 1.5/F, 0)</code> with <code>fz = 1</code>:</p>
+<ul>
+<li><code>c_out</code> is the trunk's top at the contact: <code>Hgt + 1.6r</code>, where <code>r = (0.05 + 0.011H)(1 − 0.12·5u/len)</code> and <code>u</code> is the distance along the trunk (grow.js:210).</li>
+<li>The inner world has to match the outer trunk:<ul>
+<li><strong>Girth.</strong> <code>logLand</code> has a fixed <code>R = 12.5</code> (micro.js:52), a radius of 12.5 cm, against outer trunks of 13–33 cm. Pass <code>100·r</code> in as R.</li>
+<li><strong>Burial.</strong> The inner log sits 0.4R above the litter (micro.js:53), the outer one 0.6r. Make them the same.</li>
+</ul>
+</li>
+<li>At commit, set <code>tgt = [0, ·, zc(0)]</code> rather than <code>[0, 0, 0]</code> (line 157), so the camera centres on the log axis. That needs <code>log: lg</code> added to <code>build</code>'s return in grow.js.</li>
+</ul>
+<p><strong>Turn.</strong> The inner log isn't along +x: <code>zc = z0 + x·k + …</code>, so its direction is <code>b = atan(k)</code>, up to ±11°. With <code>a</code> from the stand record (<code>f.si.log[0].a</code>):</p>
+<ul>
+<li><code>yaw_in = yaw_out + a − b</code>, and the sun takes the same <code>+ (a − b)</code>.</li>
+<li><code>sun3</code> can't take that through <code>cl.az</code>, because <code>G.cl.az === 0</code> is a mode flag (main.js:96). Add <code>+ (G.cl.rot || 0)</code> inside that branch and set <code>cl.rot = a − b</code> in the site record.</li>
+<li>I derived this on paper with <code>yaw</code>'s convention, eye at <code>tgt + rad·(sin yaw, ·, cos yaw)</code>. It has not been run; check it with a render, since a sign error turns the log 2a off.</li>
+</ul>
+<p><strong>Keeping the frame moving.</strong> <code>#snap</code> is a fixed full-screen element (template.html:35), and with pitch ≥ 0 <code>lookAt</code> aims exactly at <code>tgt</code> (line 181). So a scale about the centre is exact at the target's depth:</p>
+<p><code>transform: scale(s)</code>, with <code>s(t) = r_swap / (rad_in(t)/F)</code>, both in outer units.</p>
+<p>Two things have to hold for it to work:</p>
+<ul>
+<li><strong>The camera must still be moving inward when the swap happens.</strong> Today's glide eases to zero speed (line 344). If the inner camera then pulls back to its framing (<code>r1</code> = 38 for the log), <code>s</code> falls below 1, and the frozen frame shrinks to a picture in the middle with a hole in it. Run one log-radius timeline over both phases: <code>log rad = log r0 + ln(1/F)·E(t/2.9 s)</code>, with <code>E</code> a smoothstep. Swap at <code>t = 1.6 s</code>, where <code>E = 0.575</code> and <code>r_swap = rEnd·F^0.425</code>, about 7·rEnd. After the swap the inner camera continues on the same curve for 1.3 s, the opening, with pitch held. Then run the existing glide to <code>(r1, p1)</code>.</li>
+<li><strong>The scale is exact only at the target's depth.</strong> It peaks near 7×, so the periphery is upscaled and blurred, and nearer things show parallax. The centre opens first, so that mostly falls inside the hole. Keep the plain fade when <code>ema &gt; 0.03</code>.</li>
+</ul>
+<p><strong>#3.</strong> <code>col</code> (line 151) is trunks and rocks, with no crowns, so a ray through it almost never shades the floor; "sunlit" would be the default and fake. Test the ray against crown spheres from <code>stand</code> instead (height ≈ 0.7H, radius <code>sp.cr</code>), and call it gap probability: R. Animal shadows and muffled birds are fine for the queue.</p>
+<p><strong>Data, measured.</strong></p>
+<ul>
+<li>
+<p><strong>Genera: openly licensed and reachable.</strong></p>
+<ul>
+<li><strong>Little's maps:</strong> cloned from github.com/wpetry/ustreeatlas into /home/claude/wpetry/ustreeatlas. That is 679 species from the USGS Internet Archive copy, public domain (17 U.S.C. § 105); the repo warns of "digitizing errors in some of the shapefiles".</li>
+<li><strong>Caudullo et al. 2017:</strong> 19 species zips from figshare in tmp/data/caudullo/. Each is CC BY 4.0 (Fagus sylvatica: doi:10.6084/m9.figshare.5101144.v4), in WGS84 shapefiles; I used the native polygons and points, not the synanthropic layer.</li>
+<li><strong>Packed:</strong> nine genera (Quercus, Fagus, Picea, Pinus, Betula, Abies, Larix, Acer, Tilia) on the 356,253 Köppen land cells (tmp/rowan_scripts/genera*.py).</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>As a 16-bit word per cell, split into low and high byte planes</th>
+<th>As bitplanes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cell centre</td>
+<td>17.1 kB</td>
+<td>20.8 kB</td>
+</tr>
+<tr>
+<td>Any overlap</td>
+<td><strong>15.2 kB</strong></td>
+<td>18.0 kB</td>
+</tr>
+</tbody>
+</table>
+<p>Use any-overlap: cell-centre tests miss coasts (Acer at Seattle).</p>
+<ul>
+<li><strong>Spot checks:</strong> Innsbruck has all nine; Boston seven; Des Moines Quercus, Acer and Tilia; Kyoto nothing, because no source covers Asia. That is the per-cell flag Ash wants, measured. The European genera need every Caudullo species in the genus, not my 19; I'd expect a few kB more.</li>
+<li><strong>10′ mountain plane.</strong> 56,505 15′ cells (15.9 % of land) have max − floor above 500 m. That gives 125,516 10′ cells:</li>
+</ul>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Contents</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mean only</td>
+<td>95 kB</td>
+</tr>
+<tr>
+<td>Mean only, as residual from the 15′ mean in 20 m steps</td>
+<td><strong>85 kB</strong></td>
+</tr>
+<tr>
+<td>Mean + floor</td>
+<td>189 kB</td>
+</tr>
+<tr>
+<td>Mean + floor, as residuals</td>
+<td>162 kB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>But it does not do what #5 promises for the floor.</strong> Quito's floor moves from 2,079 to only 2,353 m against a town near 2,850 m (from memory). The 3′ sample at the point is 2,798 m, so Quito sits on a plateau above a gorge. Innsbruck's floor doesn't move (579 m, which is right). A low percentile instead of the minimum would fix Quito and break Innsbruck (its p25 is 1,001 m). So the plane is relief for the range and horizon. Queue it as that, labelled.</p>
+<ul>
+<li><strong>CRU wind</strong>, packed though not asked: <code>cru_cl2_grid_10min_wnd.dat.gz</code> (5.9 MB, ODbL), 12 months over all 67,129 cells:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.5 m/s</td>
+<td>112 kB</td>
+</tr>
+<tr>
+<td>0.25 m/s</td>
+<td>145 kB</td>
+</tr>
+<tr>
+<td>0.1 m/s</td>
+<td>189 kB</td>
+</tr>
+</tbody>
+</table>
+<p>Label it sparse: CRU's wind network is thin.</p>
+<p><strong>Budget.</strong> At 1,608 kB, the genera bring it to about 1.63 MB; mountain means to about 1.71 MB; wind at 0.5 m/s to about 1.82 MB. I agree with stopping there and saying why.</p>
+<h3>Agreed for this round</h3>
+<ol>
+<li><strong>The moving frozen frame.</strong><ul>
+<li><code>prep()</code> and commit, split as above, with <code>prep</code> run before the glide.</li>
+<li>The height glide to <code>c_out + 1.5/F</code> with <code>fz = 1</code>.</li>
+<li>Inner log girth and burial from the outer trunk.</li>
+<li><code>yaw_in = yaw + a − b</code>, with <code>cl.rot</code> for the sun.</li>
+<li>One log-radius timeline across the swap, with <code>#snap</code> scaled by <code>s(t) = r_swap/(rad_in/F)</code>.</li>
+<li>Render at 30/60/90 % of the opening, plus one frame just after it, to confirm no jump in trunk, sun or scale.</li>
+</ul>
+</li>
+<li><strong>Genera, measured (15.2 kB for nine).</strong><ul>
+<li>Rasterise every Little and Caudullo species of the nine genera, any-overlap, into two byte planes, plus a coverage flag (3 kB).</li>
+<li><code>earthGenome</code> draws from pool species whose genus is present, and falls back to the sketch where no source covers the cell, saying so in the place line.</li>
+<li>The log, bark and litter leaf inherit the genus through <code>f.si.sp</code>.</li>
+</ul>
+</li>
+<li><strong>The bucket reaches the bottom.</strong> At dive time, tardigrade tuns and the stomatal snapshot read the bucket's soil water (<code>sw</code>) (agreed in round 5, unbuilt; about 0.5 kB).</li>
+</ol>
+<p>Each item needs: lower rungs byte-identical, <code>grow_test</code> clean.</p>
+<h3>Queue</h3>
+<ol>
+<li>Phenology on the Growing Season Index, from the shipped dew-point depression and DTR.</li>
+<li>Shade at the spot from crown spheres; animal shadows passing over; muffled home birds.</li>
+<li>The 10′ mountain means (85 kB) as relief for the range and horizon, not the floor.</li>
+<li>Wind (112 kB at 0.5 m/s, sparse): the dew rule's calm-night test, sway and fire.</li>
+<li>The real window (stencil, <code>sm2</code>) if the moving frame isn't enough.</li>
+<li>Needle litter and host galleries, once the genera say which conifer.</li>
+<li>The globe.</li>
+<li>SoilGrids, if Sam rules it in.</li>
+</ol></section>
+<section class="turn builder"><b class="who">Builder</b><p>, after building</p>
+<p>Built items 2 and 3 of Rowan's list. Item 1 is in a reduced form, and I added wind from the queue.</p>
+<ul>
+<li>
+<p><strong>Genera: as agreed.</strong> The nine byte planes take 17 kB, packed from Rowan's any-overlap raster. I didn't ship a
+  separate coverage flag: "covered" means the maps put at least one of the nine genera in the cell. The genus map
+  filters the existing climate sketch rather than choosing species afresh: a species whose genus isn't there is
+  dropped, unless that would empty the forest. That made two fixes necessary further down:</p>
+<ul>
+<li>The log world's oak seedlings (and so the living-leaf branch) go where oaks don't grow.</li>
+<li>The maples were all "Bigleaf maple", a western species, even in Iowa, so they are now named by region.</li>
+<li><strong>The moving frame: reduced.</strong> I built the visible half: <code>#snap</code> scales with the opening, ×3 going in and ×0.5
+  going out, over 1.3 s. Rowan's exact formula ties the scale to the inner camera through one log-radius timeline;
+  it isn't built, and neither are the prep/commit split of <code>grow()</code>, matching the inner log to the trunk, or the
+  height fix. Each needs the dive at a trunk rendered frame by frame to check, and the headless renders can't
+  catch a 1.3 s opening. So the scale is a fixed curve, honestly labelled as a picture zooming, not geometry.</li>
+</ul>
+</li>
+<li>
+<p><strong>Wind: added (112 kB).</strong> In <code>place2</code> it sets the trees' sway and gates the clear-night cooling in the dew rule.</p>
+</li>
+<li><strong>Bucket to the tardigrades and stomata: not built.</strong> Queued.</li>
+<li><strong>Ending here.</strong> The rung stands at 1,740,098 bytes. The remaining candidates all need either a ruling (SoilGrids)
+  or rendering work that should be watched (the true window). Ash's turn argued for stopping where the bytes stop
+  earning their keep, and this is that point.</li>
+</ul>
+<p>Checked:</p>
+<ul>
+<li>The lower rungs are byte-identical, and <code>grow_test</code> is clean.</li>
+<li>Node:<ul>
+<li>Innsbruck: all nine genera.</li>
+<li>Des Moines: oak, maple, lime.</li>
+<li>Tromsø: pine, birch. Spruce dropped, with the line saying so.</li>
+<li>Kyoto: no map, so a sketch, with the line saying so.</li>
+</ul>
+</li>
+<li>Render: Tromsø in summer, birch and pine under its own mountains; a dive into the log runs without errors.</li>
+</ul></section></template>
 <footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Little’s range maps (USGS) and Caudullo et al. 2017; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
-</main></body></html>
+</main>
+<script>
+const d = document.getElementById('talk'), b = document.getElementById('talk-b'), tabs = d.querySelectorAll('nav button');
+const show = (k) => { for (const t of tabs) t.setAttribute('aria-selected', t.dataset.r == k); b.replaceChildren(document.getElementById('rd' + k).content.cloneNode(true)); b.scrollTop = 0; };
+document.getElementById('talk-o').addEventListener('click', () => { if (!b.firstChild) show(0); d.showModal(); });
+d.querySelector('.x').addEventListener('click', () => d.close());
+d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+for (const t of tabs) t.addEventListener('click', () => show(t.dataset.r));
+if (location.hash === '#agents') { show(0); d.showModal(); }
+</script></body></html>
