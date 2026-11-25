@@ -6,8 +6,8 @@ import os, re, html, markdown
 
 S = 'site/story'; os.makedirs(S, exist_ok=True)
 size = lambda f: os.path.getsize(f)
-B = {k: size(f) for k, f in [('0.2kb', 'a/index.html'), ('2kb', 'b/index.html'), ('20kb', 'c/index.html'), ('200kb', 'd/index.html'), ('2mb', 'e/index.html')]}
-LIM = {'0.2kb': 200, '2kb': 2000, '20kb': 20000, '200kb': 200000, '2mb': 2000000}
+B = {k: size(f) for k, f in [('0.2kb', 'a/index.html'), ('2kb', 'b/index.html'), ('20kb', 'c/index.html'), ('200kb', 'd/index.html'), ('2mb', 'w/index.html'), ('earth', 'e/index.html')]}
+LIM = {'0.2kb': 200, '2kb': 2000, '20kb': 20000, '200kb': 200000, '2mb': 2000000, 'earth': 2000000}
 ROUNDS = [  # file, title, what it settled, 2 MB rung's bytes after it was built
   ('round-01', 'Binding the scales', 'The plot waits while you dive; you dive at a real log of its own species; the range is the plot’s surroundings; worlds open from the spot.', 114327),
   ('round-02', 'Measured ground and months', 'ETOPO 2022 heights and CRU CL 2.0 months under every Earth place; the range becomes the real 640 km; treeline from the warmest month.', 919258),
@@ -88,7 +88,7 @@ def bar(k): return f'<div class="bytes">{B[k]:,} of {LIM[k]:,} bytes · {pct(k):
 
 # ---- the overview -----------------------------------------------------------------------------------------------
 code_kb, kg_kb = 89, 36                                       # measured: the 2 MB page's script with the grids removed, compressed (see the note below)
-data_kb = B['2mb'] / 1000 - code_kb - kg_kb
+data_kb = B['earth'] / 1000 - code_kb - kg_kb
 rows = ''.join(f'<li><a href="{f}.html"><b>Round {i + 1}</b><span>{html.escape(t)}</span><em>→ {n / 1e6:.2f} MB</em><small>{html.escape(w)}</small></a></li>' for i, (f, t, w, n) in enumerate(ROUNDS))
 hist = ''.join(f'<tr><td>{a}</td><td class="n">{b:,}</td></tr>' for a, b in [
   ('Before the night: everything written as rules (lives, fire, beavers, the zoom, caves, nine ages, the Köppen map)', 113207),
@@ -134,19 +134,29 @@ body = f'''
 <dt>The traps</dt><dd>Things that do nothing in this build still leave crumbs, and a few bytes is enough to break it. A stray <code>let</code>, an empty <code>...[]</code>, or a newline between two pieces of shader text each did. Overnight, a helper written as <code>TIER &gt; 3 &amp;&amp; (…)</code> left <code>lu=!1</code> behind and reshuffled every minified name in the file. Only copying the code inline kept the rung identical.</dd>
 </dl></section>
 
-<section class="rung"><header><b>200 kB</b><span>The whole world, seen coarser</span><a href="../200kb/">Open ↗</a></header>
+<section class="rung"><header><b>200 kB</b><span>The measured Earth, seen coarser</span><a href="../200kb/">Open ↗</a></header>
 {bar('200kb')}
 <div class="bar split" title="program, climate classes, measured grids"><i style="width:{90 / 2:.2f}%;background:#f1f3ea"></i><i style="width:{14 / 2:.2f}%;background:#8fb8e0"></i><i style="width:{(B['200kb'] / 1000 - 104) / 2:.2f}%;background:var(--sun)"></i></div>
 <div class="legend"><span><i style="background:#f1f3ea"></i>program, about 90 kB</span><span><i style="background:#8fb8e0"></i>climate classes in half degrees, about 14 kB</span><span><i style="background:var(--sun)"></i>measured grids, about {B['200kb'] / 1000 - 104:.0f} kB</span></div>
-<p class="is">Here a forest is <b>the same world as the rung above, seen from further off</b>. Every rule is here; only the measurements are coarser.</p>
+<p class="is">Here a forest is <b>the measured-Earth world (which held the 2 MB rung until the worlds replaced it), seen from further off</b>. Every rule is here; only the measurements are coarser.</p>
 <dl>
 <dt>What is in it</dt><dd>Everything the 2 MB rung does: animals born, hunting, ageing and dying; trees growing, falling, burning and evolving; nine past ages; the lake and the cave; the zoom from a mountain range to the underside of a leaf, through a window into each next world. Click anywhere on Earth and the forest is grown from measured climate, ground and native trees, as before.</dd>
 <dt>How it was filled</dt><dd>For its first two days this rung held a scene of 32 kB: a stream and a pool, weather, deer with needs, and nothing added to fill it. Then the question came back: why leave it a sixth full when the whole program fits? The program is about 90 kB. What fills the rest is the 2 MB rung’s own measured grids, each value replaced by the mean of a block and stored once. The page spreads each block back over its cells, and every rule downstream reads them as before. The block sizes were measured, not guessed. Climate in 2° blocks came to 140 kB alone. Climate in 3° blocks (about 330 km at the equator), with heights and tree ranges in 1.5°, left 8 kB spare.</dd>
 <dt>What it costs</dt><dd>A place is its block. Innsbruck’s valley is 608 m up at 2 MB, and 796 m here, because its block takes in the mountains on either side. Its year comes to much the same: 8.4 °C and 979 mm above, 8.3 °C and 1,023 mm here. That is because temperatures are stored reduced to sea level and lapsed back to the ground they stand on. The horizon, which looks 120 km out, mostly falls inside one block, so the ranges around a plot are softer than at 2 MB.</dd>
 </dl></section>
 
-<section class="rung"><header><b>2 MB</b><span>A world that keeps time and place</span><a href="../2mb/">Open ↗</a></header>
+<section class="rung"><header><b>2 MB</b><span>Worlds without a cut</span><a href="../2mb/">Open ↗</a></header>
 {bar('2mb')}
+<p class="is">Here a forest is <b>one place on a whole planet, and the planet is one of six</b>. Nothing swaps as you change scale: from a globe in space to the cells of a leaf it is one height field, one set of trees, one sky, and you can walk, fly or fall through it at any size.</p>
+<dl>
+<dt>Why it replaced the measured Earth</dt><dd>The rung below this, at its best, was a set of separate worlds (a mountain range, a plot, a log, the moss, a leaf), each drawn its own way, joined by windows. Zooming meant cuts: a cloud became a flat sheet, a range became a different picture. The brief was asked again: what is 2 MB best spent on? The answer chosen was a world with no cuts at all, at every scale, then many of them.</dd>
+<dt>How it stays one world</dt><dd>The ground is 40 octaves of noise on a sphere, from 4,000 km to a few micrometres, each kept in its own small lattice and measured from the camera, so a grain beside you is as precise as a continent. Trees stand on fixed sites 7 m apart and are drawn whole near you, as crowns farther off, and as the canopy's texture beyond. Ground cover, litter, stones and grains are lattices fixed to the planet. The clouds are a real shell around the globe. Each band dissolves into the next.</dd>
+<dt>What a genome decides</dt><dd>Radius, gravity, the air (how thick, what colour it scatters), the star, the sea's liquid, rings and moons, warmth and wetness, whether anyone lives there, and five to eight tree species, each a body plan with its own branching, droop, leaves, bark and climate niche. Gravity reaches everywhere: mountains, cloud height, tree height, wing length, how high you jump.</dd>
+<dt>What it costs</dt><dd>Nothing measured: these are invented planets, so the page is all program, {B['2mb']:,} bytes packed, {pct('2mb'):.1f}% of the allowance. More rules will be added, but the rest of the room will not be filled for its own sake.</dd>
+</dl></section>
+
+<section class="rung"><header><b>2 MB, before</b><span>The measured Earth</span><a href="../2mb-earth/">Open ↗</a></header>
+{bar('earth')}
 <div class="bar split" title="program, climate classes, measured grids"><i style="width:{code_kb / 20:.2f}%;background:#f1f3ea"></i><i style="width:{kg_kb / 20:.2f}%;background:#8fb8e0"></i><i style="width:{data_kb / 20:.2f}%;background:var(--sun)"></i></div>
 <div class="legend"><span><i style="background:#f1f3ea"></i>program, about {code_kb} kB</span><span><i style="background:#8fb8e0"></i>Köppen climate classes, about {kg_kb} kB</span><span><i style="background:var(--sun)"></i>measured grids, about {data_kb / 1000:.2f} MB</span></div>
 <p class="is">Here a forest is a <b>place in the world, in time</b>. It has a history: animals are born, hunt, age and die, and trees grow, fall, burn and evolve over centuries. It has a whereabouts: click anywhere on Earth and its measured ground, months, humidity and wind, and, where range maps cover it, its native trees, decide what grows. And it holds together from a mountain range 640 km across down to the underside of a leaf.</p>
@@ -166,11 +176,11 @@ It stopped at 87% on purpose. The last candidates either needed a ruling (is a m
 </dl></section>
 
 <h2>What the world is, at every order</h2>
-<p>Read upward, the rungs show how much has to be written down before a forest is anywhere at all. At 200 bytes a tree is its index. At 2 kB it is a distance worked out per pixel. At 20 kB it is a genome grown into a body. At 200 kB it has every rule the project has written, and an address seen from 300 km off. At 2 MB the address comes into focus: what grows there is decided by measurements of that place, and those same measurements reach down through the log and the moss to the age of a fallen leaf.</p>
+<p>Read upward, the rungs show how much has to be written down before a forest is anywhere at all. At 200 bytes a tree is its index. At 2 kB it is a distance worked out per pixel. At 20 kB it is a genome grown into a body. At 200 kB it has every rule the project has written, and an address seen from 300 km off. At 2 MB the address dissolves into a whole planet: there are no more rungs inside the rung, just one world you can cross at any size, and five more beside it through the wormholes. (Before that, the 2 MB room held the measured Earth, which is still open.)</p>
 <p>The rule all five share is the one in the brief: no pictures of a forest, only ways of making one. The lower rungs prove how little that takes. The top one tests whether, given room, the making can be made true.</p>
 
 <h2>The overnight dialogue</h2>
-<p>The 2 MB rung was filled by an argument. Two Claude agents took turns on each round, then the main session built what they agreed, checked it, published it, and wrote what it changed and why.</p>
+<p>The measured-Earth 2 MB rung was filled by an argument. Two Claude agents took turns on each round, then the main session built what they agreed, checked it, published it, and wrote what it changed and why.</p>
 <div class="who">
 <div style="border-color:var(--ash)"><b>Ash</b>Proposes. A naturalist and builder: what would make the scales one world, ranked by how much each buys per byte.</div>
 <div style="border-color:var(--rowan)"><b>Rowan</b>Checks. A sceptical engineer: reads the code, quotes line numbers, fetches and packs the data to measure it, and pushes back on anything fake.</div>

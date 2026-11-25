@@ -4,7 +4,7 @@
 // so a grain is always where it was; each fades in as it grows big enough to see and out as it shrinks below a pixel.
 // Their colours are the planet's: its grass, its fallen leaves, its rock and sand.
 import { LEAFFACE } from './shade.js';
-import { AX } from './planet.js';
+import { AX, RIVD } from './planet.js';
 
 export function mkCover(gl, prog, PRE) {
   const { floor, max, min, abs } = Math;
@@ -31,9 +31,10 @@ void main() {
   vec3 q = uEa * da + uEb * dd.x + uEc * dd.y;                           // camera-local, on the sphere
   float dh; vec3 g; ground(q, uBand.x * .25, dh, g); float h = uG0 + dh;
   vec3 o = q + vec3(0., uH0 + dh, 0.) + q * (h / uR);
-  vec3 cl = climate(q, h); float fo = forestF(q, h, cl.x, cl.y, 0.);
+  vec3 cl = climate(q, h + ${RIVD}. * uRivC); float rd, rw, rm = riverM(q, h + ${RIVD}. * uRivC, cl.y, rd, rw); h -= ${RIVD}. * (rm - uRivC); o.y -= ${RIVD}. * (rm - uRivC);
+  float fo = forestF(q, h, cl.x, cl.y, 0.) * (1. - step(.2, rm));
   float urb = cityRho(q) * citySuit(h, cl.x, cl.y, 0.);
-  tA = vec4(o, .6 + .8 * hh(c, 4)); tB = vec4(hh(c, 3), hh(c, 5) * 6.2832, fo, cl.x < -6. ? 0. : cl.y); tC = vec4(urb, h, cn(c, 9), hh(c, 7));
+  tA = vec4(o, .6 + .8 * hh(c, 4)); tB = vec4(hh(c, 3), hh(c, 5) * 6.2832, fo, cl.x < -6. || rm > .3 ? 0. : cl.y); tC = vec4(urb, h, cn(c, 9), hh(c, 7));
   gl_Position = vec4(0.);
 }`;
   const tfp = (() => {

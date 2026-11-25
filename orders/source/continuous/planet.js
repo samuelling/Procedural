@@ -12,7 +12,7 @@
 export const K = 40, LS = 22, GOLD = 2.39996323, PLA = 1.32471795724;
 export const sOf = (k) => 2 ** (LS - k);
 export const RIDGE0 = 4, RIDGE1 = 14;                                      // octaves 262 km to 512 m are ridged: mountains
-export const CLIM = 4;                                                     // extra rows: two climate fields, two forest-patch fields
+export const CLIM = 5;                                                     // extra rows: two climate fields, two forest-patch fields, rivers
 
 // ---- randomness ----------------------------------------------------------------------------------------------------
 export const rng = (s) => () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -109,7 +109,8 @@ const rot = (k, p) => { const [ca, sa, cb, sb] = rotK(k), x1 = ca * p[0] - sa * 
 export const latK = (k, p, s = sOf(k)) => rot(k, p).map((v) => m256(v / s));
 export const octN = (G, k, p) => { const u = latK(k, p); return shape(k, vn3(u[0], u[1], u[2], k + G.kseed)); };
 // the ground's height above the sea at a point (any radius: it is read along the radius), to octave kmax
-export function H(G, p, kmax = K) {
+export function H(G, p, kmax = K) { const h = H0(G, p, kmax); if (kmax < 20 || h < 0.5 || h > 2200) return h; const l = Math.hypot(...p), q = p.map((v) => v / l * G.R); return h - RIVD * river(G, q, h, climate(G, q, h).W); }
+export function H0(G, p, kmax = K) {
   const l = Math.hypot(...p), q = p.map((v) => v / l * G.R); let h = G.base, m = 1;
   for (let k = 0; k < kmax; k++) { const n = octN(G, k, q); if (k === MASKK) m = belt(n, G); h += G.amp[k] * (masked(k) ? m : 1) * (n - 0.5); }
   return h;
@@ -118,6 +119,17 @@ function seaLevel(G) {                                                      // t
   const r = rng(G.n + 5), v = [];
   for (let i = 0; i < 1500; i++) { const z = r() * 2 - 1, a = r() * 6.2832, s = Math.sqrt(1 - z * z); v.push(H(G, [s * Math.cos(a) * G.R, s * Math.sin(a) * G.R, z * G.R], 9)); }
   v.sort((a, b) => a - b); return -v[Math.floor(G.seaFrac * v.length)];
+}
+// rivers: the places where a slow noise (30 km cells) crosses one half are channels; its gradient turns that into a
+// distance in metres, so a channel has a true width (wider where it is wetter), carved RIVD deep
+export const RIVD = 5;
+const rivN = (G, u) => { const k = K + 4 + G.kseed; return vn3(u[0], u[1], u[2], k) * 0.7 + vn3(u[0] * 2 + 11.3, u[1] * 2 + 11.3, u[2] * 2 + 11.3, k) * 0.3; };
+export function river(G, p, h, W, out) {
+  const wd = (8 + 70 * W * W) * ss(0.3, 0.45, W) * ss(0.5, 3, h) * (1 - ss(1600, 2200, h)); if (wd <= 0) return 0;
+  const u = rot(K + 4, p).map((v) => m256(v / 30000)), n = rivN(G, u), e = 1e-4;
+  const g = Math.hypot(rivN(G, [u[0] + e, u[1], u[2]]) - n, rivN(G, [u[0], u[1] + e, u[2]]) - n, rivN(G, [u[0], u[1], u[2] + e]) - n) / e / 30000, dist = Math.abs(n - 0.5) / Math.max(g, 1e-12);
+  if (out) { out.dist = dist; out.wd = wd; }
+  return 1 - ss(wd * 0.5, wd * 1.5, dist);
 }
 // the octave's value, gradient and curvature (lattice units) at a point, for the shaders' near field
 export function taylor(G, k, p) {
@@ -129,8 +141,8 @@ export function taylor(G, k, p) {
 
 // ---- climate: warmth from latitude and height, wetness from latitude belts and a slow noise ----------------------
 // the climate fields are four more noise rows: warmth and wetness (1,200 and 450 km) and forest patches (900 and 260 m)
-export const CL_S = [1.2e6, 4.5e5, 900, 260];
-export const clim = (G, i, p) => { const s = CL_S[i], q = rot(K + i, p).map((v) => m256(v / s)), k = K + i + G.kseed, f = (a, o) => vn3(q[0] * a + o, q[1] * a + o, q[2] * a + o, k); return f(1, 0) * 0.5 + f(2.03, 17.3) * 0.3 + f(4.11, 41.7) * 0.2; };
+export const CL_S = [1.2e6, 4.5e5, 900, 260, 30000];
+export const clim = (G, i, p) => { const s = CL_S[i], q = rot(K + i, p).map((v) => m256(v / s)), k = K + i + G.kseed, f = (a, o) => vn3(q[0] * a + o, q[1] * a + o, q[2] * a + o, k); return f(1, 0) * 0.5 + f(2, 17.3) * 0.3 + f(4, 41.7) * 0.2; };
 export function climate(G, p, h) {
   const l = Math.hypot(...p), sl = (p[0] * G.axis[0] + p[1] * G.axis[1] + p[2] * G.axis[2]) / l, lat = Math.asin(sl);
   const T = G.Teq - G.Tgrad * sl * sl - 6.5 * Math.max(h, 0) / 1000 * G.g + 8 * (clim(G, 0, p) - 0.5);
@@ -152,7 +164,7 @@ export function site(G, a, sg, i, j) {
   const [b, c] = AX[a], fk = a * 2 + (sg > 0 ? 1 : 0), xb = (i + 0.15 + 0.7 * hs2(i, j, 40 + fk)) * TREE, xc = (j + 0.15 + 0.7 * hs2(i, j, 50 + fk)) * TREE, d = G.R * G.R - xb * xb - xc * xc;
   if (d <= 0) return null; const xa = sg * Math.sqrt(d); if (Math.abs(xa) < Math.max(Math.abs(xb), Math.abs(xc))) return null;
   const p = [0, 0, 0]; p[a] = xa; p[b] = xb; p[c] = xc;
-  const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)); if (hs2(i, j, 60 + fk) > F) return null;
+  const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)); if (hs2(i, j, 60 + fk) > F || river(G, p, h, W) > 0.25) return null;
   const w = speciesW(G, T, W), tot = w.reduce((x, y) => x + y, 0); if (tot < 1e-3) return null;
   let x = hs2(i, j, 70 + fk) * tot, s = 0; while (s < w.length - 1 && x > w[s]) x -= w[s++];
   return { p, h, sp: s, seed: hs2(i, j, 80 + fk) };
@@ -201,7 +213,7 @@ vec4 oct(int k, vec3 q) {
   return vec4(n, (transpose(M) * g) * D.z);
 }
 // a climate row: just the value (absolute), no near field needed at its size
-float clim(int i, vec3 q) { int k = ${K} + i; vec4 A = OT(k, 0), D = OT(k, 3); vec3 u = A.xyz + rotO(k) * q * D.z; return vnd3(u, k + uKs).x * .5 + vnd3(u * 2.03 + 17.3, k + uKs).x * .3 + vnd3(u * 4.11 + 41.7, k + uKs).x * .2; }
+float clim(int i, vec3 q) { int k = ${K} + i; vec4 A = OT(k, 0), D = OT(k, 3); vec3 u = A.xyz + rotO(k) * q * D.z; return vnd3(u, k + uKs).x * .5 + vnd3(u * 2. + 17.3, k + uKs).x * .3 + vnd3(u * 4. + 41.7, k + uKs).x * .2; }
 `;
 // the octave table for the camera's foot p (planet metres, on the sphere) and frame F (3 columns: local x y z in
 // planet axes), packed for uOct
@@ -253,6 +265,13 @@ float cityRho(vec3 q) {
     vec2 ce = vec2(cc) + .2 + .6 * vec2(hs2(cc, 91 + fk), hs2(cc, 92 + fk)); float R = (1500. + 10000. * pow(hs2(cc, 93 + fk), 3.)) / ${CITY}., d = length(uv - ce) / R;
     if (d < 1.) r = max(r, pow(1. - d, 1.4)); }
   return r;
+}
+uniform float uRivC;   // the channel's depth fraction at the foot
+float riverM(vec3 q, float h, float W, out float dist, out float wd) {
+  wd = (8. + 70. * W * W) * smoothstep(.3, .45, W) * smoothstep(.5, 3., h) * (1. - smoothstep(1600., 2200., h)); dist = 1e9; if (wd <= 0.) return 0.;
+  int k = ${K} + 4; vec4 A = OT(k, 0), D = OT(k, 3); vec3 u = A.xyz + rotO(k) * q * D.z; vec4 a = vnd3(u, k + uKs), b = vnd3(u * 2. + 11.3, k + uKs);
+  float n = a.x * .7 + b.x * .3; vec3 g = a.yzw * .7 + b.yzw * .6; dist = abs(n - .5) / max(length(g) * D.z, 1e-12);
+  return 1. - smoothstep(wd * .5, wd * 1.5, dist);
 }
 float citySuit(float h, float T, float W, float sl) { return smoothstep(3., 12., h) * smoothstep(900., 500., h) * smoothstep(-4., 2., T) * smoothstep(.15, .3, W) * smoothstep(.25, .1, sl); }
 float forestF(vec3 q, float h, float T, float W, float fp) {

@@ -1,6 +1,6 @@
 // Worlds, continuous: a family of invented planets, each grown from its own genome (planet.js), each viewed at any
 // scale without a cut, from the whole globe down to the cells of a leaf, and joined by wormholes (wormhole.js).
-import { K, sOf, H, genome, octTable, climate, GLSL_NOISE, GLSL_GROUND, GLSL_CLIMATE, MASKK, octN, TREE, AX, LOT } from './planet.js';
+import { K, sOf, H, H0, river, RIVD, genome, octTable, climate, GLSL_NOISE, GLSL_GROUND, GLSL_CLIMATE, MASKK, octN, TREE, AX, LOT } from './planet.js';
 import { mkCity } from './city.js';
 import { mkFauna } from './fauna.js';
 import { mkTrees } from './trees.js';
@@ -89,7 +89,7 @@ function arrive(n, P, look) {                                              // st
   const u = nrm(p), h = H(G, p);
   cam.P = u.map((v) => v * (G.R + max(h, 0) + 1.7)); cam.ref = nrm(cross(u, cross([0.2, 0.9, 0.3], u)));
   if (look) { cam.ref = nrm(madd(look, u, -dot(look, u))); cam.yaw = 0; cam.pitch = 0.04; }
-  setLight(); hint();
+  setLight(); hint(); if (typeof setMode === 'function') { setMode('walk'); ctl.land = 0; }
 }
 
 // ---- the ground: nested square rings of a 64-cell grid around the camera's foot, each twice the last, laid on the
@@ -97,7 +97,7 @@ function arrive(n, P, look) {                                              // st
 const N = 64, Hh = N / 2;
 const CLIM = GLSL_CLIMATE(G);
 const SPEC = `uniform vec4 uSpN[8], uSpC[8]; uniform int uNsp;`;
-const tprog = prog(PRE + GLSL_NOISE + GLSL_GROUND + `
+const tprog = prog(PRE + GLSL_NOISE + GLSL_GROUND + CLIM + `
 layout(location = 0) in vec2 aG;
 uniform vec3 uLv; uniform float uH0, uSea, uG0;
 out vec3 vP, vQ, vGr; out vec2 vPl; out float vW, vCe, vH, vM;
@@ -108,8 +108,9 @@ void main() {
   float sx = th > 1e-4 ? sin(th) / th : 1. - th * th / 6., s2 = sin(th * .5);
   vec3 q = vec3(dir.x * r * sx, -2. * s2 * s2 * uR, dir.y * r * sx);    // the point on the sphere, from the foot
   float dh; vec3 gr; vM = ground(q, ce, dh, gr);
-  float h = uG0 + dh; vH = h; vQ = q; vGr = gr; vCe = ce; vPl = p;
-  float hv = max(h, 0.);                                                 // the sea is a surface of its own
+  float h = uG0 + dh; vec3 cl = climate(q, h + ${RIVD}. * uRivC); float rd, rw, rm = riverM(q, h + ${RIVD}. * uRivC, cl.y, rd, rw);   // rivers: carve the channel,
+  h -= ${RIVD}. * (rm - uRivC); vH = h; vQ = q; vGr = gr; vCe = ce; vPl = p;
+  float hv = max(max(h, rm > .02 ? h + ${RIVD}. * rm - ${RIVD}. * .7 : -1e9), 0.);   // and fill it; the sea is a surface of its own
   vP = q + vec3(0., uH0 + (hv - uG0), 0.) + q * (hv / uR);
   vec4 qq = uVP * vec4(vP, 1.); vW = qq.w; gl_Position = vec4(qq.xy, 0., qq.w);
 }`, PRE + GLSL_NOISE + GLSL_GROUND + CLIM + SPEC + `
@@ -125,8 +126,9 @@ void main() {
   for (int k = 0; k < ${K}; k++) { float s = sOf(k); if (s > vCe * 2.5) continue; if (s < fp * 1.5) break; float w = (1. - clamp(s / vCe - 1.5, 0., 1.)) * clamp(s / fp * .5 - .75, 0., 1.); float a = OT(k, 1).w * (OT(k, 6).y > .5 ? vM : 1.); gr += oct(k, vQ).yzw * a * w; }
   vec3 up = normalize(vec3(0., 1., 0.) + vQ / uR), n = normalize(up - (gr - up * dot(gr, up)));
   float hA = vH, sl = 1. - dot(n, up);
-  bool sea = hA < 0.;
   vec3 cl = climate(vQ, hA); float T = cl.x, W = cl.y;
+  float rd, rw, rm = riverM(vQ, hA + 4., W, rd, rw), wet = rw > 0. ? clamp((rw * .42 - rd) / max(fp * 1.5, .05) + .5, 0., 1.) : 0.;   // the water's width, softened to the pixel
+  bool sea = hA < 0. || wet > .5;
 #define NF(q, S) mix(n2((q) / (S)), .5, smoothstep(.2, .8, fp / (S)))   // a noise, smoothed to its mean once a pixel covers it
   vec3 D = uF * vQ, ab = abs(uFoot + D); vec2 wp = ab.x > ab.y && ab.x > ab.z ? D.yz : ab.y > ab.z ? D.zx : D.xy;   // a flat map of the nearby ground, for small textures
   // what the ground is made of, as it would look from far off: forest, grassland, desert, rock, snow and ice, beach
@@ -182,7 +184,7 @@ void main() {
   vec3 col; float sh = max(dot(up, uSun), 0.);
   if (sea) {
     vec3 v = normalize(vP), wn = normalize(up + (vec3(n2(wp / 9. + uT * .3), 0., n2(wp / 7. - uT * .25)) - .5) * .06 * smoothstep(3e3, 50., d)), r = reflect(v, wn);
-    float fr = .02 + .98 * pow(1. - max(dot(-v, wn), 0.), 5.), dep = clamp(-hA / 40., 0., 1.);
+    float fr = .02 + .98 * pow(1. - max(dot(-v, wn), 0.), 5.), dep = hA < 0. ? clamp(-hA / 40., 0., 1.) : .55;
     vec3 below = mix(alb * uSunC * sh * .5, uLiq * (uSunC * sh + uSky * .5), dep);
     col = mix(below, uSky * .8 * (.3 + .7 * sh) + uSunC * pow(max(dot(r, uSun), 0.), 600.) * 12., fr);
   } else { float dif = max(dot(nl, uSun), 0.) * shadow(vP), am = .55 + .45 * dot(nl, up); col = alb * (uSunC * dif + uSky * am * .55 * (.15 + .85 * smoothstep(-.2, .2, dot(up, uSun)))); }
@@ -208,13 +210,14 @@ function octaves(F) {
   const u = F[1], foot = u.map((v) => v * G.R), T = octTable(G, foot, F);
   gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, octTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 7, T.length / 28, 0, gl.RGBA, gl.FLOAT, T); gl.activeTexture(gl.TEXTURE0);
   S.foot = foot; S.F = F; S.m0 = (() => { const n = octN(G, MASKK, foot), b = 1 - abs(2 * n - 1), t = min(1, max(0, (b - 0.55) / 0.35)); return 0.25 + 1.6 * G.ridge * t * t * (3 - 2 * t); })();
-  S.axis = toLocal(F, G.axis); S.sun = toLocal(F, G.sunDir);
+  S.axis = toLocal(F, G.axis); S.sun = toLocal(F, G.sunDir); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
   S.tb = foot.map((v) => floor(v / TREE)); S.tf = foot.map((v, i) => v / TREE - S.tb[i]); S.lb = foot.map((v) => floor(v / LOT)); S.lf = foot.map((v, i) => v / LOT - S.lb[i]);
   S.night = min(1, max(0, (0.06 - S.sun[1]) / 0.16));
 }
 // every program that reads the ground calls this
 const setNoise = (P) => {
   gl.uniform1i(P.uOct, 7); gl.uniform1i(P.uKs, G.kseed); gl.uniform1f(P.uR, G.R); gl.uniform1f(P.uMaskR, G.ridge); gl.uniform1f(P.uM0, S.m0);
+  if (P.uRivC) gl.uniform1f(P.uRivC, S.rivC);
   if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? 1 : 0); }
   if (P.uAxis) { gl.uniform3fv(P.uAxis, S.axis); gl.uniform1f(P.uTeq, G.Teq); gl.uniform1f(P.uTgrad, G.Tgrad); gl.uniform1f(P.uWet, G.wet); gl.uniform1f(P.uGrav, G.g); }
   if (P.uSpN) { const a = new Float32Array(32), c = new Float32Array(32); G.species.forEach((s, i) => { if (i < 8) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, min(8, G.species.length)); }
@@ -251,7 +254,7 @@ function shadowPass() {
   gl.bindFramebuffer(gl.FRAMEBUFFER, shFB.f); gl.viewport(0, 0, SH.size, SH.size); gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
   gl.clearBufferfv(gl.COLOR, 0, [-1e9, 0, 0, 0]); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0);
-  SH.cast = true; trees.draw(common, setNoise, cam, G, S); city.draw(common, setNoise, cam, G, S); SH.cast = false;
+  SH.cast = true; trees.draw(common, setNoise, cam, G, S); city.draw(common, setNoise, cam, G, S); fauna.beasts(common, cam, G, S); SH.cast = false;
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, shFB.t); gl.activeTexture(gl.TEXTURE0);
 }
 const post = prog(`#version 300 es
@@ -329,6 +332,7 @@ function frame(now) {
   cover.draw(common, setNoise, cam, G, S);
   city.draw(common, setNoise, cam, G, S);
   fauna.draw(common, cam, G, S);
+  fauna.beasts(common, cam, G, S);
   holes.draw(common, cam, G, S, FB, VP, W, Hp);
   sky.clouds(common, cam, G, S, FB);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, Hp); gl.disable(gl.DEPTH_TEST);
@@ -343,7 +347,7 @@ function frame(now) {
 function jump(n, mouth, dist) {
   G = world(n); const u = nrm(mouth), g = max(H(G, u.map((x) => x * G.R)), 0), tang = nrm(cross(u, cross([0.3, 0.8, 0.5], u)));
   cam.P = madd(u.map((v) => v * (G.R + g + dist * 0.35)), tang, dist); cam.ref = tang; cam.yaw = 0; cam.pitch = -0.1;
-  flash = 1; flashC = G.sunCol.map((v) => min(1, v / 2.6)); hint();
+  flash = 1; flashC = G.sunCol.map((v) => min(1, v / 2.6)); hint(); setMode('walk');
 }
 // ---- looking and moving: drag turns, the wheel or a pinch goes toward whatever is under the pointer ----------------
 function pick(px, py) {
@@ -367,24 +371,70 @@ function zoomAt(px, py, f) {                                               // f 
   moveLocal(r.map((v) => v * dist * (1 - f)));
   const u = nrm(cam.P), g = max(ground(u.map((x) => x * G.R)), 0), lo = G.R + g + dist * f * 0.02 + 1e-7; if (hypot(...cam.P) < lo) cam.P = u.map((x) => x * lo);
 }
+// Two ways to be here, as in Ashland: walking (the mouse captured by a click, WASD or the arrows to walk, Shift to run,
+// Z to creep, Space to jump, under this planet's own gravity) and flying (F, or any scroll: W and S go where you look,
+// Space and C rise and sink, Shift is faster, the pace set by how high you are, from a stride to a continent a second).
+// Scrolling still goes toward whatever is under the pointer (the centre, when the mouse is captured) at any scale.
+const ctl = { mode: 'walk', vy: 0, ground: true, land: 0, touch: { x: 0, y: 0 }, bob: 0 };
+const EYE = 1.7, locked = () => document.pointerLockElement === canvas;
+const setMode = (m) => { if (ctl.mode === m) return; ctl.mode = m; ctl.vy = 0; if (m === 'walk') ctl.land = 1; $('mode').textContent = m === 'walk' ? 'walking' : 'flying'; $('mode').dataset.m = m; };
+const look = (dx, dy, k) => { cam.yaw -= dx * k; cam.pitch = min(1.55, max(-1.55, cam.pitch - dy * k)); };
 let drag = null; const pts = new Map();
-canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); drag = { d0: null }; });
+const touchy = matchMedia('(pointer: coarse)').matches;
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && !locked() && !touchy) { canvas.requestPointerLock?.(); }
+  canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); drag = { d0: null };
+});
+addEventListener('mousemove', (e) => { if (locked()) look(e.movementX, e.movementY, 0.0022); });
 canvas.addEventListener('pointermove', (e) => {
-  if (!pts.has(e.pointerId)) return; const p = pts.get(e.pointerId), dx = e.clientX - p[0], dy = e.clientY - p[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
-  if (pts.size === 2) { const [a, b] = [...pts.values()], d = hypot(a[0] - b[0], a[1] - b[1]); if (drag.d0) zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, drag.d0 / d); drag.d0 = d; return; }
-  cam.yaw -= dx * 0.004; cam.pitch = min(1.55, max(-1.55, cam.pitch + dy * 0.004));
+  if (!pts.has(e.pointerId) || locked()) return; const p = pts.get(e.pointerId), dx = e.clientX - p[0], dy = e.clientY - p[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 2) { const [a, b] = [...pts.values()], d = hypot(a[0] - b[0], a[1] - b[1]); if (drag.d0) { setMode('fly'); zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, drag.d0 / d); } drag.d0 = d; return; }
+  look(-dx, -dy, -0.004);
 });
 const upE = (e) => { pts.delete(e.pointerId); if (pts.size < 2 && drag) drag.d0 = null; };
 canvas.addEventListener('pointerup', upE); canvas.addEventListener('pointercancel', upE);
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, exp(e.deltaY * (e.deltaMode ? 0.05 : 0.0015))); }, { passive: false });
-addEventListener('keydown', (e) => { keys[e.code] = 1; }); addEventListener('keyup', (e) => { keys[e.code] = 0; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); setMode('fly'); const [x, y] = locked() ? [canvas.clientWidth / 2, canvas.clientHeight / 2] : [e.clientX, e.clientY]; zoomAt(x, y, exp(e.deltaY * (e.deltaMode ? 0.05 : 0.0015))); }, { passive: false });
+addEventListener('keydown', (e) => {
+  if (e.repeat) return; keys[e.code] = 1;
+  if (e.code === 'KeyF') setMode(ctl.mode === 'walk' ? 'fly' : 'walk');
+  if (e.code === 'Space' && ctl.mode === 'walk' && ctl.ground) jumpUp();
+  if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+});
+addEventListener('keyup', (e) => { keys[e.code] = 0; });
+// touch: a stick in the lower left walks (or flies); drag elsewhere to look; pinch to change scale; two buttons
+(() => {
+  const st = $('stick'), kn = $('knob'); let id = null, c0 = null;
+  st.addEventListener('pointerdown', (e) => { e.stopPropagation(); id = e.pointerId; st.setPointerCapture(id); const r = st.getBoundingClientRect(); c0 = [r.left + r.width / 2, r.top + r.height / 2]; });
+  st.addEventListener('pointermove', (e) => { if (e.pointerId !== id) return; let x = (e.clientX - c0[0]) / 50, y = (e.clientY - c0[1]) / 50; const l = hypot(x, y); if (l > 1) { x /= l; y /= l; } ctl.touch = { x, y }; kn.style.transform = `translate(${x * 40}px, ${y * 40}px)`; });
+  const end = () => { id = null; ctl.touch = { x: 0, y: 0 }; kn.style.transform = ''; }; st.addEventListener('pointerup', end); st.addEventListener('pointercancel', end);
+  $('bjump').addEventListener('pointerdown', (e) => { e.stopPropagation(); if (ctl.mode === 'walk') { if (ctl.ground) jumpUp(); } else keys.Space = 1; });
+  $('bjump').addEventListener('pointerup', () => { keys.Space = 0; });
+  $('bfly').addEventListener('pointerdown', (e) => { e.stopPropagation(); setMode(ctl.mode === 'walk' ? 'fly' : 'walk'); });
+})();
+function jumpUp() { ctl.vy = 4.2; ctl.ground = false; }                     // the same legs everywhere: under weak gravity you go high
 let flyV = [0, 0, 0];
-function fly(dt) {                                                         // WASD at a pace set by height: a stride on the ground, a region a second from orbit
-  const hc = S.hc || 1, sp = max(hc, 2e-5) * 1.6 * (keys.ShiftLeft ? 4 : 1);
-  const f = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), s = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), v = (keys.KeyE || keys.Space ? 1 : 0) - (keys.KeyQ || keys.KeyC ? 1 : 0);
-  const d = dir(cam.yaw, 0), t = [(d[0] * f - d[2] * s) * sp, v * sp, (d[2] * f + d[0] * s) * sp];
-  flyV = flyV.map((q, i) => q + (t[i] - q) * min(1, dt * 8));
-  if (hypot(...flyV) > 1e-12) moveLocal(flyV.map((q) => q * dt));
+function fly(dt) {
+  const hc = S.hc || 1, k = keys, tx = abs(ctl.touch.x) > 0.15 ? ctl.touch.x : 0, ty = abs(ctl.touch.y) > 0.15 ? -ctl.touch.y : 0;
+  const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) + ty, s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) + tx;
+  const run = k.ShiftLeft || k.ShiftRight || hypot(tx, ty) > 0.92;
+  if (ctl.mode === 'fly') {
+    const v = (k.Space || k.KeyE ? 1 : 0) - (k.KeyC || k.KeyQ || k.ControlLeft ? 1 : 0), sp = max(hc, 2e-5) * 1.2 * (run ? 4 : 1), d = dir(), r = nrm([-d[2], 0, d[0]]);
+    const t = [(d[0] * f + r[0] * s) * sp, (d[1] * f + v) * sp, (d[2] * f + r[2] * s) * sp];
+    flyV = flyV.map((q, i) => q + (t[i] - q) * min(1, dt * 6));
+    if (hypot(...flyV) > 1e-12) moveLocal(flyV.map((q) => q * dt));
+    return;
+  }
+  // walking: along the ground at a person's pace, held down by this planet's gravity
+  const sp = (run ? 6.2 : k.KeyZ ? 1.6 : 3.6) / max(1, hypot(f, s)), d = dir(cam.yaw, 0), want = [(d[0] * f - d[2] * s) * sp, 0, (d[2] * f + d[0] * s) * sp];
+  flyV = flyV.map((q, i) => i === 1 ? 0 : q + (want[i] - q) * min(1, dt * (ctl.ground ? 10 : 1.5)));
+  if (hypot(...flyV) > 1e-6) { const F = axes(); cam.P = madd(cam.P, toPlanet(F, flyV.map((q) => q * dt)), 1); }
+  const u = nrm(cam.P), gnd = max(ground(u.map((x) => x * G.R)), 0), above = hypot(...cam.P) - G.R - gnd;
+  ctl.bob += hypot(flyV[0], flyV[2]) * dt * (ctl.ground ? 1 : 0);
+  let a;
+  if (ctl.land > 0 && above > EYE + 0.5) a = EYE + (above - EYE) * exp(-dt * 2.2);            // down from the air: a glide, then gravity
+  else { ctl.land = 0; ctl.vy -= 9.81 * G.g * dt; a = above + ctl.vy * dt; if (a <= EYE) { a = EYE; ctl.vy = 0; ctl.ground = true; } else ctl.ground = false; }
+  const eye = a + (ctl.ground ? Math.sin(ctl.bob * 3.6) * 0.035 : 0);
+  cam.P = u.map((x) => x * (G.R + gnd + eye));
 }
 
 // ---- what you are looking at, in words ---------------------------------------------------------------------------
@@ -395,6 +445,7 @@ function hud() {
   const c = pick(canvas.clientWidth / 2, canvas.clientHeight / 2), d = c ?? S.hc * 3, w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = BANDS.find((b) => w >= b[0])[1];
   $('alt').textContent = fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
+  $('lock').hidden = locked() || touchy;
   $('bar').style.width = min(100, max(2, (log2(w) + 20) / 44 * 100)) + '%';
 }
 function hint() {
@@ -403,4 +454,4 @@ function hint() {
 }
 arrive(0);
 requestAnimationFrame(frame);
-window.sylva = { cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
+window.sylva = { setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };

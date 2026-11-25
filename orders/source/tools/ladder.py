@@ -17,21 +17,25 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
  ('20kb', 20000, 'c/index.html', 'A genome and a grammar',
   'Real 3D. Trees grown branch by branch from a genome, with moss where the rain runs, shadows, fog, wind and birdsong.',
   'a short story', ['Switch forests, then <b>Reseed</b> for a new one. No two are the same.'], None),
- ('200kb', 200000, 'd/index.html', 'The whole world, seen coarser',
-  'Everything the top rung does: every animal, every age, every scale. Only the Earth is blurrier, measured in 300 km squares.',
+ ('200kb', 200000, 'd/index.html', 'The measured Earth, seen coarser',
+  'The real-Earth forest: every animal, every age, every scale, grown on the climate of anywhere you click. The Earth is measured in 300 km squares.',
   'a novella', TRY[:2], None),
- ('2mb', 2000000, 'e/index.html', 'A world that keeps time and place',
-  'A forest where things happen to each other, from 640 km of mountains down to the mites on a leaf, grown on the real climate of anywhere you click.',
-  'one photo from your phone', TRY, [
-   ('Lives', 'Deer, wolves, foxes, hares, beavers and birds, each with hunger, an age and two inherited genes. Does fawn in spring, stags roar, wolves hunt, deer remember where the kills were.'),
-   ('A wood that changes', 'Trees grow, age, fall and burn. Lightning fires run on the wind and stop at water. Beavers drown a stand under their pond. Over centuries the trees evolve into new species, with a tree of life to prove it.'),
-   ('Time', 'Day and night, aurora, four seasons, storms. Rewind and fast forward. Nine other ages, from the first trees of the Devonian to mammoths and the wildwood.'),
-   ('Places', 'Anywhere on Earth, from measured heights, months, rain and tree ranges. Ten forests, a kelp forest, under a lake, inside a limestone cave.'),
-   ('Scales', 'Mountain range, plot, rotting log, moss or under the bark, soil, the underside of a leaf: ten times smaller each step, each world seen through a window into the next, and none of them an island.'),
-   ('Look closer', 'Walk it on foot, with animals that hear you coming, and out past the edge as far as you like, at every scale: the squares around you grow as you come near. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.')]),
+ ('2mb', 2000000, 'w/index.html', 'Worlds without a cut',
+  'Six whole planets, each grown from a genome of physics and plant genetics, joined by wormholes. Zoom from a globe in space to a leaf’s cells without one cut.',
+  'one photo from your phone', [
+   'Click to look, press <b>F</b> and fly to the glowing sphere ahead, then go in. You come out on another planet',
+   'Press <b>F</b> and fly up until the planet is a globe with moons, then scroll back down into a single grain of soil',
+   'Fly round to the night side and find a city: its streets and windows are lit'], [
+   ('Planets', 'Six genomes: size, gravity, the colour the air scatters, the star, the liquid in the seas, rings and moons. Weaker gravity makes taller mountains, deeper air, taller trees, longer wings and higher jumps.'),
+   ('Genetics', 'Five to eight tree species per planet, each a body plan: dome, cone, palm, column, umbrella, weeping, orb or spire, with its own branching, droop, leaves and bark, growing where its climate niche fits. Grazers with four or six legs.'),
+   ('One world, every scale', 'A single height field of 40 octaves from 4,000 km to micrometres, measured from the camera so a grain beside you is as exact as a continent: the globe, continents and rivers, forests tree by tree, leaves, litter, stones, soil grains, silt.'),
+   ('Weather and light', 'Volumetric clouds over the whole globe, fronts and clear spells, a night side with stars, sun shadows through the canopy.'),
+   ('Towns', 'On inhabited planets: street grids, towers that rise toward the core, brick, glass and concrete, windows lit at night.'),
+   ('Wormholes', 'Three on each planet, bending the light around them and showing the far world inside. Every planet is a few jumps from every other.')]),
 ]
 os.makedirs('site/thumbs', exist_ok=True)
 for f in os.listdir('thumbs'): shutil.copyfile('thumbs/' + f, 'site/thumbs/' + f)
+os.makedirs('site/2mb-earth', exist_ok=True); shutil.copyfile('e/index.html', 'site/2mb-earth/index.html')
 rows, W = '', [30, 42, 58, 78, 100]   # the picture's share of the row, rung by rung
 for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
     os.makedirs('site/' + folder, exist_ok=True); shutil.copyfile(src, f'site/{folder}/index.html')
@@ -40,6 +44,7 @@ for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
     extra = ''
     if folder == '0.2kb': extra = f'<figure class="code"><figcaption>All of it:</figcaption><code>{E(open(src).read().strip())}</code></figure>'
     if tries: extra += '<div class="try"><p>Try</p><ul>' + ''.join(f'<li>{t}</li>' for t in tries) + '</ul></div>'
+    if folder == '2mb': extra += '<p class="was">Until today this rung held the measured Earth (1.74 MB of real heights, climate and tree ranges): <a href="2mb-earth/">still open here ↗</a></p>'
     if inside: extra += '<details><summary>Everything in it</summary><dl>' + ''.join(f'<dt>{E(a)}</dt><dd>{E(b)}</dd>' for a, b in inside) + '</dl></details>'
     step = '' if k == 0 else '<div class="step" aria-hidden="true"><span>×10 the room</span></div>'
     rows += f'''{step}<section class="rung r{k}" style="--w:{W[k]}%">
@@ -69,7 +74,7 @@ for k, (fn, t, w, n) in enumerate(ROUNDS):
     tpls += f'<template id="rd{k}"><p class="settled"><b>Round {k + 1}: {E(t)}.</b> {E(w)} After it, the 2 MB rung stood at {n:,} bytes.</p>{render(open(f"dialogue/{fn}.md").read())}</template>\n'
 talk = f'''<dialog id="talk" aria-labelledby="talk-h"><div class="tk">
 <header><h2 id="talk-h">Ash and Rowan</h2><button class="x" aria-label="Close">×</button>
-<p>The 2 MB rung was filled by an argument. Overnight, two Claude agents took turns, six rounds of them. <b class="a">Ash</b> proposed: a naturalist and builder, ranking ideas by what each bought per byte. <b class="r">Rowan</b> checked: a sceptical engineer who read the code, measured the data, and pushed back on anything fake. Then the main session built what they agreed. Their own words, unedited except for typos.</p>
+<p>The measured-Earth 2 MB rung (now at <a href="2mb-earth/">2mb-earth</a>) was filled by an argument. Overnight, two Claude agents took turns, six rounds of them. <b class="a">Ash</b> proposed: a naturalist and builder, ranking ideas by what each bought per byte. <b class="r">Rowan</b> checked: a sceptical engineer who read the code, measured the data, and pushed back on anything fake. Then the main session built what they agreed. Their own words, unedited except for typos.</p>
 <nav role="tablist" aria-label="Rounds">{chips}</nav></header>
 <div class="body" id="talk-b" tabindex="0"></div></div></dialog>
 {tpls}'''
@@ -105,6 +110,7 @@ h2 b { display: block; font: 700 clamp(30px, 5vw, 44px)/1 var(--serif); font-sty
 .jar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--lichen), var(--amber)); }
 .code { margin: 16px 0 0; } .code figcaption { font: italic 400 14px/1 var(--serif); color: var(--lichen); margin-bottom: 6px; }
 .code code { display: block; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid var(--line); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); word-break: break-all; }
+.was { margin: 10px 0 0; font-size: 14px; opacity: .8; } .r4 .was { grid-column: 1; } .was a { color: var(--lichen); }
 .try { margin-top: 16px; } .try p { margin: 0 0 6px; font: italic 400 15px/1 var(--serif); color: var(--lichen); }
 .try ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .try li { padding-left: 20px; position: relative; font-size: 14.5px; max-width: 60ch; text-wrap: pretty; }

@@ -4,7 +4,7 @@
 // a box with a face that has floors, windows and frames, then brick or concrete or glass, then the grain of each down
 // to millimetres; at night the windows light. From farther off the ground carries the street grid and, after dark,
 // the lights; from orbit a city is a grey smudge by day and a glow by night.
-import { AX, LOT, cityRho } from './planet.js';
+import { AX, LOT, cityRho, RIVD } from './planet.js';
 
 export function mkCity(gl, prog, PRE) {
   const { floor, max, min, abs, hypot } = Math;
@@ -19,7 +19,7 @@ void main() {
   vec3 q = uEa * da + uEb * dd.x + uEc * dd.y;
   float dh; vec3 g; ground(q, 8., dh, g); float h = uG0 + dh; vec3 up = normalize(vec3(0., 1., 0.) + q / uR); float sl = 1. - dot(normalize(up - (g - up * dot(g, up))), up);
   vec3 o = q + vec3(0., uH0 + dh, 0.) + q * (h / uR);
-  vec3 cl = climate(q, h); float rho = cityRho(q) * citySuit(h, cl.x, cl.y, sl);
+  vec3 cl = climate(q, h + ${RIVD}. * uRivC); float rd, rw, rm = riverM(q, h + ${RIVD}. * uRivC, cl.y, rd, rw); o.y -= ${RIVD}. * (rm - uRivC); float rho = cityRho(q) * citySuit(h, cl.x, cl.y, sl) * (1. - step(.05, rm));
   bool street = (c.x & 3) == 0 || (c.y + 1000000) % 5 == 0;
   float s1 = hs2(c, 120), s2 = hs2(c, 121), s3 = hs2(c, 122), park = step(hs2(c / ivec2(4, 5), 123), .12);
   float on = !street && rho > .04 && s1 < rho * 1.8 && park < .5 ? 1. : 0.;
