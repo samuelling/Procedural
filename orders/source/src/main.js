@@ -184,8 +184,8 @@ function grow(keepView, aged) {
 // ---- walking out of the plot (2 MB rung): the land goes on. The squares round you are grown as you come near, each from
 // its own seed on the same ground the far valley shows (its height everywhere is the valley's), and the far land and its
 // simple trees step aside wherever one stands. The plot itself is where the animals live and the years are kept.
-function wand() { return B && B.farH && !G.world && !G.span && !G.ero; }
-function hAt(x, z) { const S = B.S, hs = S / 2; if ((Math.abs(x) <= hs && Math.abs(z) <= hs) || !wand()) return B.Hgt(x, z); const e = f.nbm && f.nbm.get(Math.round(x / S) + ',' + Math.round(z / S)); return e ? e.B.Hgt(x - e.X, z - e.Z) : B.farH(x, z); }
+function wand() { return B && !G.ero && (B.farH ? !G.world && !G.span : G.span && B.ring && G.world !== 'range'); }   // a forest, or any small world but the range: not a cave or a lake
+function hAt(x, z) { const S = B.S, hs = S / 2; if ((Math.abs(x) <= hs && Math.abs(z) <= hs) || !wand()) return B.Hgt(x, z); const e = f.nbm && f.nbm.get(Math.round(x / S) + ',' + Math.round(z / S)); return e ? e.B.Hgt(x - e.X, z - e.Z) : B.farH ? B.farH(x, z) : B.Hgt(x, z); }
 function nbClear() { if (f.nbm) for (const e of f.nbm.values()) canvas.nb.drop(e.W); f.nbm = new Map(); f.nbs = []; f.colN = []; f.hd = null; f.hm = 0; if (f.lc) { f.lc = null; setSun(); } }
 function nbTick() {
   if (!wand()) { if (f.nbm && f.nbm.size) nbClear(); return; }
@@ -201,7 +201,7 @@ function nbTick() {
       const X = cx * S, Z = cz * S, d = hypot(X - c[0], Z - c[2]) + ((X - c[0]) * sin(yaw) + (Z - c[2]) * cos(yaw)) * 0.5; if (d < bd) { bd = d; best = [cx, cz, X, Z]; }
     }
     if (best) {
-      const [cx, cz, X, Z] = best, Bn = build({ ...G, off: { X, Z, H: B.farH, strm: B.strm, lake: B.lake } }, G.sd || seed, Q * 0.5, den);
+      const [cx, cz, X, Z] = best, Bn = build({ ...G, off: { X, Z, H: B.farH || (G.world === 'bark' ? G.hb : B.Hgt), strm: B.strm, lake: B.lake, lg: B.lg, lv: B.lv } }, G.sd || seed, Q * 0.5, den);
       const col = Bn.trees.filter((t) => t.st < 2 && t.H > 1.5).map((t) => [t.x + X, t.z + Z, 0.05 + 0.011 * t.H, Bn.Hgt(t.x, t.z) + t.H]);
       for (const a of Bn.rocks) for (let i = 0; i < a.length; i += 12) if (a[i + 3] > 0.35) col.push([a[i] + X, a[i + 2] + Z, a[i + 3] * 0.8, a[i + 1] + a[i + 3] * 0.7]);
       m.set(cx + ',' + cz, { cx, cz, X, Z, B: Bn, W: canvas.nb.add(R, Bn, G), col }); f.nbT = performance.now(); ch = 1;

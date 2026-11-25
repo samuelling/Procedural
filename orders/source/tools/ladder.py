@@ -6,7 +6,7 @@ TRY = ['Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times 
        '<b>Places → Anywhere on Earth</b>, then click where you grew up',
        '<b>Happenings → Wolves</b>, then <b>Time → Fast forward</b>, and watch the seedlings come back',
        '<b>Places → Another age</b>, and stand among the coal swamps’ scale trees',
-       '<b>You → Walk</b> and keep going past the edge of the plot. The land goes on, grown around you as you come near']
+       '<b>You → Walk</b> and keep going past the edge, at any scale. The forest, the log, the soil and the leaf all go on, grown around you as you come near']
 R = [  # folder, allowance, built file, title, one line, as big as, things to try, everything in it
  ('0.2kb', 200, 'a/index.html', 'One formula',
   'Eighty firs fading into mist, from one loop. Each tree’s size, height and paleness come from its number in the line.',
@@ -27,8 +27,8 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
    ('A wood that changes', 'Trees grow, age, fall and burn. Lightning fires run on the wind and stop at water. Beavers drown a stand under their pond. Over centuries the trees evolve into new species, with a tree of life to prove it.'),
    ('Time', 'Day and night, aurora, four seasons, storms. Rewind and fast forward. Nine other ages, from the first trees of the Devonian to mammoths and the wildwood.'),
    ('Places', 'Anywhere on Earth, from measured heights, months, rain and tree ranges. Ten forests, a kelp forest, under a lake, inside a limestone cave.'),
-   ('Scales', 'Mountain range, plot, rotting log, moss or under the bark, soil, the underside of a leaf: ten times smaller each step, each world seen through a window into the next.'),
-   ('Look closer', 'Walk it on foot, with animals that hear you coming, and out past the plot as far as you like: the squares around you grow as you come near. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.')]),
+   ('Scales', 'Mountain range, plot, rotting log, moss or under the bark, soil, the underside of a leaf: ten times smaller each step, each world seen through a window into the next, and none of them an island.'),
+   ('Look closer', 'Walk it on foot, with animals that hear you coming, and out past the edge as far as you like, at every scale: the squares around you grow as you come near. Double-click anything: leaf veins, single needles, lichens, dew at dawn, a ladybird or two.')]),
 ]
 os.makedirs('site/thumbs', exist_ok=True)
 for f in os.listdir('thumbs'): shutil.copyfile('thumbs/' + f, 'site/thumbs/' + f)

@@ -124,7 +124,7 @@ const MSHF = PRE + `
 in vec3 pw, nw, po; in vec2 xx; in float vz; flat in vec2 ii;
 uniform float uMat; uniform vec3 uRA, uRB, uLit; uniform float uLa; out vec4 o;
 void main() {
-  vec3 n = normalize(nw), alb; float ao = 1.;` + (TIER > 3 ? ' if (uMat > 2.5 && uMat < 3.5 && hid(pw.xz)) discard; float hh = 0.; FP = vz / (uK.y * uR.y * .5) / max(abs(dot(n, normalize(uCam - pw))), .25);' : '') + `
+  vec3 n = normalize(nw), alb; float ao = 1.;` + (TIER > 3 ? ' if ((uMat > 2.5 && uMat < 3.5 || uMat > 1.2 && uMat < 1.3) && hid(pw.xz)) discard; float hh = 0.; FP = vz / (uK.y * uR.y * .5) / max(abs(dot(n, normalize(uCam - pw))), .25);' : '') + `
   if (uMat < .5) {                                                          // stone: strata, speckle, cracks, lichen, then moss
     vec3 fn = cross(dFdx(pw), dFdy(pw)); if (dot(fn, fn) > 1e-14) { fn = normalize(fn); if (dot(fn, n) < 0.) fn = -fn; n = normalize(mix(n, fn, .6)); }
     float st = vn3(po * vec3(1.1, 4.5, 1.1)), spk = vn3(po * 14.), cr = abs(fb3(po * 1.7) - .5);
@@ -338,7 +338,7 @@ export function mkRenderer(canvas, low) {
         buf(m.i, gl.ELEMENT_ARRAY_BUFFER); return { v, n: m.i.length, k: instances ? instances.length / 12 : 0 };
       };
       W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
-      if (TIER > 3) { W.xm = B.xm && B.xm.map((m) => mesh(m)); W.hz = B.hz && mesh(B.hz); }
+      if (TIER > 3) { W.xm = B.xm && B.xm.map((m) => mesh(m)); W.hz = B.hz && mesh(B.hz); W.ring = B.ring && mesh(B.ring); }
       if (TIER > 3) W.str = G.age ? [G.age, 0, 2] : B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // (in a fallen leaf: its age)   // the rock bed a gorge cuts through
       if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const H = G.home || G, tot = H.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => H.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }   // the range's forest is the colour of the forest you came from
       gl.bindVertexArray(null);
@@ -353,6 +353,7 @@ export function mkRenderer(canvas, low) {
         gl.bindVertexArray(W.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, W.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, W.land.n - W.nTop, gl.UNSIGNED_SHORT, W.nTop * 2); }
         if (TIER > 3 && W.xm) { gl.uniform1f(PMx.uMat, 1); for (const m of W.xm) { gl.bindVertexArray(m.v); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0); } }   // rock in three dimensions: a cave
+        if (TIER > 3 && !shadow && W.ring) { gl.bindVertexArray(W.ring.v); gl.uniform1f(PMx.uMat, 1.25); gl.drawElements(gl.TRIANGLES, W.ring.n, gl.UNSIGNED_SHORT, 0); }   // a small world's ground, on past its patch
         if (TIER > 3 && !shadow && W.far) { gl.bindVertexArray(W.far.v); gl.uniform1f(PMx.uMat, 3); gl.uniform3fv(PMx.uFor, W.for); gl.drawElements(gl.TRIANGLES, W.far.n, gl.UNSIGNED_SHORT, 0); }
         gl.uniform1f(PMx.uMat, 0); for (const s of W.stones) if (s.k) { gl.bindVertexArray(s.v); gl.drawElementsInstanced(gl.TRIANGLES, s.n, gl.UNSIGNED_SHORT, 0, s.k); }
         com(PCx, f, view, K, R, or, nf); if (!shadow) { gl.uniform3fv(PCx.uBA, pal.ba); gl.uniform3fv(PCx.uBB, pal.bb); gl.uniform4fv(PCx.uBP, pal.bp); if (TIER > 3) gl.uniform3fv(PCx.uLB, pal.lb); }

@@ -79,8 +79,11 @@ export function build(G, seed, q = 1, den = 1, stand) {
       const e = G.ero, H1 = Hgt; Hgt = (x, z) => H1(x, z) - e.low(x, z); strm.lvl = (x) => Math.max(e.lvl(x), lvl(x) - e.low(x, zc(x)) + (fl > 0 && x < xd ? 0 : -1e9)); strm.ero = e;
     }
   }
-  let lg = null, lv = null; if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
-  if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
+  if (TIER > 3 && !G.off) G.hb = Hgt;                                       // the ground before any small world is laid on it (a square beside a bark patch starts from it)
+  let lg = null, lv = null; if (TIER > 3 && G.world === 'log' && G.off) { const L0 = G.off.lg, X = G.off.X, Z = G.off.Z; lg = { ...L0, zc: (x) => L0.zc(x + X) - Z, R: (x) => L0.R(x + X), cy: (x) => L0.cy(x + X) }; }   // beside the plot's log, the same log runs on
+  else if (TIER > 3 && G.world === 'log') { const l = logLand(Hgt, rnd, hs); Hgt = l.Hgt; lg = l.log; }   // a rotting log, as part of the ground
+  if (TIER > 3 && G.world === 'leaf' && G.off) { const v0 = G.off.lv, X = G.off.X, Z = G.off.Z; lv = (x) => v0(x + X) - Z; }   // and the same vein
+  else if (TIER > 3 && G.world === 'leaf') { const l = leafLand(Hgt, rnd); Hgt = l.Hgt; lv = l.vein; }   // a leaf's vein, as a ridge
   if (TIER > 3 && G.world === 'lake') Hgt = lakeLand(Hgt, hs);   // a lake bed
   if (TIER > 3 && G.world === 'cave') { lv = cave3(rnd, hs); Hgt = () => -60; }   // a cave in the rock; the ordinary ground goes far below, out of sight
   if (TIER > 3 && G.world === 'range') { const c = G.cl, l = rangeLand(rnd, hs, G.stage ?? 10, c && c.elev != null && ((x, z) => { const m = elev(c.lat - z * 10 / 111.2, c.lon + x * 10 / (111.2 * Math.cos(c.lat * Math.PI / 180))); return m === null ? null : m / 1000; }), c && c.lon != null ? '@' + c.lat + ',' + c.lon : ''); Hgt = l.Hgt; wet = l.wet; lv = l.range; }   // a mountain range worn down by its rivers
@@ -331,8 +334,19 @@ export function build(G, seed, q = 1, den = 1, stand) {
   const pal = { la: new Float32Array(24), lb: new Float32Array(24), ba: new Float32Array(24), bb: new Float32Array(24), bp: new Float32Array(32) };
   G.trees.forEach((sp, i) => { pal.la.set(sp.leaf.a, i * 3); pal.lb.set(sp.leaf.b, i * 3); pal.ba.set(sp.bark.a, i * 3); pal.bb.set(sp.bark.b, i * 3); pal.bp.set([sp.bark.t, sp.bark.sc, TIER > 3 && sp.leaf.t === 1 ? 1 : 0, 0], i * 4); });
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
-  const vy = TIER > 3 && !G.off && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' ? { cave: lv } : G.world === 'range' && { spot: lv.spot });
+  const vy = TIER > 3 && !G.off && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' ? { cave: lv } : G.world === 'range' ? { spot: lv.spot } : {});
   if (TIER > 3 && vy && lv && lv.mouth) vy.mouth = lv.mouth; if (TIER > 3 && vy && !G.span && G.cl && G.cl.elev != null) vy.hz = horizon(G.cl);   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
+  if (TIER > 3 && vy && G.span && !G.off && G.world !== 'cave' && G.world !== 'lake') {   // a small world goes on past its patch: its own ground, out to where the haze takes it
+    const grid = G.world === 'range' || G.world === 'bark', K = low ? 22 : 30, M = low ? 96 : 160, R0 = hs * 20, rv = [], ri = [];
+    let e0 = 0; for (let k = 0; k < 64; k++) { const a = k / 64 * TAU; e0 += Hgt(max(-hs, min(hs, cos(a) * hs * 1.5)), max(-hs, min(hs, sin(a) * hs * 1.5))) / 64; }
+    const Hx = grid ? (x, z) => { const cx = max(-hs, min(hs, x)), cz = max(-hs, min(hs, z)), d = max(abs(x), abs(z)) - hs, t = min(1, max(0, d / (hs * 0.9))), u = t * t * (3 - 2 * t);
+      return Hgt(cx, cz) * (1 - u) + u * (e0 + L.amp * 1.6 * (fbm(x * L.f * 0.4 + ox, 7, z * L.f * 0.4 + oz, 4) - 0.5)); } : Hgt;   // (a ground drawn on a grid fades from its edge into the same kind of land)
+    for (let k = 0; k <= K; k++) { const h = hs * 0.998 * pow(R0 / hs, k / K), e = h * 0.02;
+      for (let m = 0; m < 4 * M; m++) { const t = m / M, sd = floor(t), u = (t - sd) * 2 - 1, x = [u, 1, -u, -1][sd] * h, z = [-1, u, 1, -u][sd] * h, y = Hx(x, z), nn = nrm([Hx(x - e, z) - Hx(x + e, z), 2 * e, Hx(x, z - e) - Hx(x, z + e)]); rv.push(x, y, z, nn[0], nn[1], nn[2], 1, wet(x, z)); } }
+    for (let k = 0; k < K; k++) for (let m = 0; m < 4 * M; m++) { const a = k * 4 * M + m, b = k * 4 * M + (m + 1) % (4 * M); ri.push(a, b, a + 4 * M, b, b + 4 * M, a + 4 * M); }
+    vy.ring = { v: new Float32Array(rv), i: new Uint16Array(ri) };
+    if (G.world === 'log') vy.lg = lg; if (G.world === 'leaf') vy.lv = lv;   // (for the squares beside it)
+  }
   const sr = rng(seed ^ 0x77);
   if (TIER > 3 && G.world === 'lake') water = sheet(Hgt, 0, -hs, hs, -hs, hs, 96);   // the lake's surface, seen from below
   if (TIER > 3 && G.world === 'cave') { const p = lv.sump, y = lv.floorAt(p[0], p[1] + 1, p[2]) + 0.7; water = sheet((x, z) => lv.floorAt(x, y + 0.3, z), y, p[0] - 7, p[0] + 7, p[2] - 7, p[2] + 7, 28); }   // the sump, where the stream's canyon ends in a pool
