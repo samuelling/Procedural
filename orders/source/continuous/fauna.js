@@ -48,9 +48,9 @@ void main() { CAST
   vec3 col = alb * (uSunC * dif + uSky * (.45 + .3 * n.y)); col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y);
   oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW); }`);
   const bodies = new Map();
-  function bodyPlan(G) {
-    if (bodies.has(G.n)) return bodies.get(G.n);
-    const r = rng(G.n * 313 + 5), legs = G.n === 0 ? 4 : r() < 0.35 ? 6 : 4, L = (0.55 + 0.5 * r()) * G.g ** -0.5, len = 1 + 0.8 * r(), ht = L, neck = 0.3 + 0.7 * r();
+  function bodyPlan(G, hunter) {
+    const key = G.n + (hunter ? 100 : 0); if (bodies.has(key)) return bodies.get(key);
+    const r = rng(G.n * 313 + 5 + (hunter ? 77 : 0)), legs = G.n === 0 || hunter ? 4 : r() < 0.35 ? 6 : 4, L = (hunter ? 0.4 + 0.15 * r() : 0.55 + 0.5 * r()) * G.g ** -0.5, len = hunter ? 0.9 + 0.3 * r() : 1 + 0.8 * r(), ht = L, neck = hunter ? 0.15 : 0.3 + 0.7 * r();
     const V = [], blob = (c, rx, ry, rz, tag) => {                         // an ellipsoid of 12 x 8 quads
       for (let i = 0; i < 12; i++) for (let j = 0; j < 8; j++) for (const [a, b] of [[0, 0], [1, 0], [1, 1], [0, 0], [1, 1], [0, 1]]) {
         const th = (i + a) / 12 * 6.2832, ph = (j + b) / 8 * 3.1416, n = [Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)];
@@ -66,8 +66,8 @@ void main() { CAST
     const vao = gl.createVertexArray(), ib = gl.createBuffer(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 40, 0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 40, 12); gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
     gl.bindBuffer(gl.ARRAY_BUFFER, ib); for (const [l, o] of [[4, 0], [5, 16]]) { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 4, gl.FLOAT, false, 32, o); gl.vertexAttribDivisor(l, 1); } gl.bindVertexArray(null);
-    const hue = G.n === 0 ? [0.32, 0.2, 0.1] : G.soil.map((v) => Math.min(1, v * (1.2 + r()) + 0.05)), b = { vao, ib, n: V.length / 10, col: hue, col2: hue.map((v) => Math.min(1, v * 1.8 + 0.15)), spots: r() < 0.5 ? 1 : 0, scale: 0.8 + 0.6 * r() };
-    bodies.set(G.n, b); return b;
+    const hue = hunter ? (G.n === 0 ? [0.12, 0.11, 0.1] : G.rock.map((v) => v * 0.45)) : G.n === 0 ? [0.32, 0.2, 0.1] : G.soil.map((v) => Math.min(1, v * (1.2 + r()) + 0.05)), b = { vao, ib, n: V.length / 10, col: hue, col2: hue.map((v) => Math.min(1, v * 1.8 + 0.15)), spots: !hunter && r() < 0.5 ? 1 : 0, scale: hunter ? 0.9 : 0.8 + 0.6 * r() };
+    bodies.set(key, b); return b;
   }
   const herds = new Map(), HS = 1000;
   function herdsNear(G, S) {
@@ -87,23 +87,31 @@ void main() { CAST
   return {
     beasts(common, cam, G, S) {
       if (S.hc > 1500 || S.sun[1] < -0.1) return;
-      const B = bodyPlan(G), F = S.F, foot = S.foot, t = performance.now() / 1000, out = [];
+      const B = bodyPlan(G), BH = bodyPlan(G, true), F = S.F, foot = S.foot, t = performance.now() / 1000, out = [], hunt = [];
       for (const f of herdsNear(G, S)) {
         const D0 = f.p.map((v, k) => v - foot[k]); if (hypot(...D0) > 1600) continue;
         const ea = [0, 1, 2].map((k) => F[0][k]), eb = [0, 1, 2].map((k) => F[2][k]);   // local east and north, in planet axes
-        for (let k = 0; k < f.n; k++) {                                   // each animal ambles round its own spot in the herd
-          const ph = f.sd * 50 + k * 2.39, ox = cos(ph) * (8 + k * 4) + sin(t * 0.03 + k) * 14, oz = sin(ph) * (8 + k * 4) + cos(t * 0.025 + k * 1.7) * 14;
-          const vx = cos(t * 0.03 + k) * 0.42, vz = -sin(t * 0.025 + k * 1.7) * 0.35, walk = min(1, max(0, Math.sin(t * 0.11 + k * 3.1) * 1.5 + 0.2));
+        // the pack: a few hunters circling the herd, closing in and drawing off
+        const np = f.sd < 0.55 ? 2 + floor(f.sd * 6) : 0, hp = [];
+        for (let k = 0; k < np; k++) { const a = t * 0.05 + k * 2.1 + f.sd * 9, rr = 70 + 45 * Math.sin(t * 0.021 + k), x = cos(a) * rr, z = sin(a) * rr; hp.push([x, z, -a]); }
+        const put = (list, ox, oz, head, walk, sc, gait, sd) => {
           const P = [0, 1, 2].map((q) => f.p[q] + ea[q] * ox + eb[q] * oz), l = hypot(...P), pg = P.map((v) => v / l * G.R), h = H(G, pg, 20);
           const D = pg.map((v, q) => v - foot[q]), qq = [0, 1, 2].map((r) => D[0] * F[r][0] + D[1] * F[r][1] + D[2] * F[r][2]);
-          const pos = [qq[0], qq[1] + (h - S.cy) + qq[1] * h / G.R, qq[2]];
-          out.push(pos[0], pos[1], pos[2], B.scale * (0.85 + 0.3 * Math.sin(k * 5.3)), Math.atan2(vx, vz), walk, t * 5 * G.g ** 0.5, k * 0.37 + f.sd);
+          list.push(qq[0], qq[1] + (h - S.cy) + qq[1] * h / G.R, qq[2], sc, head, walk, gait, sd);
+        };
+        for (const [x, z, a] of hp) put(hunt, x, z, a, 1, 1, t * 7 * G.g ** 0.5, f.sd);
+        for (let k = 0; k < f.n; k++) {                                   // each animal ambles round its own spot in the herd, and runs from the pack
+          const ph = f.sd * 50 + k * 2.39; let ox = cos(ph) * (8 + k * 4) + sin(t * 0.03 + k) * 14, oz = sin(ph) * (8 + k * 4) + cos(t * 0.025 + k * 1.7) * 14;
+          let vx = cos(t * 0.03 + k) * 0.42, vz = -sin(t * 0.025 + k * 1.7) * 0.35, walk = min(1, max(0, Math.sin(t * 0.11 + k * 3.1) * 1.5 + 0.2)), gait = t * 5;
+          for (const [x, z] of hp) { const dx = ox - x, dz = oz - z, d = hypot(dx, dz); if (d < 45) { const k2 = (45 - d) * 1.4; ox += dx / d * k2; oz += dz / d * k2; vx = dx; vz = dz; walk = 1; gait = t * 11; } }
+          put(out, ox, oz, Math.atan2(vx, vz), walk, B.scale * (0.85 + 0.3 * Math.sin(k * 5.3)), gait * G.g ** 0.5, k * 0.37 + f.sd);
         }
       }
-      if (!out.length) return;
-      gl.useProgram(beast.p); common(beast); gl.uniform1f(beast.uCy, S.cy); gl.uniform3fv(beast.uCol, B.col); gl.uniform3fv(beast.uCol2, B.col2); gl.uniform1f(beast.uSpots, B.spots);
-      gl.bindBuffer(gl.ARRAY_BUFFER, B.ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); gl.disable(gl.CULL_FACE);
-      gl.bindVertexArray(B.vao); gl.drawArraysInstanced(gl.TRIANGLES, 0, B.n, out.length / 8); gl.bindVertexArray(null);
+      gl.useProgram(beast.p); common(beast); gl.uniform1f(beast.uCy, S.cy); gl.disable(gl.CULL_FACE);
+      for (const [b, a] of [[B, out], [BH, hunt]]) { if (!a.length) continue;
+        gl.uniform3fv(beast.uCol, b.col); gl.uniform3fv(beast.uCol2, b.col2); gl.uniform1f(beast.uSpots, b.spots);
+        gl.bindBuffer(gl.ARRAY_BUFFER, b.ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(a), gl.DYNAMIC_DRAW); gl.bindVertexArray(b.vao); gl.drawArraysInstanced(gl.TRIANGLES, 0, b.n, a.length / 8); }
+      gl.bindVertexArray(null);
       S.nBeasts = out.length / 8; S.beast = out.slice(0, 3);
     },
     draw(common, cam, G, S) {

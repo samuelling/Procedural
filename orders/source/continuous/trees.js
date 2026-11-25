@@ -80,21 +80,26 @@ export function mkTrees(gl, prog, PRE) {
 layout(location = 4) in vec4 iP;   // where the tree stands, from the camera; how far its band has faded (w)
 layout(location = 5) in vec4 iS;   // scale, turn, seed, species
 uniform float uWd, uCy;
-vec3 place(vec3 p) { float c = cos(iS.y), s = sin(iS.y); p *= iS.x; float h = max(p.y, 0.) / 20.; p.xz += vec2(sin(uT * .9 + iS.z * 40.), cos(uT * .7 + iS.z * 23.)) * h * h * .25 * uWd; return vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z) + iP.xyz; }
+layout(location = 6) in vec4 iG; layout(location = 7) in vec4 iC; layout(location = 8) in vec4 iB; layout(location = 9) in vec4 iX;   // a species' genes: height and spread, leaf size and width; leaf colour and lobes; bark; its code
+flat out vec4 vLc, vBk, vLf; flat out float vCode;
+vec3 fallC(float h) { vec3 k = clamp(abs(mod(h * 6. + vec3(0., 4., 2.), 6.) - 3.) - 1., 0., 1.); return pow(mix(vec3(.4), k, .85) * .55, vec3(2.2)); }   // a species' autumn colour
+void genes() { vLc = iC; vBk = iB; vLf = vec4(iG.zw, iC.w, iX.y); vCode = iX.x; if (iX.y > .5) { vLc.rgb = mix(vLc.rgb, fallC(iX.z), uAut) * (1. + uSpr * vec3(.6, .9, .2)); } }
+vec3 place(vec3 p) { float c = cos(iS.y), s = sin(iS.y); p *= iS.x; p.y *= iG.x; p.xz *= iG.y; float h = max(p.y, 0.) / 20.; p.xz += vec2(sin(uT * .9 + iS.z * 40.), cos(uT * .7 + iS.z * 23.)) * h * h * .25 * uWd; return vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z) + iP.xyz; }
 vec3 turn(vec3 n) { float c = cos(iS.y), s = sin(iS.y); return vec3(c * n.x - s * n.z, n.y, s * n.x + c * n.z); }`;
   const DITHER = `bool gone(float f) { return h1(gl_FragCoord.xy + fract(f * 13.7) * 91.) > f; }
-uniform vec4 uBark[8], uLeaf[8], uLeafC[8], uForm[8];`;
-  const OUT = `col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW);`;
+uniform vec4 uForm[16];
+flat in vec4 vLc, vBk, vLf; flat in float vCode;`;
+  const OUT = `col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), vCode, 0, 1); gl_FragDepth = fdep(vW);`;
   const wood = prog(PRE + INST + `
 layout(location = 0) in vec3 aP; layout(location = 1) in vec3 aN; layout(location = 2) in vec2 aU;
 out vec3 vP, vN; out vec2 vU; out float vW, vF, vSd, vR; flat out int vSp;
-void main() { vP = place(aP); vN = turn(aN); vU = aU * iS.x; vF = iP.w; vSd = iS.z; vR = aP.y * iS.x; vSp = int(iS.w); vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`, PRE + DITHER + `
+void main() { genes(); vP = place(aP); vN = turn(aN); vU = aU * iS.x; vF = iP.w; vSd = iS.z; vR = aP.y * iS.x; vSp = int(iS.w); vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`, PRE + DITHER + `
 in vec3 vP, vN; in vec2 vU; in float vW, vF, vSd, vR; flat in int vSp; uniform float uCy;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 float vor(vec2 u) { vec2 i = floor(u), f = u - i; float d = 9.; for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 o = vec2(x, y), r = o + vec2(h1(i + o), h1(i + o + 7.3)) - f; d = min(d, dot(r, r)); } return sqrt(d); }
 void main() {
   if (gone(vF)) discard; CAST
-  float fp = vW * uPix; vec2 u = vU + vec2(0., vSd * 31.); vec4 bk = uBark[vSp];
+  float fp = vW * uPix; vec2 u = vU + vec2(0., vSd * 31.); vec4 bk = vBk;
   // bark at every scale it has: ridges and furrows (centimetres), plates, lichen (millimetres), cork cells (tens of micrometres)
   float rid = n2(vec2(u.x * 9., u.y * 1.6)) * .6 + n2(vec2(u.x * 23., u.y * 5.)) * .4, fur = smoothstep(.35, .62, rid) * bk.w + (1. - bk.w) * .8;
   vec3 alb = mix(bk.rgb * .3, bk.rgb, fur) * (.85 + .3 * n2(u * 40.));
@@ -108,14 +113,14 @@ void main() {
   const leaf = prog(PRE + INST + `
 layout(location = 0) in vec3 aP; layout(location = 1) in vec3 aN; layout(location = 2) in vec2 aU; layout(location = 3) in vec2 aX;
 out vec3 vP, vN; out vec2 vU; out float vW, vF, vL, vSd, vY; flat out int vSp;
-void main() { vP = place(aP); vN = turn(aN); vU = aU; vL = aX.x * iS.x; vSd = aX.y; vSp = int(iS.w); vF = iP.w; vY = aP.y * iS.x; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`, PRE + DITHER + `
+void main() { genes(); vP = place(aP); vN = turn(aN); vU = aU; vL = aX.x * iS.x; vSd = aX.y; vSp = int(iS.w); vF = iP.w; vY = aP.y * iS.x; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`, PRE + DITHER + `
 in vec3 vP, vN; in vec2 vU; in float vW, vF, vL, vSd, vY; flat in int vSp; uniform float uCy;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 ` + LEAFFACE + `
 void main() {
   if (gone(vF)) discard;
   // the card is a twig (u along it, v across, in card units; vL metres long) carrying this species' leaves
-  vec4 lf = uLeaf[vSp]; float form = uForm[vSp].x; vec2 q = vU * vL; float fp = vW * uPix, cw = vL * .75;
+  vec4 lf = vLf; float form = uForm[vSp].x; vec2 q = vU * vL; float fp = vW * uPix, cw = vL * .75;
   vec2 lp = vec2(0.); float inside = 0., stem = smoothstep(.0035, .002, abs(q.y)) * step(q.x, vL * .92), ll = 0.;
   float far = smoothstep(lf.x * .05, lf.x * .15, fp);                    // too far to make out single leaves: the spray as a whole
   if (far > 0.) { float e = length(vec2(vU.x * 2. - 1., vU.y * 2.)); if (e < .95 - .3 * n2(vU * 7. + vSd * 30.) && h1(gl_FragCoord.xy + vSd) < far * .9) { inside = 1.; lp = vec2(lf.x * .4, 0.); ll = lf.x; } }
@@ -135,9 +140,11 @@ void main() {
     vec2 d = normalize(vec2(.5, side)), r = q - vec2(t, 0.); float s = dot(r, d), w = dot(r, vec2(-d.y, d.x)), L = lf.x * (1. - .4 * q.x / vL);
     if (s > 0. && s < L && abs(w) < .0008 * (1. - .4 * s / L) && q.x < vL * .95) { inside = 1.; lp = vec2(s, w); ll = L; }
   }
-  if (inside < .5 && stem < .5) discard; CAST
-  vec3 base = uLeafC[vSp].rgb * (.85 + .3 * h1(vec2(vSd * 9.1, 1.)));
-  vec3 alb = stem > .5 && inside < .5 ? uBark[vSp].rgb * .5 : base;
+  if (inside < .5 && stem < .5) discard;
+  if (vLf.w > .5 && inside > .5 && fract(vSd * 91.7 + vCode * .013) < uBare) discard;   // deciduous: the leaves fall in autumn and come back in spring
+  CAST
+  vec3 base = vLc.rgb * (.85 + .3 * h1(vec2(vSd * 9.1, 1.)));
+  vec3 alb = stem > .5 && inside < .5 ? vBk.rgb * .5 : base;
   if (inside > .5 && far < 1.) alb = leafFace(alb, lp, ll, fp);
   vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n;
   float sh = shadow(vP + n * .05), dif = max(dot(n, uSun), 0.) * sh, tr = max(dot(-n, uSun), 0.) * .6 * sh;
@@ -148,9 +155,11 @@ void main() {
   // the mid band: each tree a camera-facing card, its crown the outline of its form, lit as a volume
   const crown = prog(PRE + `
 layout(location = 0) in vec2 aC; layout(location = 4) in vec4 iP; layout(location = 5) in vec4 iS;
-uniform vec3 uRt; uniform vec4 uForm[8];
+uniform vec3 uRt; uniform vec4 uForm[16];
 out vec2 vC; out vec3 vP; out float vW, vF, vSd; flat out int vSp;
-void main() { vSp = int(iS.w); vec4 fm = uForm[vSp]; float h = iS.x * fm.y, w = h * fm.z; vec3 c = iP.xyz + vec3(0., h * .5, 0.); vP = c + uRt * aC.x * w + vec3(0., 1., 0.) * aC.y * h * .52; vC = aC; vF = iP.w; vSd = iS.z; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`, PRE + DITHER + `
+layout(location = 6) in vec4 iG; layout(location = 7) in vec4 iC; layout(location = 8) in vec4 iB; layout(location = 9) in vec4 iX; flat out vec4 vLc, vBk, vLf; flat out float vCode;
+vec3 fallC(float h) { vec3 k = clamp(abs(mod(h * 6. + vec3(0., 4., 2.), 6.) - 3.) - 1., 0., 1.); return pow(mix(vec3(.4), k, .85) * .55, vec3(2.2)); }
+void main() { vSp = int(iS.w); vLc = iC; vBk = iB; vLf = vec4(0., 0., 0., iX.y); vCode = iX.x; if (iX.y > .5) vLc.rgb = mix(mix(vLc.rgb, fallC(iX.z), uAut), iB.rgb * .7, uBare * .7); vec4 fm = uForm[vSp]; float h = iS.x * fm.y * iG.x, w = iS.x * fm.y * fm.z * iG.y; vec3 c = iP.xyz + vec3(0., h * .5, 0.); vP = c + uRt * aC.x * w + vec3(0., 1., 0.) * aC.y * h * .52; vC = aC; vF = iP.w; vSd = iS.z; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`, PRE + DITHER + `
 in vec2 vC; in vec3 vP; in float vW, vF, vSd; flat in int vSp; uniform float uCy; uniform vec3 uRt;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 void main() {
@@ -166,9 +175,10 @@ void main() {
   else if (form < 6.5) { wdt = sqrt(max(0., 1. - pow((c.y - .5) / .5, 2.))) * .8; bot = 0.; }
   else { wdt = (1. - y) * .35 + .03; bot = -.4; }
   float rag = form > 2.5 && form < 3.5 ? 0. : n2(c * 9. + vSd * 40.) * .25; bool trunk = abs(c.x) < .035 && c.y < bot + .05;
-  if ((form < 2.5 && form > 1.5) ? wdt < .5 && !trunk : (abs(c.x) > wdt - rag * wdt || c.y < bot) && !trunk) discard; CAST
+  if ((form < 2.5 && form > 1.5) ? wdt < .5 && !trunk : (abs(c.x) > wdt - rag * wdt || c.y < bot) && !trunk) discard;
+  if (vLf.w > .5 && !trunk && n2(c * 23. + vSd * 7.) < uBare * .75) discard; CAST
   vec3 n = normalize(uRt * c.x / max(wdt, .1) * .8 + vec3(0., .5 + .5 * c.y, 0.) - normalize(vP) * sqrt(max(0., 1. - c.x * c.x)));
-  vec3 alb = trunk || form > 2.5 && form < 3.5 ? uBark[vSp].rgb * .6 : uLeafC[vSp].rgb * (.75 + .5 * n2(c * 14. + vSd * 9.));
+  vec3 alb = trunk || form > 2.5 && form < 3.5 ? vBk.rgb * .6 : vLc.rgb * (.75 + .5 * n2(c * 14. + vSd * 9.));
   float dif = max(dot(n, uSun), 0.) * shadow(vP + uSun * 2.);
   vec3 col = alb * (uSunC * dif * .8 + uSky * .45) * (.6 + .4 * y);
   ${OUT}
@@ -177,7 +187,7 @@ void main() {
   // ---- geometry: V variants of each species, grown when a planet is first visited -----------------------------------
   const quad = gl.createVertexArray(); gl.bindVertexArray(quad); gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   const cib = gl.createBuffer(); gl.bindVertexArray(null);
-  const inst = (vao, buf) => { gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const [l, o] of [[4, 0], [5, 16]]) { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 4, gl.FLOAT, false, 32, o); gl.vertexAttribDivisor(l, 1); } };
+  const inst = (vao, buf) => { gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (let l = 4; l < 10; l++) { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 4, gl.FLOAT, false, 96, (l - 4) * 16); gl.vertexAttribDivisor(l, 1); } };
   inst(quad, cib); gl.bindVertexArray(null);
   const kits = new Map();
   function kit(G) {
@@ -196,13 +206,12 @@ void main() {
       o.ib = gl.createBuffer(); inst(o.wv, o.ib); inst(o.lv, o.ib); T.push(o);
     } });
     gl.bindVertexArray(null);
-    const U = { bark: new Float32Array(32), leaf: new Float32Array(32), leafC: new Float32Array(32), form: new Float32Array(32) };
-    G.species.forEach((sp, i) => { if (i >= 8) return; const f = FORM[sp.form];
-      U.bark.set([...sp.bark, sp.barkRough], i * 4); U.leaf.set([sp.leaf[0], sp.leaf[1], sp.leaf[2], 0], i * 4); U.leafC.set([...sp.canopy, 0], i * 4);
+    const U = { form: new Float32Array(64) };
+    G.species.forEach((sp, i) => { if (i >= 16) return; const f = FORM[sp.form];
       U.form.set([f, sp.h, f === 1 ? 0.24 : f === 7 ? 0.12 : f === 3 ? 0.3 : f === 2 ? 0.55 : f === 4 ? 0.5 + sp.spread * 0.3 : 0.3 + sp.spread * 0.25, 0], i * 4); });
     const k = { T, U, memo: new Map(), block: new Map() }; kits.set(G.n, k); return k;
   }
-  const setU = (P, U) => { gl.uniform4fv(P.uBark, U.bark); gl.uniform4fv(P.uLeaf, U.leaf); gl.uniform4fv(P.uLeafC, U.leafC); gl.uniform4fv(P.uForm, U.form); };
+  const setU = (P, U) => { gl.uniform4fv(P.uForm, U.form); };
 
   // ---- which trees, each frame: the cube faces near the camera, their lattice cells within reach; each site is
   // looked up once (a few thousand a frame at most, so a new stand fills in over a moment rather than stalling) ------
@@ -210,7 +219,7 @@ void main() {
   return {
     draw(common, setNoise, cam, G, S) {
       const hc = S.hc; if (hc > 4000) return;
-      const K = kit(G), T = K.T, near = T.map(() => []), far = [], F = S.F, foot = S.foot;
+      const K = kit(G), T = K.T, near = T.map(() => []), far = [], F = S.F, foot = S.foot, metNow = [];
       const r2 = min(R2, max(R1 * 1.2, hc * 6 + 150)); let budget = 2500;
       const ab = foot.map(abs);
       for (let a = 0; a < 3; a++) {
@@ -227,20 +236,23 @@ void main() {
           const pos = [q[0] + q[0] * t.h / G.R, q[1] + (t.h - S.cy) + q[1] * t.h / G.R, q[2] + q[2] * t.h / G.R];
           const sc2 = 0.75 + t.seed * 0.5, rot = t.seed * 40, v = floor(t.seed * 997) % V, idx = t.sp * V + v;
           const fNear = min(1, max(0, (R1 - d) / 14)), fFar = min(1, max(0, (d - (R1 - 14)) / 14)) * min(1, max(0, (r2 - d) / 60));
-          if (fNear > 0 && T[idx]) near[idx].push(pos[0], pos[1], pos[2], fNear, sc2, rot, t.seed, t.sp);
-          if (fFar > 0) far.push(pos[0], pos[1], pos[2], fFar, sc2 * (T[idx] ? T[idx].h / G.species[t.sp].h : 1), rot, t.seed, t.sp);
+          const g = t.spc, gx = [g.hM, g.wM, g.leaf[0], g.leaf[1], g.canopy[0], g.canopy[1], g.canopy[2], g.leaf[2], g.bark[0], g.bark[1], g.bark[2], g.rough, g.code, g.decid, g.fall, 0];
+          if (d < 40) metNow.push(g.code);
+          if (fNear > 0 && T[idx]) near[idx].push(pos[0], pos[1], pos[2], fNear, sc2, rot, t.seed, t.sp, ...gx);
+          if (fFar > 0) far.push(pos[0], pos[1], pos[2], fFar, sc2 * (T[idx] ? T[idx].h / G.species[t.sp].h : 1), rot, t.seed, t.sp, ...gx);
         }
       }
       if (K.memo.size > 300000) K.memo.clear();
+      if (!S.cast() && S.meet) S.meet(G, metNow);
       const dw = (P) => { common(P); gl.uniform1f(P.uCy, S.cy); gl.uniform1f(P.uWd, 1); setU(P, K.U); };
       gl.useProgram(wood.p); dw(wood);
-      T.forEach((o, n) => { const a = near[n]; o.cnt = 0; if (!a.length) return; gl.bindBuffer(gl.ARRAY_BUFFER, o.ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(a), gl.DYNAMIC_DRAW); o.cnt = a.length / 8; gl.bindVertexArray(o.wv); gl.drawElementsInstanced(gl.TRIANGLES, o.wn, gl.UNSIGNED_INT, 0, o.cnt); });
+      T.forEach((o, n) => { const a = near[n]; o.cnt = 0; if (!a.length) return; gl.bindBuffer(gl.ARRAY_BUFFER, o.ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(a), gl.DYNAMIC_DRAW); o.cnt = a.length / 24; gl.bindVertexArray(o.wv); gl.drawElementsInstanced(gl.TRIANGLES, o.wn, gl.UNSIGNED_INT, 0, o.cnt); });
       gl.useProgram(leaf.p); dw(leaf); gl.disable(gl.CULL_FACE);
       T.forEach((o) => { if (!o.cnt || !o.ln) return; gl.bindVertexArray(o.lv); gl.drawElementsInstanced(gl.TRIANGLES, o.ln, gl.UNSIGNED_INT, 0, o.cnt); });
       if (far.length) {
         const d = [cos(cam.pitch) * sin(cam.yaw), sin(cam.pitch), cos(cam.pitch) * cos(cam.yaw)], rl = hypot(d[0], d[2]) || 1;
         gl.useProgram(crown.p); dw(crown); if (S.cast()) gl.uniform3fv(crown.uRt, S.shR()); else gl.uniform3f(crown.uRt, -d[2] / rl, 0, d[0] / rl);
-        gl.bindBuffer(gl.ARRAY_BUFFER, cib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(far), gl.DYNAMIC_DRAW); gl.bindVertexArray(quad); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, far.length / 8);
+        gl.bindBuffer(gl.ARRAY_BUFFER, cib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(far), gl.DYNAMIC_DRAW); gl.bindVertexArray(quad); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, far.length / 24);
       }
       gl.bindVertexArray(null); void H; void sqrt;
     },

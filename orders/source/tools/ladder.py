@@ -21,15 +21,17 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
   'The real-Earth forest: every animal, every age, every scale, grown on the climate of anywhere you click. The Earth is measured in 300 km squares.',
   'a novella', TRY[:2], None),
  ('2mb', 2000000, 'w/index.html', 'Worlds without a cut',
-  'Six whole planets, each grown from a genome of physics and plant genetics, joined by wormholes. Zoom from a globe in space to a leaf’s cells without one cut.',
+  'Six whole planets, each grown from a genome of physics and plant genetics, with thousands of tree species apiece, days, seasons and weather, joined by wormholes. Zoom from a globe in space to a leaf’s cells without one cut.',
   'one photo from your phone', [
    'Click to look, press <b>F</b> and fly to the glowing sphere ahead, then go in. You come out on another planet',
    'Press <b>F</b> and fly up until the planet is a globe with moons, then scroll back down into a single grain of soil',
    'Fly round to the night side and find a city: its streets and windows are lit'], [
    ('Planets', 'Six genomes: size, gravity, the colour the air scatters, the star, the liquid in the seas, rings and moons. Weaker gravity makes taller mountains, deeper air, taller trees, longer wings and higher jumps.'),
-   ('Genetics', 'Five to eight tree species per planet, each a body plan: dome, cone, palm, column, umbrella, weeping, orb or spire, with its own branching, droop, leaves and bark, growing where its climate niche fits. Grazers with four or six legs.'),
+   ('Genetics', 'Ten to sixteen families per planet, each a body plan (dome, cone, palm, column, umbrella, weeping, orb or spire) and hundreds of species within each: some 3,500 to 5,000 per planet, every one a mutation of its family, named from its genes. Look at a tree to read its name; the Tree of life shows them all, and lights the ones you have met.'),
+   ('Lives', 'Herds of grazers in open country, with four or six legs as the planet’s genome says, and packs of hunters circling them; a herd scatters when the pack comes close. Flocks wheel overhead.'),
+   ('Time', 'Each planet turns on its own day (9 to 60 hours) and tilts its own way, so it has its own year and seasons: deciduous species colour, drop their leaves and flush again; grass browns; snow comes down the hills. Speed time up, stop it, or let it run.'),
    ('One world, every scale', 'A single height field of 40 octaves from 4,000 km to micrometres, measured from the camera so a grain beside you is as exact as a continent: the globe, continents and rivers, forests tree by tree, leaves, litter, stones, soil grains, silt.'),
-   ('Weather and light', 'Volumetric clouds over the whole globe, fronts and clear spells, a night side with stars, sun shadows through the canopy.'),
+   ('Weather and light', 'Volumetric clouds over the whole globe, fronts and clear spells, rain and snow under storms with lightning, a night side with stars, aurora over the poles, sun shadows through the canopy.'),
    ('Towns', 'On inhabited planets: street grids, towers that rise toward the core, brick, glass and concrete, windows lit at night.'),
    ('Wormholes', 'Three on each planet, bending the light around them and showing the far world inside. Every planet is a few jumps from every other.')]),
 ]

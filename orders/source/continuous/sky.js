@@ -103,6 +103,13 @@ void main() {
         vec3 tr; vec3 sc = scatter(rd, t, tr); rc2 = rc2 * tr + sc;
         if (t < tw / max(1. - T, 1e-3) || res.a > .999) res = vec4(res.rgb * (1. - alp) + rc2 * alp, res.a * (1. - alp)); else res = vec4(res.rgb + rc2 * alp * res.a, res.a * (1. - alp));
       } } }
+  if (uAur > 0. && rd.y > 0. && lim > 1e11) { vec3 c = vec3(0.), tr = vec3(1.);
+    {                                          // aurora: curtains hanging from the high air, swaying
+      float az = atan(rd.x, rd.z), el = asin(rd.y), ec = .45 + .18 * sin(az * 1.3 + uT * .03) + .08 * sin(az * 3.1 - uT * .05);
+      float cur = smoothstep(ec - .25, ec, el) * exp(-max(el - ec, 0.) * 3.5) * (.35 + .65 * pow(.5 + .5 * sin(az * 23. + 4. * n2(vec2(az * 4., uT * .08))), 3.)) * (.5 + .5 * n2(vec2(az * 9., uT * .3)));
+      c += mix(uAurC, uAurC.bgr * vec3(1., .4, .6), smoothstep(ec, ec + .35, el)) * cur * uAur * .5 * tr;
+    }
+    res.rgb += c * res.a; }
   o = res;
 }`);
   const vq = gl.createVertexArray(), fb2 = gl.createFramebuffer(); let fbFor = null;
@@ -125,7 +132,7 @@ void main() {
       if (fbFor !== FB.t[0]) { gl.bindFramebuffer(gl.FRAMEBUFFER, fb2); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, FB.t[0], 0); fbFor = FB.t[0]; }
       gl.bindFramebuffer(gl.FRAMEBUFFER, fb2); gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.SRC_ALPHA);
       gl.useProgram(cl.p); common(cl); setRay(cl, cam, G, S);
-      gl.uniform1f(cl.uCov, S0.cover ?? G.cloud); gl.uniform1f(cl.uB0, G.cloudBase); gl.uniform1f(cl.uB1, G.cloudTop);
+      gl.uniform1f(cl.uCov, (S0.cover ?? G.cloud) + 0.45 * (S.rain || 0) * Math.min(1, Math.max(0, (20000 - S.cy) / 15000))); gl.uniform1f(cl.uB0, G.cloudBase); gl.uniform1f(cl.uB1, G.cloudTop);
       const tl = G.ringTilt, n = [Math.sin(tl), 0, Math.cos(tl)]; gl.uniform3fv(cl.uRingN, loc(S, n)); gl.uniform1f(cl.uRing0, G.rings ? 1.25 : 0); gl.uniform1f(cl.uRing1, G.rings);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FB.t[1]); gl.uniform1i(cl.uDist, 1); gl.activeTexture(gl.TEXTURE0);
       gl.bindVertexArray(vq); gl.drawArrays(gl.TRIANGLES, 0, 3);

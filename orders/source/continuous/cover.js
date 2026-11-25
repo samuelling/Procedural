@@ -85,7 +85,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
   vec3 sway = vec3(sin(uT * 1.3 + o.x * .3) * .04, 0., cos(uT * 1.1 + o.z * .3) * .04) * t * t;
   vP = o + vec3(dir.x * bend * len, len * t * (1. - bend * .35), dir.y * bend * len) + vec3(-dir.y, 0., dir.x) * lat * wid + sway;
   vN = normalize(vec3(dir.x * .3, 1., dir.y * .3) + vec3(-dir.y, 0., dir.x) * lat * (fern ? .7 : .4)); vL = vec3(b, lat, bi); vSd = sd; ${END}`,
-  `vec3 g0 = mix(uDry, uGrass, smoothstep(.2, .6, vS)); vec3 alb = vT > .5 ? g0 * .7 * (.8 + .3 * vSd) : g0 * (.75 + .5 * vSd); vec3 n = normalize(vN); float sh = 1.;
+  `vec3 g0 = mix(uDry, uGrass, smoothstep(.2, .6, vS) * smoothstep(-9., -2., uSeasT)); vec3 alb = vT > .5 ? g0 * .7 * (.8 + .3 * vSd) : g0 * (.75 + .5 * vSd); vec3 n = normalize(vN); float sh = 1.;
   if (vT > .5) { float pi = fract(vL.x * 14.), lf = abs(pi - .5) * 2., wl = .35 + .65 * lf, al = abs(vL.y);
     if (al > wl) discard;                                                 // a fern's fronds, notched into leaflets
     float pin = al / wl; sh = (.75 + .35 * (1. - pin)) * (1. - .45 * smoothstep(.06, 0., al) * step(.5, 1. - fp * 200.)); }

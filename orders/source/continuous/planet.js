@@ -63,35 +63,67 @@ export function genome(n) {
   G.cities = earth || r() < 0.4;
   G.species = flora(G, r); for (const s of G.species) s.canopy = lin(hsl(s.hue, s.sat, s.lit));
   // the axis the planet spins on, and where its star is, in the planet's own frame
-  G.axis = [0, 0, 1]; G.sunDir = (() => { const a = earth ? 0.5 : r() * 6.28, b = earth ? 0.2 : lerp(-0.4, 0.4); return [Math.cos(a) * Math.cos(b), Math.sin(a) * Math.cos(b), Math.sin(b)]; })();
+  // its day, its tilt and its year: the star crosses the sky once a day and swings north and south once a year
+  G.dayH = earth ? 24 : Math.round(lerp(9, 60)); G.tilt = earth ? 0.409 : lerp(0, 0.75); G.yearD = earth ? 365 : Math.round(lerp(90, 900)); G.sunA = earth ? 0.5 : r() * 6.28;
+  G.aurora = lin(hsl(earth ? 0.36 : r(), 0.9, 0.55));
+  G.axis = [0, 0, 1]; G.sunDir = sunAt(G, 0);
   G.amp = amps(G); G.base = 0; G.base = seaLevel(G);
   return G;
 }
 
 // the plants: 5 to 8 species, each a body plan and the climate it needs. On Sylva they are Earth's own forms.
+// where the star is (planet axes) at time t, in the planet's own days from the start; day 0 is midsummer in the north
+export function sunAt(G, t) { const dl = G.tilt * Math.cos(2 * Math.PI * t / G.yearD), a = G.sunA - 2 * Math.PI * t; return [Math.cos(dl) * Math.cos(a), Math.cos(dl) * Math.sin(a), Math.sin(dl)]; }
+// the season at a latitude: +1 midsummer, -1 midwinter; and whether it is warming (spring) or cooling (autumn)
+export function season(G, t, lat) { const ph = 2 * Math.PI * t / G.yearD, k = Math.min(1, Math.abs(lat) / 0.35) * Math.min(1, G.tilt / 0.3) * Math.sign(lat || 1); return { s: Math.cos(ph) * k, spring: -Math.sin(ph) * k > 0 }; }
 const FORMS = ['broad', 'cone', 'palm', 'column', 'umbrella', 'weep', 'orb', 'spire'];
+// The plants: families, each a body plan and the climate it suits, and inside each family hundreds of species, every
+// one a small mutation of its family's genes (taller or squatter, paler or redder, broader or finer leaves, its own
+// climate). On Sylva the families are Earth's own forms under their real genus names; elsewhere they are invented.
+const SYL = ['ka', 'lo', 'ri', 'tha', 'mel', 'vor', 'si', 'na', 'ul', 'pe', 'dra', 'quo', 'ze', 'mi', 'or', 'bel', 'tu', 'xa', 'en', 'gal', 'phy', 'ro', 'sa', 'cle'];
+const word = (r, n) => { let w = ''; for (let i = 0; i < n; i++) w += SYL[Math.floor(r() * SYL.length)]; return w; };
+const cap = (w) => w[0].toUpperCase() + w.slice(1);
 function flora(G, r) {
   const lerp = (a, b) => a + (b - a) * r(), S = [];
-  if (G.n === 0) return [
-    { name: 'oak', form: 'broad', T: [13, 7], W: [0.6, 0.25], h: 22, spread: 0.55, depth: 4, kids: 3, droop: 0, leaf: [0.09, 0.45, 5], hue: 0.25, sat: 0.55, lit: 0.17, bark: [0.09, 0.075, 0.06], barkRough: 1 },
-    { name: 'beech', form: 'broad', T: [9, 5], W: [0.75, 0.2], h: 26, spread: 0.4, depth: 4, kids: 3, droop: 0.1, leaf: [0.08, 0.55, 0], hue: 0.27, sat: 0.6, lit: 0.2, bark: [0.3, 0.29, 0.27], barkRough: 0.2 },
-    { name: 'birch', form: 'broad', T: [3, 7], W: [0.55, 0.3], h: 18, spread: 0.28, depth: 4, kids: 2, droop: 0.35, leaf: [0.05, 0.6, 0], hue: 0.24, sat: 0.6, lit: 0.24, bark: [0.75, 0.73, 0.68], barkRough: 0.4 },
-    { name: 'spruce', form: 'cone', T: [0, 7], W: [0.6, 0.3], h: 28, spread: 0.2, depth: 2, kids: 5, droop: 0.4, leaf: [0.02, 0.06, 0], hue: 0.38, sat: 0.4, lit: 0.1, bark: [0.12, 0.08, 0.06], barkRough: 0.7 },
-    { name: 'pine', form: 'umbrella', T: [8, 10], W: [0.4, 0.3], h: 24, spread: 0.5, depth: 3, kids: 3, droop: 0, leaf: [0.06, 0.05, 0], hue: 0.3, sat: 0.4, lit: 0.13, bark: [0.3, 0.15, 0.08], barkRough: 1 },
-    { name: 'rainforest giant', form: 'broad', T: [26, 5], W: [0.85, 0.15], h: 38, spread: 0.7, depth: 4, kids: 3, droop: 0, leaf: [0.16, 0.4, 0], hue: 0.3, sat: 0.6, lit: 0.13, bark: [0.35, 0.32, 0.26], barkRough: 0.3 },
-    { name: 'palm', form: 'palm', T: [26, 6], W: [0.6, 0.3], h: 16, spread: 0, depth: 1, kids: 14, droop: 0.6, leaf: [1.0, 0.12, 0], hue: 0.25, sat: 0.55, lit: 0.18, bark: [0.35, 0.3, 0.22], barkRough: 0.5 },
-    { name: 'acacia', form: 'umbrella', T: [24, 6], W: [0.35, 0.15], h: 9, spread: 0.9, depth: 4, kids: 2, droop: 0, leaf: [0.04, 0.5, 0], hue: 0.22, sat: 0.4, lit: 0.17, bark: [0.2, 0.15, 0.1], barkRough: 0.8 },
-  ];
-  const n = 5 + Math.floor(r() * 4);
+  if (G.n === 0) {
+    const E = [
+      { name: 'oak', genus: 'Quercus', form: 'broad', T: [13, 7], W: [0.6, 0.25], h: 22, spread: 0.55, depth: 4, kids: 3, droop: 0, leaf: [0.09, 0.45, 5], hue: 0.25, sat: 0.55, lit: 0.17, bark: [0.09, 0.075, 0.06], barkRough: 1, decid: 1, fall: 0.08 },
+      { name: 'beech', genus: 'Fagus', form: 'broad', T: [9, 5], W: [0.75, 0.2], h: 26, spread: 0.4, depth: 4, kids: 3, droop: 0.1, leaf: [0.08, 0.55, 0], hue: 0.27, sat: 0.6, lit: 0.2, bark: [0.3, 0.29, 0.27], barkRough: 0.2, decid: 1, fall: 0.07 },
+      { name: 'birch', genus: 'Betula', form: 'broad', T: [3, 7], W: [0.55, 0.3], h: 18, spread: 0.28, depth: 4, kids: 2, droop: 0.35, leaf: [0.05, 0.6, 0], hue: 0.24, sat: 0.6, lit: 0.24, bark: [0.75, 0.73, 0.68], barkRough: 0.4, decid: 1, fall: 0.14 },
+      { name: 'maple', genus: 'Acer', form: 'broad', T: [10, 6], W: [0.65, 0.25], h: 20, spread: 0.5, depth: 4, kids: 3, droop: 0, leaf: [0.1, 0.9, 5], hue: 0.26, sat: 0.6, lit: 0.18, bark: [0.22, 0.2, 0.18], barkRough: 0.6, decid: 1, fall: 0.01 },
+      { name: 'willow', genus: 'Salix', form: 'weep', T: [11, 8], W: [0.8, 0.2], h: 15, spread: 0.6, depth: 3, kids: 3, droop: 0.8, leaf: [0.08, 0.18, 0], hue: 0.22, sat: 0.45, lit: 0.24, bark: [0.18, 0.15, 0.12], barkRough: 0.9, decid: 1, fall: 0.15 },
+      { name: 'spruce', genus: 'Picea', form: 'cone', T: [0, 7], W: [0.6, 0.3], h: 28, spread: 0.2, depth: 2, kids: 5, droop: 0.4, leaf: [0.02, 0.06, 0], hue: 0.38, sat: 0.4, lit: 0.1, bark: [0.12, 0.08, 0.06], barkRough: 0.7 },
+      { name: 'pine', genus: 'Pinus', form: 'umbrella', T: [8, 10], W: [0.4, 0.3], h: 24, spread: 0.5, depth: 3, kids: 3, droop: 0, leaf: [0.06, 0.05, 0], hue: 0.3, sat: 0.4, lit: 0.13, bark: [0.3, 0.15, 0.08], barkRough: 1 },
+      { name: 'fig', genus: 'Ficus', form: 'broad', T: [26, 5], W: [0.85, 0.15], h: 38, spread: 0.7, depth: 4, kids: 3, droop: 0, leaf: [0.16, 0.4, 0], hue: 0.3, sat: 0.6, lit: 0.13, bark: [0.35, 0.32, 0.26], barkRough: 0.3 },
+      { name: 'palm', genus: 'Arecaria', form: 'palm', T: [26, 6], W: [0.6, 0.3], h: 16, spread: 0, depth: 1, kids: 14, droop: 0.6, leaf: [1.0, 0.12, 0], hue: 0.25, sat: 0.55, lit: 0.18, bark: [0.35, 0.3, 0.22], barkRough: 0.5 },
+      { name: 'acacia', genus: 'Acacia', form: 'umbrella', T: [24, 6], W: [0.35, 0.15], h: 9, spread: 0.9, depth: 4, kids: 2, droop: 0, leaf: [0.04, 0.5, 0], hue: 0.22, sat: 0.4, lit: 0.17, bark: [0.2, 0.15, 0.1], barkRough: 0.8 },
+      { name: 'cactus', genus: 'Cereus', form: 'column', T: [22, 7], W: [0.22, 0.1], h: 7, spread: 0.3, depth: 1, kids: 3, droop: 0, leaf: [0.05, 0.3, 0], hue: 0.3, sat: 0.35, lit: 0.2, bark: [0.18, 0.32, 0.15], barkRough: 0.2 },
+    ];
+    E.forEach((f) => { f.nSp = 150 + Math.floor(r() * 500); }); return E;
+  }
+  const n = 10 + Math.floor(r() * 7);
   for (let i = 0; i < n; i++) {
-    const form = FORMS[Math.floor(r() * FORMS.length)], Tc = G.Teq - G.Tgrad * r() * 0.8;
-    S.push({ name: 'species ' + (i + 1), form, T: [Tc, lerp(4, 10)], W: [lerp(0.3, 0.9), lerp(0.15, 0.35)], h: lerp(6, 34) * G.g ** -0.5, spread: lerp(0.2, 0.9), depth: 2 + Math.floor(r() * 3), kids: 2 + Math.floor(r() * 4),
-      droop: lerp(-0.2, 0.8), leaf: [lerp(0.02, 0.25), lerp(0.08, 0.8), Math.floor(r() * 4) * (r() < 0.5 ? 1 : 0) + (r() < 0.2 ? 5 : 0)], hue: (G.leafHue + lerp(-0.06, 0.06) + 1) % 1, sat: lerp(0.3, 0.75), lit: lerp(0.1, 0.28),
-      bark: lin(hsl(r(), lerp(0, 0.4), lerp(0.1, 0.6))), barkRough: r() });
+    const form = FORMS[Math.floor(r() * FORMS.length)], Tc = G.Teq - G.Tgrad * r() * 0.8, gen = cap(word(r, 2 + Math.floor(r() * 2)));
+    S.push({ name: gen.toLowerCase() + ' family', genus: gen, form, T: [Tc, lerp(4, 10)], W: [lerp(0.25, 0.9), lerp(0.15, 0.35)], h: lerp(6, 34) * G.g ** -0.5, spread: lerp(0.2, 0.9), depth: 2 + Math.floor(r() * 3), kids: 2 + Math.floor(r() * 4),
+      droop: lerp(-0.2, 0.8), leaf: [lerp(0.02, 0.25), lerp(0.08, 0.8), Math.floor(r() * 4) * (r() < 0.5 ? 1 : 0) + (r() < 0.2 ? 5 : 0)], hue: (G.leafHue + lerp(-0.08, 0.08) + 1) % 1, sat: lerp(0.3, 0.75), lit: lerp(0.1, 0.28),
+      bark: lin(hsl(r(), lerp(0, 0.4), lerp(0.1, 0.6))), barkRough: r(), decid: r() < 0.4 ? 1 : 0, fall: r(), nSp: 120 + Math.floor(r() * 520) });
   }
   return S;
 }
-
+// species i of family f: its own genes, and a name that says something about them
+export function species(G, f, i) {
+  const key = f * 100000 + i; G.spc = G.spc || new Map(); let s = G.spc.get(key); if (s) return s;
+  const F = G.species[f], r = rng(G.n * 7919 + f * 104729 + i * 31 + 3), nrm = () => (r() + r() + r() - 1.5) * 1.15;
+  const hM = Math.exp(nrm() * 0.28), wM = Math.exp(nrm() * 0.2), lL = Math.exp(nrm() * 0.3), lW = Math.exp(nrm() * 0.3), dh = nrm() * (G.n === 0 ? 0.025 : 0.06), ds = nrm() * 0.12, dl = nrm() * 0.035;
+  const lobes = F.leaf[2] > 0 ? Math.max(0, Math.round(F.leaf[2] + nrm() * 1.5)) : r() < 0.06 ? 3 : 0;
+  const canopy = lin(hsl((F.hue + dh + 1) % 1, Math.min(0.95, Math.max(0.05, F.sat + ds)), Math.min(0.5, Math.max(0.05, F.lit + dl))));
+  const bark = F.bark.map((v) => Math.min(1, v * Math.exp(nrm() * 0.25)));
+  const ep = [hM > 1.3 ? 'gigantea' : hM < 0.75 ? 'nana' : '', lW > 1.35 ? 'latifolia' : lW < 0.72 ? 'angustifolia' : '', dh > 0.04 ? 'aurea' : dh < -0.04 ? 'caerulea' : '', canopy[0] > canopy[1] * 0.9 ? 'rubra' : '', bark[0] > 0.5 ? 'alba' : '', wM > 1.25 ? 'patula' : ''].filter(Boolean);
+  const epithet = ep.length && r() < 0.6 ? ep[Math.floor(r() * ep.length)] : word(r, 2) + ['ensis', 'ifolia', 'a', 'ii', 'oides', 'iana', 'um'][Math.floor(r() * 7)];
+  s = { f, i, name: F.genus + ' ' + epithet, hM, wM, leaf: [F.leaf[0] * lL, Math.min(0.95, F.leaf[1] * lW), lobes], canopy, bark, rough: F.barkRough, decid: F.decid || 0, fall: ((F.fall ?? 0.1) + nrm() * 0.04 + 1) % 1, code: f * 10000 + i + 1 };
+  G.spc.set(key, s); return s;
+}
+export const nSpecies = (G) => G.species.reduce((a, f) => a + f.nSp, 0);
 // how rough the ground is at each scale, as a fraction of the scale (by log2 of the scale in metres)
 const RT = [[22, 0.00042], [21, 0.00055], [20, 0.0008], [19, 0.0013], [18, 0.004], [17, 0.01], [15, 0.03], [13, 0.06], [12, 0.07], [11, 0.06], [9, 0.045], [7, 0.035], [5, 0.03], [2, 0.028], [-1, 0.03], [-4, 0.048], [-7, 0.058], [-10, 0.04], [-18, 0.03]];
 const frac = (l) => { for (let i = 1; i < RT.length; i++) if (l >= RT[i][0]) { const [l0, a0] = RT[i - 1], [l1, a1] = RT[i]; return a1 + (a0 - a1) * (l - l1) / (l0 - l1); } return 0.03; };
@@ -167,7 +199,8 @@ export function site(G, a, sg, i, j) {
   const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)); if (hs2(i, j, 60 + fk) > F || river(G, p, h, W) > 0.25) return null;
   const w = speciesW(G, T, W), tot = w.reduce((x, y) => x + y, 0); if (tot < 1e-3) return null;
   let x = hs2(i, j, 70 + fk) * tot, s = 0; while (s < w.length - 1 && x > w[s]) x -= w[s++];
-  return { p, h, sp: s, seed: hs2(i, j, 80 + fk) };
+  const nS = G.species[s].nSp, ri = Math.floor(i * TREE / 25000), rj = Math.floor(j * TREE / 25000), base = Math.floor(hs2(ri, rj, 90 + s + fk * 20) * nS), k = Math.floor(hs2(i, j, 75 + fk) ** 2 * 9);   // this region's few, commonest first
+  return { p, h, sp: s, spc: species(G, s, (base + k * 61) % nS), seed: hs2(i, j, 80 + fk) };
 }
 
 // ---- cities: on inhabited planets, a few towns and cities in each 60 km cell of the cube faces, where the land

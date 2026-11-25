@@ -3,6 +3,8 @@
 import { K, sOf, H, H0, river, RIVD, genome, octTable, climate, GLSL_NOISE, GLSL_GROUND, GLSL_CLIMATE, MASKK, octN, TREE, AX, LOT } from './planet.js';
 import { mkCity } from './city.js';
 import { mkFauna } from './fauna.js';
+import { mkLife } from './life.js';
+import { nSpecies, sunAt, season, vn3 } from './planet.js';
 import { mkTrees } from './trees.js';
 import { mkCover } from './cover.js';
 import { mkSky } from './sky.js';
@@ -23,6 +25,7 @@ const madd = (a, b, k) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
 export const PRE = `#version 300 es
 precision highp float; precision highp int;
 uniform mat4 uVP; uniform vec3 uSun, uSunC, uSky; uniform float uT, uPix, uAlt, uHs; uniform vec3 uBeta;
+uniform float uSeasT, uAut, uBare, uSpr, uRain, uAur; uniform vec3 uAurC;   // the season here (warmth offset, autumn colour, leaf loss, spring flush), rain, aurora
 float fdep(float w) { return log2(max(w, 1e-7) * 1e7 + 1.) / 50.; }
 // sun shadows: one map from the star's side, round the camera's foot, sized to how high the camera is. uSh is 0 when
 // drawing as usual, 1 while drawing the shadow casters into the map, 2 when there is no map
@@ -96,7 +99,7 @@ function arrive(n, P, look) {                                              // st
 // sphere by distance along it (so a ring is a ring of the globe however far it reaches) ---------------------------
 const N = 64, Hh = N / 2;
 const CLIM = GLSL_CLIMATE(G);
-const SPEC = `uniform vec4 uSpN[8], uSpC[8]; uniform int uNsp;`;
+const SPEC = `uniform vec4 uSpN[16], uSpC[16]; uniform int uNsp;`;
 const tprog = prog(PRE + GLSL_NOISE + GLSL_GROUND + CLIM + `
 layout(location = 0) in vec2 aG;
 uniform vec3 uLv; uniform float uH0, uSea, uG0;
@@ -133,12 +136,12 @@ void main() {
   vec3 D = uF * vQ, ab = abs(uFoot + D); vec2 wp = ab.x > ab.y && ab.x > ab.z ? D.yz : ab.y > ab.z ? D.zx : D.xy;   // a flat map of the nearby ground, for small textures
   // what the ground is made of, as it would look from far off: forest, grassland, desert, rock, snow and ice, beach
   float fo = forestF(vQ, hA, T, W, fp);
-  vec3 grass = mix(uDry, uGrass, smoothstep(.25, .6, W)) * (.85 + .3 * NF(wp, 40.));
+  vec3 grass = mix(uDry, uGrass, smoothstep(.25, .6, W) * smoothstep(-9., -2., uSeasT)) * (.85 + .3 * NF(wp, 40.));
   vec3 alb = mix(uSand * (.9 + .2 * NF(wp, 300.)), grass, smoothstep(.12, .3, W));
   vec3 rock = uRock * (.8 + .4 * NF(wp, 9.));
   // the forest's mean colour: its species, weighted by how well each suits this place
   vec3 can = vec3(0.); float cw = 0.;
-  for (int i = 0; i < 8; i++) { if (i >= uNsp) break; vec4 s = uSpN[i]; float w = exp(-pow((T - s.x) / s.y, 2.) - pow((W - s.z) / s.w, 2.)); can += uSpC[i].rgb * w; cw += w; }
+  for (int i = 0; i < 16; i++) { if (i >= uNsp) break; vec4 s = uSpN[i]; float w = exp(-pow((T - s.x) / s.y, 2.) - pow((W - s.z) / s.w, 2.)); vec3 cc = uSpC[i].rgb; if (uSpC[i].w > .5) cc = mix(mix(cc, vec3(.35, .12, .02), uAut * .8), vec3(.1, .085, .07), uBare * .8); can += cc * w; cw += w; }
   can = cw > 1e-4 ? can / cw : uGrass; fo *= smoothstep(1e-4, .05, cw);
   float far = smoothstep(80., 420., d);                                    // under trees you see the floor; from far, their crowns
   alb = mix(alb, mix(uSoil, can * (.85 + .3 * NF(wp, 7.)), far), fo);
@@ -170,7 +173,7 @@ void main() {
     em = vec3(1., .72, .38) * uNight * rho * (road * 1.4 + (1. - road) * .25 * step(.6, h1(vec2(li) * .37))) * mix(.6, 1., kr);   // street lights and windows
   }
   alb = mix(alb, uSand, smoothstep(5., 1.5, hA) * (1. - fo));               // beaches
-  float snow = smoothstep(-3., -9., T + 3. * NF(wp, 500.)) * smoothstep(.8, .5, sl);   // snow and ice where it is cold enough
+  float snow = smoothstep(-3., -9., T + uSeasT + 3. * NF(wp, 500.)) * smoothstep(.8, .5, sl);   // snow and ice where it is cold enough
   alb = mix(alb, vec3(.8, .83, .88), snow);
   // close up: the floor's own grain, scale by scale, each fading in as it grows big enough to see
   float id, g1 = vor(wp / .03, id);
@@ -210,7 +213,7 @@ function octaves(F) {
   const u = F[1], foot = u.map((v) => v * G.R), T = octTable(G, foot, F);
   gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, octTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 7, T.length / 28, 0, gl.RGBA, gl.FLOAT, T); gl.activeTexture(gl.TEXTURE0);
   S.foot = foot; S.F = F; S.m0 = (() => { const n = octN(G, MASKK, foot), b = 1 - abs(2 * n - 1), t = min(1, max(0, (b - 0.55) / 0.35)); return 0.25 + 1.6 * G.ridge * t * t * (3 - 2 * t); })();
-  S.axis = toLocal(F, G.axis); S.sun = toLocal(F, G.sunDir); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
+  S.axis = toLocal(F, G.axis); S.sun = toLocal(F, sunAt(G, G.t || 0)); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
   S.tb = foot.map((v) => floor(v / TREE)); S.tf = foot.map((v, i) => v / TREE - S.tb[i]); S.lb = foot.map((v) => floor(v / LOT)); S.lf = foot.map((v, i) => v / LOT - S.lb[i]);
   S.night = min(1, max(0, (0.06 - S.sun[1]) / 0.16));
 }
@@ -220,7 +223,7 @@ const setNoise = (P) => {
   if (P.uRivC) gl.uniform1f(P.uRivC, S.rivC);
   if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? 1 : 0); }
   if (P.uAxis) { gl.uniform3fv(P.uAxis, S.axis); gl.uniform1f(P.uTeq, G.Teq); gl.uniform1f(P.uTgrad, G.Tgrad); gl.uniform1f(P.uWet, G.wet); gl.uniform1f(P.uGrav, G.g); }
-  if (P.uSpN) { const a = new Float32Array(32), c = new Float32Array(32); G.species.forEach((s, i) => { if (i < 8) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, min(8, G.species.length)); }
+  if (P.uSpN) { const a = new Float32Array(64), c = new Float32Array(64); G.species.forEach((s, i) => { if (i < 16) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, s.decid || 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, min(16, G.species.length)); }
 };
 
 // ---- targets: the scene in high range, and the distance to whatever each pixel shows (for picking) ----------------
@@ -259,9 +262,13 @@ function shadowPass() {
 }
 const post = prog(`#version 300 es
 out vec2 v; void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); v = p; gl_Position = vec4(p * 2. - 1., 0., 1.); }`, `#version 300 es
-precision highp float; in vec2 v; uniform sampler2D uS; uniform float uEx, uFlash; uniform vec3 uFlashC; out vec4 o;
+precision highp float; in vec2 v; uniform sampler2D uS; uniform float uEx, uFlash, uRainP, uSnowP, uT; uniform vec3 uFlashC; out vec4 o;
+float streak(vec2 uv, float sc, float sp, float len) { vec2 p = uv * vec2(sc, sc / len); p.y += uT * sp; vec2 c = floor(p); float h = fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453); vec2 f = fract(p); float x = abs(f.x - .5 - (h - .5) * .6); return step(.8, h) * smoothstep(.07 * len / 6., 0., x / max(len / 6., .2)) * smoothstep(0., .25, f.y) * smoothstep(1., .55, f.y); }
 ${HPOST}
-void main() { vec3 c = holes(v, uS) * uEx; c = clamp(c * (2.51 * c + .03) / (c * (2.43 * c + .59) + .14), 0., 1.); c = pow(c, vec3(.4545)); vec2 w = v - .5; c *= 1. - .35 * dot(w, w); c = mix(c, uFlashC, uFlash); o = vec4(c, 1.); }`);
+void main() { vec3 c = holes(v, uS) * uEx; c = clamp(c * (2.51 * c + .03) / (c * (2.43 * c + .59) + .14), 0., 1.); c = pow(c, vec3(.4545)); vec2 w = v - .5; c *= 1. - .35 * dot(w, w); c = mix(c, uFlashC, uFlash);
+  if (uRainP > 0.) { float r = streak(v + vec2(v.y * .08, 0.), 90., 2.6, 6.) + streak(v + .31, 160., 3.4, 6.) * .7 + streak(v + .73, 260., 4.2, 6.) * .5; c = mix(c, c * .8 + vec3(.55, .6, .65) * .35, r * uRainP * .6); }
+  if (uSnowP > 0.) { float r = streak(v, 40., .35, 1.) + streak(v + .4, 70., .45, 1.) * .8 + streak(v + .8, 120., .55, 1.) * .6; c = mix(c, vec3(.92), min(1., r) * uSnowP * .8); }
+  o = vec4(c, 1.); }`);
 const VQ = gl.createVertexArray();
 function mkHolesPost() { return holes.POST; }
 
@@ -271,15 +278,44 @@ const trees = mkTrees(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND);
 const cover = mkCover(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const city = mkCity(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const fauna = mkFauna(gl, prog, PRE);
+const life = mkLife(() => G);
 
 
 // ---- light: the planet's star, where it stands over this spot ------------------------------------------------------
 const L = { sun: [0, 1, 0], sunC: [0, 0, 0], sky: [0, 0, 0] };
+// ---- time: each planet keeps its own clock (in its own days); the season and the weather where you are ----------
+const SPEEDS = [0, 1 / 1200, 1 / 60, 1 / 6, 2], SPN = ['stopped', 'a day in 20 minutes', 'a day a minute', 'a day in 6 seconds', 'two days a second'];
+let speed = 1;
+function clock(dt) {
+  G.t = (G.t || 0) + SPEEDS[speed] * dt;
+  const u = nrm(cam.P), lat = Math.asin(max(-1, min(1, dot(u, G.axis)))), se = season(G, G.t, lat);
+  S.lat = lat; S.seasonS = se.s; S.spring = se.spring;
+  S.seasT = 11 * se.s * min(1, G.tilt / 0.41);                            // warmer in summer, colder in winter
+  S.aut = se.spring ? 0 : min(1, max(0, (0.35 - se.s) / 0.45)); S.bare = min(1, max(0, (-0.15 - se.s) / 0.4)) * (se.spring ? 1 : min(1, S.aut * 1.2));
+  S.spr = se.spring ? min(1, max(0, 1 - abs(se.s + 0.1) / 0.35)) : 0;
+  // rain: weather systems a few hundred km across, drifting; where it is wet enough to rain, and cold enough, snow
+  const p = cam.P.map((v) => v / 2.2e5), dr = G.t * 3, w = vn3(p[0] + dr, p[1] + dr * 0.6, p[2], 999 + G.kseed) * 0.7 + vn3(p[0] * 2.3 - dr, p[1] * 2.3, p[2] * 2.3 + dr, 998 + G.kseed) * 0.3;
+  const c = climate(G, u.map((x) => x * G.R), max(S.g0 || 0, 0));
+  S.rain = min(1, max(0, (w - 0.6) / 0.14)) * min(1, max(0, (c.W - 0.25) / 0.2)); S.snow = c.T + S.seasT < 0;
+  // aurora: near the poles, in the dark
+  S.aur = min(1, max(0, (abs(lat) - 0.95) / 0.2)) * min(1, max(0, (-0.08 - (S.sun ? S.sun[1] : 1)) / 0.15));
+  if (S.rain > 0.75 && !S.snow && S.cy < G.cloudBase && Math.random() < dt * 0.12 * S.rain) { flash = 0.55; flashC = [0.85, 0.88, 1]; }   // lightning
+  const day = ((G.t % 1) + 1) % 1; void day;
+  if ((clock.n = (clock.n || 0) + 1) % 10 === 0) {
+    const s2 = sunAt(G, G.t), pu = [u[0], u[1]], ps = [s2[0], s2[1]], ha = Math.atan2(pu[0] * ps[1] - pu[1] * ps[0], pu[0] * ps[0] + pu[1] * ps[1]), hr = ((12 - ha / (2 * PI) * G.dayH) % G.dayH + G.dayH) % G.dayH;
+    const sn = abs(lat) < 0.2 || G.tilt < 0.08 ? 'no seasons here' : se.s > 0.6 ? 'summer' : se.s < -0.6 ? 'winter' : se.spring ? 'spring' : 'autumn';
+    $('clk').textContent = `day ${floor(G.t) + 1} · ${floor(hr)}:${String(floor(hr % 1 * 60)).padStart(2, '0')} of a ${G.dayH} h day · ${sn}${S.rain > 0.3 ? (S.snow ? ' · snowing' : ' · raining') : ''}`;
+    $('spd').textContent = SPN[speed];
+  }
+}
+addEventListener('keydown', (e) => { if (e.code === 'BracketRight') speed = min(SPEEDS.length - 1, speed + 1); if (e.code === 'BracketLeft') speed = max(0, speed - 1); if (e.code === 'KeyT') speed = speed ? 0 : 1; });
+document.getElementById('faster').addEventListener('click', () => { speed = (speed + 1) % SPEEDS.length; });
 function setLight() {
   const s = S.sun || [0, 1, 0], el = Math.asin(max(-1, min(1, s[1])));
   const k = min(1, max(0, (el * 180 / PI + 2) / 25)), sc = G.sunCol, beta = G.beta, bm = max(...beta);
   L.sun = s; L.sunC = sc.map((v, i) => v * (0.08 + 0.92 * k) * exp(-beta[i] / bm * (1 - k) * 1.5 * G.air));   // reddened low in the sky
   L.sky = beta.map((b, i) => (0.3 + 0.7 * b / bm) * 0.55 * sc[i] / 2.6 * min(1.6, 0.4 + 0.6 * G.air)).map((v) => v * (0.03 + 0.97 * min(1, max(0, (el * 180 / PI + 6) / 20))));
+  const rk = (S.rain || 0) * (S.cy < G.cloudTop ? 1 : 0); L.sunC = L.sunC.map((v) => v * (1 - 0.8 * rk)); L.sky = L.sky.map((v, i) => v * (1 - 0.35 * rk) + rk * 0.04 * [1, 1, 1.05][i] * (L.sunC[1] > 0 || el > 0 ? 1 : 0));
 }
 
 // ---- frame ---------------------------------------------------------------------------------------------------------
@@ -297,6 +333,7 @@ const common = (P) => {
   gl.uniformMatrix4fv(P.uVP, false, SH.cast ? SH.VP : VP);
   if (P.uSh) { gl.uniform1f(P.uSh, SH.cast ? 1 : SH.on ? 0 : 2); gl.uniformMatrix4fv(P.uShM, false, SH.VP); gl.uniform1f(P.uShK, SH.k); gl.uniform1f(P.uShC, SH.c); gl.uniform1f(P.uShB, SH.bias); gl.uniform1i(P.uShT, 6); } gl.uniform3fv(P.uSun, L.sun); gl.uniform3fv(P.uSunC, L.sunC); gl.uniform3fv(P.uSky, L.sky); gl.uniform1f(P.uT, (performance.now() - t0) / 1000);
   gl.uniform1f(P.uPix, 2 * Math.tan(cam.fov / 2) / Hp); gl.uniform1f(P.uAlt, S.cy); gl.uniform1f(P.uHs, G.Hs); gl.uniform3fv(P.uBeta, G.beta);
+  if (P.uSeasT) gl.uniform1f(P.uSeasT, S.seasT); if (P.uAut) gl.uniform1f(P.uAut, S.aut); if (P.uBare) gl.uniform1f(P.uBare, S.bare); if (P.uSpr) gl.uniform1f(P.uSpr, S.spr); if (P.uRain) gl.uniform1f(P.uRain, S.rain); if (P.uAur) { gl.uniform1f(P.uAur, S.aur); gl.uniform3fv(P.uAurC, G.aurora); }
 };
 let flash = 0, flashC = [1, 1, 1];
 function frame(now) {
@@ -307,8 +344,8 @@ function frame(now) {
   fly(dt);
   let F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.hc = max(S.cy - max(S.g0, 0), 1e-7);
   if (holes.step(cam, G, S, dt, jump)) { F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.hc = max(S.cy - max(S.g0, 0), 1e-7); }
-  setLight();
-  targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.cast = () => SH.cast; S.shR = () => SH.r;
+  clock(dt); setLight();
+  targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.meet = (Gp, c) => life.meet(Gp, c); S.cast = () => SH.cast; S.shR = () => SH.r;
   shadowPass();
   gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp);
   gl.clearBufferfv(gl.COLOR, 1, [1e12, 0, 0, 1]); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -338,7 +375,7 @@ function frame(now) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, Hp); gl.disable(gl.DEPTH_TEST);
   flash = max(0, flash - dt * 1.2);
   gl.useProgram(post.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, FB.t[0]); gl.uniform1i(post.uS, 0); gl.uniform1f(post.uEx, 0.62); gl.uniform1f(post.uFlash, flash); gl.uniform3fv(post.uFlashC, flashC);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FB.t[1]); gl.uniform1i(post.uD, 1); gl.activeTexture(gl.TEXTURE0); holes.setPost(post, W, Hp);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FB.t[1]); gl.uniform1i(post.uD, 1); gl.activeTexture(gl.TEXTURE0); holes.setPost(post, W, Hp); const pr = (S.rain || 0) * (S.cy < G.cloudBase ? 1 : 0); gl.uniform1f(post.uRainP, S.snow ? 0 : pr); gl.uniform1f(post.uSnowP, S.snow ? pr : 0); gl.uniform1f(post.uT, (performance.now() - t0) / 1000);
   gl.bindVertexArray(VQ); gl.drawArrays(gl.TRIANGLES, 0, 3);
   hud();
   requestAnimationFrame(frame);
@@ -353,7 +390,7 @@ function jump(n, mouth, dist) {
 function pick(px, py) {
   if (!FB) return null; gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.readBuffer(gl.COLOR_ATTACHMENT1);
   const o = new Float32Array(4); gl.readPixels(Math.floor(px * W / canvas.clientWidth), Math.floor(Hp - 1 - py * Hp / canvas.clientHeight), 1, 1, gl.RGBA, gl.FLOAT, o);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null); return o[0] < 1e11 ? o[0] : null;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); pick.code = o[0] < 1e11 ? o[1] : 0; return o[0] < 1e11 ? o[0] : null;
 }
 function rayAt(px, py) {
   const d = dir(), f = Math.tan(cam.fov / 2), a = canvas.clientWidth / canvas.clientHeight, sx = (px / canvas.clientWidth * 2 - 1) * f * a, sy = (1 - py / canvas.clientHeight * 2) * f;
@@ -445,12 +482,14 @@ function hud() {
   const c = pick(canvas.clientWidth / 2, canvas.clientHeight / 2), d = c ?? S.hc * 3, w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = BANDS.find((b) => w >= b[0])[1];
   $('alt').textContent = fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
-  $('lock').hidden = locked() || touchy;
+  const sp = life.look(G, pick.code); $('sp').textContent = sp ? sp.name : ''; $('sp').hidden = !sp;
+  $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met`;
+  $('lock').hidden = locked() || touchy || !$('life').hidden;
   $('bar').style.width = min(100, max(2, (log2(w) + 20) / 44 * 100)) + '%';
 }
 function hint() {
   $('name').textContent = G.name; const ty = G.starK < 4500 ? 'red' : G.starK < 5500 ? 'orange' : G.starK < 6200 ? 'yellow' : 'white';
-  $('phys').textContent = `${(G.R / 1000).toFixed(0)} km radius · ${G.g.toFixed(2)} g · ${G.air < 0.6 ? 'thin' : G.air > 1.5 ? 'thick' : ''} air · ${ty} star · ${G.species.length} tree species`.replace(' ·  air', ' · air');
+  $('phys').textContent = `${(G.R / 1000).toFixed(0)} km radius · ${G.g.toFixed(2)} g · ${G.air < 0.6 ? 'thin' : G.air > 1.5 ? 'thick' : ''} air · ${ty} star · ${nSpecies(G).toLocaleString()} tree species`.replace(' ·  air', ' · air');
 }
 arrive(0);
 requestAnimationFrame(frame);
