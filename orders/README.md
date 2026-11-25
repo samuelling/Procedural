@@ -8,11 +8,12 @@ unpacker. No stored images, models or sound files.
 | [`0.2kb/`](0.2kb/) | 200 bytes | One formula: firs in mist on a 2D canvas |
 | [`2kb/`](2kb/) | 2,000 bytes | One fragment shader: ten rows of trees computed per pixel |
 | [`20kb/`](20kb/) | 20,000 bytes | Sylva: a genome and a grammar growing a 3D plot |
-| [`200kb/`](200kb/) | 200,000 bytes | A living scene: a stream and pool, clouds with moving shadows, rain, snow and mist, deer, a flock of birds |
+| [`200kb/`](200kb/) | 200,000 bytes | The whole 2 MB world with the Earth seen coarser: climate in 3° blocks, heights and tree ranges in 1.5° |
 | [`2mb/`](2mb/) | 2,000,000 bytes | A forest that keeps time: animals are born, hunt, age and die; trees grow, die, fall and are replaced; plus night, seasons, flowers, insects, storms, and four more forests |
 
 `index.html` reports the real byte count of every rung against its allowance. The three small rungs are full. The
-200 kB rung uses about 32 kB, which is what was asked for at that order. The 2 MB rung uses 1.74 MB: about 89 kB of
+200 kB rung uses about 192 kB: about 90 kB of program, 14 kB of climate classes in half degrees, and about 88 kB of
+the same measurements in bigger blocks. The 2 MB rung uses 1.74 MB: about 89 kB of
 program, 36 kB of climate classes, and about 1.6 MB of measured heights, climate and tree ranges (see `DATA.md`).
 [`story/`](story/) goes through it order by order: what each rung had to cut, how the top one was filled, and the
 six rounds of the dialogue between two agents that decided what to fill it with.
@@ -34,7 +35,9 @@ npm install
 pip install zopfli playwright
 python3 tools/build_b.py                 # 2 kB: minifies 2kb/forest.glsl into 2kb/main.js and packs it
 node tools/build.mjs 2 c 20000           # 20 kB rung; TIER is a build-time constant, higher rungs' code is dropped
-node tools/build.mjs 3 d 200000          # 200 kB rung
+python3 tools/coarse_kg.py 2 src/kg200.js                    # climate classes in half-degree blocks
+python3 tools/pack_data.py src/data200.js src/kg200.js 6 6   # the grids in 3° and 1.5° blocks
+node tools/build.mjs 4 d 200000 6,6      # 200 kB rung: the 2 MB program with the coarse grids (tier 3 is no longer published)
 node tools/build.mjs 4 e 2000000         # 2 MB rung
 node tools/grow_test.mjs                 # grows every forest of every 3D rung and steps its animals; fails on non-finite numbers
 python3 tools/ladder.py                  # assembles the site and the index from real file sizes

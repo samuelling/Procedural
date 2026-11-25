@@ -50,7 +50,45 @@ label { padding: 0 4px 0 11px; color: var(--dim); font: 500 13px/1 var(--sans); 
 input[type=range] { width: 150px; margin: 0 11px 0 6px; height: 31px; accent-color: var(--sun); background: none; }
 #err { position: fixed; inset: 0; margin: 0; display: grid; place-items: center; padding: 24px; text-align: center; font-size: 15px; background: var(--field); }
 #err[hidden] { display: none; }
-@media (max-width: 560px) {
+<!--T4-->/* The 2 MB rung: a field kit. The forest has the screen; the controls fold into four drawers along the bottom,
+   and the scale is a gauge down the right edge, a powers-of-ten ladder from the range to a leaf. */
+:root { --amber: #e8b25a; --lichen: #a8c99a; --glass: rgba(14, 20, 13, .66); --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
+h1 { font: italic 600 26px/1 var(--serif); letter-spacing: 0; text-transform: none; font-variation-settings: 'SOFT' 100, 'WONK' 1; }
+#hud { border-radius: 10px; background: var(--glass); }
+#ui.dock { left: 50%; right: auto; bottom: 12px; transform: translateX(-50%); width: min(640px, calc(100% - 20px)); padding: 0; flex-direction: column; flex-wrap: nowrap; gap: 8px; align-items: center; }
+#ui.dock #hint { text-align: center; font: italic 400 14px/1.35 var(--serif); color: var(--ink); opacity: .82; }
+.dock .tabs { display: flex; pointer-events: auto; background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 2px; backdrop-filter: blur(8px); text-shadow: none; }
+.dock .tabs button { border: 0; border-radius: 999px; padding: 8px 16px; font: 500 16px/1 var(--serif); color: var(--dim); }
+.dock .tabs button[aria-selected="true"] { background: var(--amber); color: #1b160c; }
+.dock .tabs button:hover { color: var(--ink); } .dock .tabs button[aria-selected="true"]:hover { color: #1b160c; }
+.drawer { box-sizing: border-box; max-width: 100%; pointer-events: auto; background: var(--glass); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 12px; backdrop-filter: blur(10px); text-shadow: none; animation: up .18s ease-out; }
+@keyframes up { from { transform: translateY(6px); opacity: 0; } }
+.drawer[hidden] { display: none; }
+.drawer .grp { margin: 2px 2px 6px; font: italic 400 13px/1 var(--serif); color: var(--lichen); }
+.drawer .chips { display: flex; flex-wrap: wrap; gap: 6px; } .drawer .chips + .grp { margin-top: 12px; } .drawer .chips + .chips { margin-top: 6px; }
+.dock .chips button, #earth button, #when > button { border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; font: 400 15px/1 var(--serif); color: var(--ink); background: rgba(241, 243, 234, .04); }
+.dock .chips button:hover, #earth button:hover, #when > button:hover { border-color: var(--lichen); background: rgba(168, 201, 154, .12); }
+.dock .chips button[aria-pressed="true"] { background: var(--amber); border-color: var(--amber); color: #1b160c; }
+.sl { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 0 4px 0 13px; }
+.sl label { padding: 0; font: 400 15px/1 var(--serif); color: var(--dim); } .sl input[type=range] { width: 130px; height: 31px; margin: 0 8px; accent-color: var(--amber); }
+#ladder { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-shadow: 0 0 2px #000, 0 0 10px rgba(0, 0, 0, .9); }
+#ladder > button { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--glass); backdrop-filter: blur(8px); font: italic 500 14px/1 var(--serif); color: var(--ink); text-shadow: none; }
+#ladder > button:hover { border-color: var(--amber); }
+#ladder ol { list-style: none; margin: 0; padding: 8px 10px 8px 14px; position: relative; background: var(--glass); border: 1px solid var(--line); border-radius: 14px; backdrop-filter: blur(8px); text-shadow: none; }
+#ladder ol::before { content: ''; position: absolute; right: 18px; top: 22px; bottom: 22px; width: 1px; background: linear-gradient(var(--line), var(--amber), var(--line)); }
+#ladder li { display: flex; flex-direction: column; align-items: flex-end; }
+#ladder li em { font: italic 400 11px/1 var(--serif); color: var(--lichen); margin: 2px 22px 2px 0; opacity: .8; }
+#ladder li button { display: flex; align-items: baseline; gap: 8px; border: 0; padding: 6px 0; background: none; color: var(--dim); position: relative; padding-right: 26px; }
+#ladder li button::after { content: ''; position: absolute; right: 4px; top: 50%; width: 9px; height: 9px; margin-top: -5px; border-radius: 50%; border: 1px solid var(--dim); background: var(--field); }
+#ladder li button b { font: 400 15px/1 var(--serif); } #ladder li button span { font: 400 11px/1 var(--mono); opacity: .75; }
+#ladder li button:hover { color: var(--ink); } #ladder li button:hover::after { border-color: var(--ink); }
+#ladder li.on button { color: var(--ink); } #ladder li.on button b { font-weight: 600; font-style: italic; }
+#ladder li.on button::after { width: 15px; height: 15px; right: 1px; margin-top: -8px; background: var(--amber); border-color: var(--amber); box-shadow: 0 0 0 4px rgba(232, 178, 90, .25); }
+#ladder.off { opacity: .35; }
+#earth, #when { border-radius: 14px; background: var(--glass); } #when .col button { border-radius: 8px; font: 400 14px/1.35 var(--serif); padding: 8px 10px; }
+@media (max-width: 560px) { #ui.dock { bottom: 8px; } .dock .tabs button { padding: 8px 11px; font-size: 15px; } #ladder li:not(.on) b, #ladder li em { display: none; } #ladder li button span { font-size: 10px; } #ladder ol { padding: 6px 8px; } .sl input[type=range] { width: 90px; } }
+@media (prefers-reduced-motion: reduce) { .drawer { animation: none; } }
+<!--/T4-->@media (max-width: 560px) {
   #l2 { font-size: 10px; }
   button { padding: 9px 9px; font-size: 12px; }
   input[type=range] { width: 62px; }
@@ -69,7 +107,7 @@ input[type=range] { width: 150px; margin: 0 11px 0 6px; height: 31px; accent-col
   <ol id="log" aria-live="polite"></ol>
   <svg id="evo" hidden aria-label="Tree of life: the species that have lived on this plot"></svg>
 <!--/T4--></header>
-<footer id="ui">
+<!--L4--><footer id="ui">
   <p id="hint"></p>
   <div class="row" role="group" aria-label="Forest">
     <button id="g-mixed" data-g="mixed">Mixed</button><button id="g-boreal" data-g="boreal">Boreal</button><button id="g-oldgrowth" data-g="oldgrowth">Old growth</button><button id="g-aspen" data-g="aspen">Aspen</button><!--T4--><button data-g="beech">Beech</button><button data-g="carr">Carr</button><button data-g="pine">Pine</button><button data-g="larch">Larch</button><button data-g="redwood">Redwood</button><button data-g="cloud">Cloud</button><button id="b-earth">Earth…</button><button id="b-when">Any time…</button><button data-g="kelp">Kelp</button><button data-g="lake">Lake</button><button data-g="cave">Cave</button><button data-g="range">Range ÷10,000</button><button data-g="log">Log ×100</button><button data-g="moss">Moss ×1000</button><button data-g="bark">Bark ×1000</button><button data-g="soil">Soil ×10,000</button><button data-g="leaf">Leaf ×100,000</button><!--/T4-->
@@ -83,7 +121,40 @@ input[type=range] { width: 150px; margin: 0 11px 0 6px; height: 31px; accent-col
   <div class="row" role="group" aria-label="Actions">
     <button id="b-far">Overview</button><button id="b-seed">Reseed</button><button id="b-mut">Mutate</button><button id="b-snd" aria-pressed="false">Sound</button><!--T3--><button id="b-wx">Weather: clear</button><!--/T3--><!--T4--><button id="b-sea">Summer</button><button id="b-time">Time: still</button><button id="b-rw" aria-pressed="false">Rewind</button><button id="b-ff" aria-pressed="false">Fast forward</button><button id="b-fol">Follow</button><button id="b-wolf">Wolves</button><button id="b-fire">Lightning</button><button id="b-evo" aria-pressed="false">Lineages</button><button id="b-walk" aria-pressed="false">Walk</button><button id="b-in">Zoom in</button><button id="b-out">Zoom out</button><!--/T4-->
   </div>
-</footer>
+</footer><!--/L4--><!--T4--><nav id="ladder" aria-label="Scale">
+  <button id="b-out" title="Zoom out (−)" aria-label="Zoom out">Out</button>
+  <ol>
+    <li data-r="0"><button><b>Mountain range</b><span>640 km</span></button></li>
+    <li data-r="1"><em>÷10,000</em><button><b>The plot</b><span>64 m</span></button></li>
+    <li data-r="2"><em>×100</em><button><b>Rotting log</b><span>64 cm</span></button></li>
+    <li data-r="3"><em>×10</em><button><b id="r3">Moss</b><span>6.4 cm</span></button></li>
+    <li data-r="4"><em>×10</em><button><b>Soil</b><span>6.4 mm</span></button></li>
+    <li data-r="5"><em>×10</em><button><b id="r5">Leaf</b><span>0.64 mm</span></button></li>
+  </ol>
+  <button id="b-in" title="Zoom in (+)" aria-label="Zoom in">In</button>
+</nav>
+<footer id="ui" class="dock">
+  <p id="hint"></p>
+  <div class="drawer" id="d-places" hidden role="tabpanel" aria-label="Places">
+    <p class="grp">Forests</p>
+    <div class="chips"><button id="g-mixed" data-g="mixed">Mixed</button><button id="g-boreal" data-g="boreal">Boreal</button><button id="g-oldgrowth" data-g="oldgrowth">Old growth</button><button id="g-aspen" data-g="aspen">Aspen</button><button data-g="beech">Beech</button><button data-g="carr">Carr</button><button data-g="pine">Pine</button><button data-g="larch">Larch</button><button data-g="redwood">Redwood</button><button data-g="cloud">Cloud forest</button></div>
+    <p class="grp">Further afield</p>
+    <div class="chips"><button id="b-earth">Anywhere on Earth…</button><button id="b-when">Another age…</button><button data-g="kelp">Kelp forest</button><button data-g="lake">Under the lake</button><button data-g="cave">Into the cave</button></div>
+  </div>
+  <div class="drawer" id="d-time" hidden role="tabpanel" aria-label="Time">
+    <div class="chips"><span class="sl"><label for="day">Time of day</label><input id="day" type="range" min="20" max="980" value="300"></span><button id="b-sea">Summer</button></div>
+    <div class="chips"><button id="b-time">Time: still</button><button id="b-rw" aria-pressed="false">Rewind</button><button id="b-ff" aria-pressed="false">Fast forward</button></div>
+  </div>
+  <div class="drawer" id="d-life" hidden role="tabpanel" aria-label="Happenings">
+    <div class="chips"><button id="b-wx">Weather: clear</button><button id="b-fire">Lightning</button><button id="b-wolf">Wolves</button></div>
+    <div class="chips"><button id="b-fol">Follow</button><button id="b-evo" aria-pressed="false">Lineages</button></div>
+  </div>
+  <div class="drawer" id="d-you" hidden role="tabpanel" aria-label="You">
+    <div class="chips"><button id="b-far">Overview</button><button id="b-walk" aria-pressed="false">Walk</button><button id="b-snd" aria-pressed="false">Sound</button></div>
+    <div class="chips"><button id="b-seed">Reseed</button><button id="b-mut">Mutate</button><span class="sl"><label for="den" id="den-l">Trees ×1.0</label><input id="den" type="range" min="25" max="200" step="5" value="100"></span></div>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Controls"><button role="tab" data-d="places" aria-selected="false">Places</button><button role="tab" data-d="time" aria-selected="false">Time</button><button role="tab" data-d="life" aria-selected="false">Happenings</button><button role="tab" data-d="you" aria-selected="false">You</button></div>
+</footer><!--/T4-->
 <!--T4--><section id="earth" hidden aria-label="Anywhere on Earth"><canvas id="map" width="1440" height="720" aria-label="Map of climate classes: click to choose a place"></canvas><p id="here">Click anywhere on land. Colours are the measured Köppen-Geiger climate classes.</p><div class="row"><label for="climb" id="climb-l">Climb 0 m</label><input id="climb" type="range" min="0" max="5000" step="100" value="0"><button id="b-grow">Grow here</button><button id="b-shut">Close</button></div><p class="src">Climate classes: Köppen-Geiger after Rubel et al. 2017 (kgcpy). Ground: ETOPO 2022, NOAA NCEI. Months: CRU CL 2.0, 1961–90, Climatic Research Unit, University of East Anglia (ODbL). Tree ranges: Little 1971–78 (USGS); Caudullo, Welk and San-Miguel-Ayanz 2017 (CC BY 4.0).</p></section><section id="when" hidden aria-label="Any time: forests of other ages"><p>Forests of other ages. Plants and animals are sketches after the fossil record, not reconstructions of any one place.</p><div class="col"><button data-g="devonian"><b>385 million years ago</b> · Devonian: the first forests</button><button data-g="carboniferous"><b>305 million years ago</b> · Carboniferous: a coal swamp</button><button data-g="jurassic"><b>150 million years ago</b> · Jurassic: conifers, cycads, a sauropod</button><button data-g="cretaceous"><b>70 million years ago</b> · Cretaceous: the first flowering trees</button><button data-g="eocene"><b>50 million years ago</b> · Eocene: the warm world</button><button data-g="glacial"><b>20,000 years ago</b> · The last ice age: mammoth steppe</button><button data-g="thaw"><b>12,000 years ago</b> · The ice going: birch first</button><button data-g="pinewood"><b>9,000 years ago</b> · Pine and hazel</button><button data-g="wildwood"><b>6,000 years ago</b> · The wildwood: oak, elm and lime</button></div><button id="w-shut">Close</button></section><canvas id="snap"></canvas><div id="xh" hidden></div><div id="joy" hidden><i></i></div><!--/T4--><p id="err" hidden></p>
 <script>__JS__</script>
 </body>

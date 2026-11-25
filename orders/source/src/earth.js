@@ -18,7 +18,7 @@
 //             plausible for the place, not a weather station's.
 //   rules     climbing cools 6.5 °C a kilometre and wets a little; the class is worked out again from the new numbers.
 //   tables    soils, which trees grow, and their names by region, from general knowledge: unverified sketches.
-/* global TIER */
+/* global TIER, LC, LE */
 import { KG } from './kg.js';
 import { DATA } from './data.js';
 
@@ -26,15 +26,23 @@ import { DATA } from './data.js';
 let ELM = null, ELN = null, ELX = null, CI = null, CT = null, CP = null, CD = null, CR = null, CW = null, CS = null, CN = null, CE = null, GEN = null;
 const hq = (q) => (q / 255) ** 2 * 7500 - 500;
 export const ready = TIER > 3 && new Response(new Blob([Uint8Array.from(atob(DATA), (c) => c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer().then((b) => {
-  const u = new Uint8Array(b), g = kg(), E = Math.expm1, L = Math.log1p(2500); let o = 32400, n = 0;
-  CI = new Int32Array(259200).fill(-1); for (let q = 0; q < 259200; q++) if ((u[q >> 3] >> (7 - (q & 7))) & 1) CI[q] = n++;
+  const u = new Uint8Array(b), g = kg(), E = Math.expm1, L = Math.log1p(2500), bit = (q) => (u[q >> 3] >> (7 - (q & 7))) & 1; let o = 32400, n = 0;
+  CI = new Int32Array(259200).fill(-1);
+  if (LC) {   // the 200 kB rung: one value for each block of LC x LC half-degree cells, LE x LE quarter-degree for the heights
+    const w = 720 / LC, B = new Int32Array(w * 360 / LC); for (let q = 0; q < B.length; q++) B[q] = bit(q) ? n++ : -1; o = (B.length + 7) >> 3;
+    for (let q = 0; q < 259200; q++) CI[q] = B[(((q / 720) | 0) / LC | 0) * w + (((q % 720) / LC) | 0)];
+  } else for (let q = 0; q < 259200; q++) if (bit(q)) CI[q] = n++;
   const Q = new Uint8Array(n * 84); for (let k = 0; k < 84; k++) for (let c = 0, v = 0; c < n; c++) { v = (v + u[o++]) & 255; Q[c * 84 + k] = v; }
   CT = new Float32Array(n * 12); CP = new Float32Array(n * 12); CD = new Uint8Array(n * 12); CR = new Uint8Array(n * 12); CW = new Uint8Array(n * 12); CS = new Uint8Array(n * 12); CN = new Uint8Array(n * 12); CE = new Float32Array(n);
   for (let c = 0; c < n; c++) for (let k = 0, t = 0, p = 0, d = 0, r = 0, w = 0, s = 0, wn = 0, b = c * 84; k < 12; k++) { wn = (wn + Q[b + 72 + k]) & 255; CN[c * 12 + k] = wn; t = (t + Q[b + k]) & 255; p = (p + Q[b + 12 + k]) & 255; d = (d + Q[b + 24 + k]) & 255; r = (r + Q[b + 36 + k]) & 255; w = (w + Q[b + 48 + k]) & 255; s = (s + Q[b + 60 + k]) & 255; CT[c * 12 + k] = t / 2 - 60; CP[c * 12 + k] = E(p / 255 * L); CD[c * 12 + k] = d; CR[c * 12 + k] = r; CW[c * 12 + k] = w; CS[c * 12 + k] = s; }
   for (let c = 0, v = 0; c < n; c++) { v = (v + u[o++]) & 255; CE[c] = hq(v); }   // CRU's own height for each cell
-  const pl = () => { const q = new Uint8Array(1036800); for (let j = 0; j < 720; j++) for (let i = 0, P = 0; i < 1440; i++) { const x = j * 1440 + i; if (g[x]) { P = (P + u[o++]) & 255; q[x] = P; } else P = 0; } return q; };
+  const H = LE ? 720 / LE : 720, W = LE ? 1440 / LE : 1440, bx = (x) => LE ? (((x / 1440) | 0) / LE | 0) * W + (((x % 1440) / LE) | 0) : x, gb = LE ? new Uint8Array(H * W) : g;
+  if (LE) for (let x = 0; x < 1036800; x++) if (g[x]) gb[bx(x)] = 1;   // a block is land if any of its cells is
+  const sp = (a, T) => { if (!LE) return a; const q = new T(1036800); for (let x = 0; x < 1036800; x++) if (g[x]) q[x] = a[bx(x)]; return q; };
+  const pl = () => { const q = new Uint8Array(H * W); for (let j = 0; j < H; j++) for (let i = 0, P = 0; i < W; i++) { const x = j * W + i; if (gb[x]) { P = (P + u[o++]) & 255; q[x] = P; } else P = 0; } return sp(q, Uint8Array); };
   ELM = pl(); ELN = pl(); ELX = pl();
-  GEN = new Uint16Array(1036800); for (let k = 0; k < 9; k++) for (let x = 0; x < 1036800; x++) if (g[x] && u[o++]) GEN[x] |= 1 << k;   // which of nine tree genera the range maps put in each cell
+  const Gb = new Uint16Array(H * W); for (let k = 0; k < 9; k++) for (let x = 0; x < H * W; x++) if (gb[x] && u[o++]) Gb[x] |= 1 << k;   // which of nine tree genera the range maps put in each cell
+  GEN = sp(Gb, Uint16Array);
 });
 // the measured mean height of the land (m) at a point, between the four nearest cells (land ones only); null where
 // the point is more sea than land, or before the grids are in. Q picks the plane: ELM the mean, ELX the highest.
@@ -192,7 +200,7 @@ export function earthGenome(p, G0, pool) {
   const [snm, sc] = soil(p), B = G0[base], dry = g === 'B' || k[1] === 's' || k === 'Aw' || k === 'As', snow = cl(-Tmin / 5, 0, 1) * cl(p.Pa / 300, 0.2, 1);
   const lit = sc.map((v) => v * 1.3), grass = g === 'E' ? 900 : k[1] === 'S' || k === 'Aw' || k === 'As' ? 1400 : k[1] === 'W' ? 120 : B.floor.grass[0];
   const lat = Math.abs(p.lat).toFixed(1) + '°' + (p.lat < 0 ? 'S' : 'N') + ' ' + Math.abs(p.lon).toFixed(1) + '°' + (p.lon < 0 ? 'W' : 'E'), hr = (h) => { const m = round(h * 60); return ((m / 60) | 0) + ' h ' + String(m % 60).padStart(2, '0'); };
-  const txt = lat + (p.climb ? ', ' + p.climb.toLocaleString() + ' m up' : '') + ' · ' + p.now + ' ' + describe(p.now) + (p.now !== p.code ? ' (' + p.code + ' at the foot)' : ' (measured)') + ' · ' + p.Ta.toFixed(1) + ' °C a year, ' + round(min(...p.T)) + ' to ' + round(Tmax) + ' by month, ' + round(p.Pa).toLocaleString() + ' mm' + (p.src ? ' (measured, CRU 1961–90' + (p.nud && (p.nud[0] || p.nud[1] !== 1 || p.nud[2] !== 1) ? ', nudged ' + (p.nud[0] >= 0 ? '+' : '') + p.nud[0] + ' °C, swing ×' + p.nud[1].toFixed(2) + ', rain ×' + p.nud[2].toFixed(2) + ' to fit the class' : '') + ')' : ' (modelled)') + (p.elev !== null && p.elev !== undefined ? ' · ground ' + round(max(p.elev, 0)).toLocaleString() + ' m (measured)' : '') + ' · daylight ' + hr(p.day[0]) + ' in ' + (p.south ? 'June' : 'December') + ', ' + hr(p.day[1]) + ' in ' + (p.south ? 'December' : 'June') + ' · ' + snm + (cov ? ' · trees from the range maps (Little; Caudullo et al. 2017)' + (out.length ? ', ' + out.join(' and ') + ' left out: not native here' : '') : ' · trees a sketch (no range map covers here)');
+  const txt = lat + (p.climb ? ', ' + p.climb.toLocaleString() + ' m up' : '') + ' · ' + p.now + ' ' + describe(p.now) + (p.now !== p.code ? ' (' + p.code + ' at the foot)' : ' (measured)') + ' · ' + p.Ta.toFixed(1) + ' °C a year, ' + round(min(...p.T)) + ' to ' + round(Tmax) + ' by month, ' + round(p.Pa).toLocaleString() + ' mm' + (p.src ? ' (measured, CRU 1961–90' + (LC ? ', ' + LC / 2 + '° cells' : '') + (p.nud && (p.nud[0] || p.nud[1] !== 1 || p.nud[2] !== 1) ? ', nudged ' + (p.nud[0] >= 0 ? '+' : '') + p.nud[0] + ' °C, swing ×' + p.nud[1].toFixed(2) + ', rain ×' + p.nud[2].toFixed(2) + ' to fit the class' : '') + ')' : ' (modelled)') + (p.elev !== null && p.elev !== undefined ? ' · ground ' + round(max(p.elev, 0)).toLocaleString() + ' m (measured' + (LE ? ', ' + LE / 4 + '° cells' : '') + ')' : '') + ' · daylight ' + hr(p.day[0]) + ' in ' + (p.south ? 'June' : 'December') + ', ' + hr(p.day[1]) + ' in ' + (p.south ? 'December' : 'June') + ' · ' + snm + (cov ? ' · trees from the range maps (Little; Caudullo et al. 2017)' + (out.length ? ', ' + out.join(' and ') + ' left out: not native here' : '') : ' · trees a sketch (no range map covers here)');
   return { ...B, nm: 'Earth, ' + lat, cl: { ...p, txt, az: 0, snow, dec: g === 'A' ? (k === 'Aw' || k === 'As' ? 0.4 : 0) : k[1] === 's' || k === 'BSh' || k === 'BWh' ? 0.2 : (r === 'au' ? 0.1 : 1), soil: sc },
     land: { ...B.land, stream: p.Pa > 700 && g !== 'B' && g !== 'E' ? [1.1, 6, 0.2, 4] : undefined, ra: dry ? [0.55, 0.45, 0.36] : B.land.ra, log: round(B.land.log * cl(dens, 0, 1)) },
     air: { ...B.air, fog: B.air.fog * (k === 'Af' || k === 'Am' ? 1.15 : dry ? 0.5 : 1), haze: dry ? [0.86, 0.8, 0.7] : B.air.haze, aur: abs(p.lat) > 58 ? 1 : 0 },

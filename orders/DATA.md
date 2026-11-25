@@ -1,6 +1,10 @@
-# The measured data in the 2 MB rung
+# The measured data in the 2 MB and 200 kB rungs
 
-`source/src/data.js` (inlined in `2mb/index.html`) holds two derived grids, packed by `source/tools/pack_data.py`:
+`source/src/data.js` (inlined in `2mb/index.html`) holds the derived grids below, packed by `source/tools/pack_data.py`.
+`source/src/data200.js` (inlined in `200kb/index.html`) holds the same grids in bigger blocks, each value the mean of
+its block: climate in 3° blocks, heights and tree ranges (a genus counts if it counts anywhere in the block) in 1.5°.
+`source/src/kg200.js` holds the Köppen-Geiger classes in half-degree blocks, the commonest class in each
+(`source/tools/coarse_kg.py`). These are derived databases of the same sources, under the same terms:
 
 - **Climate: CRU CL 2.0 monthly normals, 1961–90.** This is a derived database: half-degree averages of temperature
   reduced to sea level, and of rainfall. Source: New, M., Lister, D., Hulme, M. and Makin, I. (2002), A

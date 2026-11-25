@@ -1,4 +1,4 @@
-/* global TIER */
+/* global LC, LE, TIER */
 import { GENOMES, mutate, extra } from './genome.js';
 import { build } from './grow.js';
 import { rng } from './noise.js';
@@ -176,6 +176,7 @@ function grow(keepView, aged) {
   if (TIER > 3) tol();
   $('lg').innerHTML = (TIER > 3 ? G.trees.filter((s) => !s.hide) : G.trees).map((s) => '<li><i style="background:' + css(s.leaf.b) + '"></i>' + (TIER > 3 ? (s.gone ? '<s>' + s.nm + '</s>' : s.nm) + (s.par ? ' <small>← ' + s.par.toLowerCase() + ', year ' + s.born + '</small>' : '') : s.nm) + '</li>').join('');
   for (const b of document.querySelectorAll('[data-g]')) b.setAttribute('aria-pressed', b.dataset.g === key);
+  if (TIER > 3 && canvas.lad) canvas.lad();
   try { history.replaceState(null, '', '#' + key + '-' + seed + (mut ? '-m' + mut : '') + (den !== 1 ? '-d' + round(den * 100) : '') + (TIER > 3 && key === 'earth' ? '@' + here.lat + ',' + here.lon + ',' + here.climb : '')); } catch (e) { /* the frame may refuse; the page works without it */ }
 }
 
@@ -457,6 +458,18 @@ if (TIER > 3) {   // anywhere on Earth: a map of the measured climate classes; c
   $('when').addEventListener('click', (e) => { if (e.target.dataset.g || e.target.id === 'w-shut') $('when').hidden = true; });
   $('b-earth').addEventListener('click', () => { $('earth').hidden = false; draw(pick2); if (pick2) show(); });
   $('b-shut').addEventListener('click', () => { $('earth').hidden = true; });
+  // the dock: four drawers, one open at a time; Escape or a second tap folds it away
+  const tabs = document.querySelectorAll('.tabs button'), openD = (d) => { for (const t of tabs) { const on = t.dataset.d === d && t.getAttribute('aria-selected') !== 'true'; t.setAttribute('aria-selected', on); $('d-' + t.dataset.d).hidden = !on; } };
+  for (const t of tabs) t.addEventListener('click', () => openD(t.dataset.d));
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') openD(''); });
+  // the scale: a powers-of-ten gauge down the right edge; the lit rung is where you are, and a tap on another walks
+  // there a power at a time, each step through the window or the dissolve as the zoom keys would
+  const rungs = document.querySelectorAll('#ladder li'), rNow = () => key === 'bark' ? 3 : key === 'leafl' ? 5 : G.world ? max(0, LAD.indexOf(G.world)) : key === 'moss' ? 3 : 1;
+  canvas.lad = () => { if (!G) return; const n = rNow(), off = key === 'lake' || key === 'cave'; $('ladder').classList.toggle('off', off); for (const l of rungs) l.classList.toggle('on', !off && +l.dataset.r === n);
+    $('r3').textContent = key === 'bark' ? 'Under the bark' : 'Moss'; $('r5').textContent = key === 'leafl' ? 'Living leaf' : 'Fallen leaf'; };
+  for (const l of rungs) l.querySelector('button').addEventListener('click', () => { if (key === 'lake' || key === 'cave') return; canvas.lt = +l.dataset.r; });
+  setInterval(() => { if (canvas.lt == null || dive || !G) return; const n = rNow(); if (n === canvas.lt || (key === 'bark' && canvas.lt > 3)) { canvas.lt = null; return; } zoom(canvas.lt > n ? 1 : -1); }, 250);
+  if (LC) $('earth').querySelector('.src').textContent += ' At this rung each is seen through bigger cells: climate in ' + LC / 2 + '° blocks, heights and tree ranges in ' + LE / 4 + '°, the climate classes in half degrees.';
   $('b-grow').addEventListener('click', () => { if (pick2 && earthAt(pick2[0], pick2[1], +$('climb').value)) { $('earth').hidden = true; key = 'earth'; mut = 0; grow(); } });
 }
 for (const k in act) $('b-' + k).addEventListener('click', act[k]);
