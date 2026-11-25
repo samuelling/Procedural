@@ -9,8 +9,8 @@
 #   2. 24 planes over CRU land cells in row order: Jan-Dec temperature reduced to sea level at 6.5 C/km (half degrees
 #      from -60 C), then Jan-Dec rainfall (a log byte up to 2,500 mm); each value stored as the change from the month
 #      before, and each plane as the change from the cell before, all mod 256
-#   3. two planes over the Köppen grid's land cells (kg.js, quarter degrees, row order): the mean height of the land in
-#      each cell, then its lowest point, each as a square-root byte from -500 to 7,000 m, stored as the change from the
+#   3. three planes over the Köppen grid's land cells (kg.js, quarter degrees, row order): the mean height of the land
+#      in each cell, its lowest point, then its highest, each as a square-root byte from -500 to 7,000 m, stored as the change from the
 #      cell to the west (sea counted as 0)
 import re, gzip, base64, numpy as np, zopfli.zlib as zz
 D = 'tmp/data/'
@@ -28,12 +28,12 @@ Z = np.vstack([band(k) for k in range(4)])[::-1].astype(np.float64)
 B = Z.reshape(720, 5, 1440, 5).transpose(0, 2, 1, 3).reshape(720, 1440, 25)
 L = np.where(B > 0, B, np.nan)
 with np.errstate(all='ignore'):
-    Hm = np.nanmean(L, axis=2); Hn = np.nanmin(L, axis=2)
-Hm = np.where(np.isnan(Hm), B.mean(axis=2), Hm); Hn = np.where(np.isnan(Hn), B.min(axis=2), Hn)
+    Hm = np.nanmean(L, axis=2); Hn = np.nanmin(L, axis=2); Hx = np.nanmax(L, axis=2)
+Hm = np.where(np.isnan(Hm), B.mean(axis=2), Hm); Hn = np.where(np.isnan(Hn), B.min(axis=2), Hn); Hx = np.where(np.isnan(Hx), B.max(axis=2), Hx)
 def plane(H):
     q = np.round(255 * np.sqrt((np.clip(H, -500, 7000) + 500) / 7500)).astype(np.int32); q[~m] = 0
     P = np.zeros_like(q); P[:, 1:] = q[:, :-1]; return ((q - P)[m] & 255).astype(np.uint8).tobytes(), q
-em, qm = plane(Hm); en, qn = plane(Hn)
+em, qm = plane(Hm); en, qn = plane(Hn); ex, qx = plane(Hx)
 # climate
 def load(v, n):
     a = np.loadtxt(gzip.open(D + f'cru_cl2_grid_10min_{v}.dat.gz', 'rt')); return a[:, 0], a[:, 1], a[:, 2:2 + n]
@@ -50,7 +50,7 @@ mk = np.zeros(720 * 360, np.uint8); mk[u] = 1
 dm = lambda Q: np.diff(np.concatenate([np.zeros((len(Q), 1), np.int64), Q], 1), axis=1) % 256
 dc = lambda x: (np.diff(np.concatenate([[0], x])) % 256).astype(np.uint8).tobytes()
 cru = b''.join(dc(dm(qT)[:, k]) for k in range(12)) + b''.join(dc(dm(qP)[:, k]) for k in range(12))
-raw = np.packbits(mk).tobytes() + cru + em + en
+raw = np.packbits(mk).tobytes() + cru + em + en + ex
 inner = zz.compress(raw, numiterations=15)[2:-4]
 open('src/data.js', 'w').write('// measured grids for the 2 MB rung: see tools/pack_data.py for what they are and where they come from\nexport const DATA = \'' + base64.b64encode(inner).decode() + '\';\n')
 print(f'CRU land cells {len(u)}, Köppen land cells {int(m.sum())}; {len(raw)} bytes raw -> {len(inner)} deflated -> {len(inner) * 4 // 3} base64')

@@ -39,6 +39,7 @@ import { valley } from './valley.js';
 import { logLand, leafLand, barkLand, microBuild } from './micro.js';
 import { rangeLand } from './range.js';
 import { elev } from './earth.js';
+import { horizon } from './horizon.js';
 import { mkErosion } from './erosion.js';
 import { lakeLand, underBuild, sheet } from './under.js';
 import { cave3 } from './cave3.js';
@@ -317,7 +318,7 @@ export function build(G, seed, q = 1, den = 1, stand) {
   G.trees.forEach((sp, i) => { pal.la.set(sp.leaf.a, i * 3); pal.lb.set(sp.leaf.b, i * 3); pal.ba.set(sp.bark.a, i * 3); pal.bb.set(sp.bark.b, i * 3); pal.bp.set([sp.bark.t, sp.bark.sc, TIER > 3 && sp.leaf.t === 1 ? 1 : 0, 0], i * 4); });
   pal.la.set(F.fa, 18); pal.lb.set(F.fb, 18); pal.la.set(F.ga, 21); pal.lb.set(F.gb, 21);
   const vy = TIER > 3 && (!G.span ? valley({ G, Hgt, strm, hs, seed, cap, low }) : G.world === 'cave' ? { cave: lv } : G.world === 'range' && { spot: lv.spot });
-  if (TIER > 3 && vy && lv && lv.mouth) vy.mouth = lv.mouth;   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
+  if (TIER > 3 && vy && lv && lv.mouth) vy.mouth = lv.mouth; if (TIER > 3 && vy && !G.span && G.cl && G.cl.elev != null) vy.hz = horizon(G.cl);   // the valley round the plot; or, in a cave, its roof   // the valley round the plot, and the nearest band of its forest
   const sr = rng(seed ^ 0x77);
   if (TIER > 3 && G.world === 'lake') water = sheet(Hgt, 0, -hs, hs, -hs, hs, 96);   // the lake's surface, seen from below
   if (TIER > 3 && G.world === 'cave') { const p = lv.sump, y = lv.floorAt(p[0], p[1] + 1, p[2]) + 0.7; water = sheet((x, z) => lv.floorAt(x, y + 0.3, z), y, p[0] - 7, p[0] + 7, p[2] - 7, p[2] + 7, 28); }   // the sump, where the stream's canyon ends in a pool

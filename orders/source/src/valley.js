@@ -13,11 +13,12 @@ export function valley({ G, Hgt, strm, hs, seed, cap, low }) {
   const lake = strm && { x: hs + 700, z: strm.zc(hs + 700), rx: 380, rz: 240 };
   if (lake) lake.y = strm.lvl(lake.x - lake.rx) - 0.05;
   const inLake = (x, z) => (lake ? ((x - lake.x) / lake.rx) ** 2 + ((z - lake.z) / lake.rz) ** 2 : 9);
+  const amp = G.cl && G.cl.mean != null ? min(1500, max(40, (G.cl.mean - G.cl.elev) * 0.9)) : 420;   // on Earth, how high the ridges stand over the floor is measured (the cell's mean over its lowest point); their shape is not
   const ridge = (x, z) => 1 - abs(2 * fbm(x * 0.0011 + ox, 5, z * 0.0011 + oz, 4) - 1);
   const H = (x, z) => {
     const b = Hgt(x, z), d = out(x, z); if (d <= 0) return b;
     const v = abs(strm ? z - strm.zc(x) : z), lk = inLake(x, z);
-    let m = 55 * (1 - exp(-((v / 260) ** 2))) + 420 * sm(350, 1900, v) * (0.45 + 0.8 * ridge(x, z)) + 180 * (fbm(x * 0.004 + oz, 2, z * 0.004 + ox, 3) - 0.5) * sm(80, 300, v);
+    let m = 55 * (1 - exp(-((v / 260) ** 2))) + amp * sm(350, 1900, v) * (0.45 + 0.8 * ridge(x, z)) + 180 * (fbm(x * 0.004 + oz, 2, z * 0.004 + ox, 3) - 0.5) * sm(80, 300, v);
     if (lake) m *= sm(1, 2.4, lk);                                          // the valley floor flattens round the lake
     let h = b + sm(0, 90, d) * m;
     if (lake && lk < 1.6) h = min(h, lake.y + 0.4 + (lk - 1) * 6 - (lk < 1 ? 7 * (1 - lk) : 0));   // the lake's bowl

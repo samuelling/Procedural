@@ -354,6 +354,18 @@ inflates when the page loads (about 0.1 s):
   by its rivers as before, then put back to the measured heights at their own 28 km scale. The sea is the Köppen grid's
   sea, so coasts are stepped at 28 km. Seen: the Andes above Quito with the Pacific to the west; the Alps around
   Innsbruck with the Adriatic to the south, lower and greener than they are, because a 28 km mean takes the peaks off.
+- **The horizon (round 3).** Around an Earth plot, the land out to 120 km is drawn behind the valley, in a depth range
+  of its own: the measured mean of each cell between the four nearest, ridged noise (modelled) that reaches toward
+  the cell's measured highest point on its crests, the sea where the cells are more sea than land, and the Earth
+  curving away (a radius of 1.15 times the Earth's, the usual allowance for the air bending light). Seen from above
+  Innsbruck's valley: forest to about 2 km, then distant pale tops; from Des Moines, flat land to the edge of sight.
+  The valley's own ridges now stand as high over the plot as the cell's measured mean stands over its lowest point
+  (854 m at Innsbruck, 40 m at Des Moines); their shape is still noise. A third height plane, each cell's highest
+  point, cost 164 kB. Rowan guessed 70 kB.
+- **One sun, one year (round 3).** On Earth the sun is placed for true north (south is +z, east +x, as on the range)
+  in every world you dive to. Its declination now runs smoothly through the year, not in four steps; the year starts
+  on 1 March, at the start of spring. Snow lies when the month's measured temperature, interpolated between months,
+  is below freezing at the plot. The seasonal snowline in the valley and the range rises and falls with it.
 
 ## The valley (2 MB rung)
 

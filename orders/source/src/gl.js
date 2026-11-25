@@ -317,7 +317,7 @@ export function mkRenderer(canvas, low) {
         buf(m.i, gl.ELEMENT_ARRAY_BUFFER); return { v, n: m.i.length, k: instances ? instances.length / 12 : 0 };
       };
       W = { bufs, vaos, caps: quads(B.caps), cards: quads(B.cards), land: mesh(B.land), nTop: B.land.nTop, stones: B.stones.map((m, i) => mesh(m, B.rocks[i])), water: TIER > 2 && B.water && mesh(B.water), pal: B.pal, G };
-      if (TIER > 3) { W.xm = B.xm && B.xm.map((m) => mesh(m)); W.tl = (G.cl && G.cl.tl) || [460, 1.85, 900, 2.95]; }   // the treeline: from the place's warmest month on Earth
+      if (TIER > 3) { W.xm = B.xm && B.xm.map((m) => mesh(m)); W.hz = B.hz && mesh(B.hz); }
       if (TIER > 3) W.str = B.strm && B.strm.ero ? [B.strm.ero.top, B.strm.ero.bot, 1] : [0, 0, 0];   // the rock bed a gorge cuts through
       if (TIER > 3) { W.far = B.far && mesh(B.far); W.farWater = B.farWater && mesh(B.farWater); const H = G.home || G, tot = H.trees.reduce((s, t) => s + (t.gone ? 0 : t.n), 0) || 1; W.for = [0, 1, 2].map((c) => H.trees.reduce((s, t) => s + (t.gone ? 0 : (t.leaf.a[c] + t.leaf.b[c]) * 0.5 * t.n), 0) / tot); }   // the range's forest is the colour of the forest you came from
       gl.bindVertexArray(null);
@@ -328,7 +328,7 @@ export function mkRenderer(canvas, low) {
       const G = W.G, pal = W.pal;
       const geometry = (PMx, PCx, PKx, view, K, R, or, nf, shadow) => {
         com(PMx, f, view, K, R, or, nf);
-        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PMx.uStr, W.str); gl.uniform3fv(PMx.uFor, W.for); gl.uniform4fv(PMx.uTl, W.tl); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
+        if (!shadow) { gl.uniform3fv(PMx.uRA, G.land.ra); gl.uniform3fv(PMx.uRB, G.land.rb); gl.uniform3fv(PMx.uLit, G.floor.lit); gl.uniform1f(PMx.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PMx.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PMx.uStr, W.str); gl.uniform3fv(PMx.uFor, W.for); gl.uniform4fv(PMx.uTl, f.tl); } if (TIER > 3) gl.uniform1f(PMx.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); }
         gl.bindVertexArray(W.land.v); gl.uniform1f(PMx.uMat, 1); gl.drawElements(gl.TRIANGLES, W.nTop, gl.UNSIGNED_SHORT, 0);
         if (!shadow) { gl.uniform1f(PMx.uMat, 2); gl.drawElements(gl.TRIANGLES, W.land.n - W.nTop, gl.UNSIGNED_SHORT, W.nTop * 2); }
         if (TIER > 3 && W.xm) { gl.uniform1f(PMx.uMat, 1); for (const m of W.xm) { gl.bindVertexArray(m.v); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0); } }   // rock in three dimensions: a cave
@@ -353,6 +353,7 @@ export function mkRenderer(canvas, low) {
       const nf = TIER > 3 ? f.nf : [0.1, 600], R = [w, h];
       gl.bindFramebuffer(gl.FRAMEBUFFER, T[0].f); gl.viewport(0, 0, w, h); gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST); com(PSK, f, f.V, f.K, R, 0, nf); gl.bindVertexArray(vQ); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.enable(gl.DEPTH_TEST);
+      if (TIER > 3 && W.hz) { com(PM, f, f.V, f.K, R, 0, [300, 2e5]); { gl.uniform3fv(PM.uRA, G.land.ra); gl.uniform3fv(PM.uRB, G.land.rb); gl.uniform3fv(PM.uLit, G.floor.lit); gl.uniform1f(PM.uLa, G.floor.la); if (TIER > 3) { gl.uniform1f(PM.uLeaf, G.world === 'leaf' ? 1 : G.world === 'bark' ? 2 : G.world === 'range' ? 3 : G.world === 'lake' ? 4 : G.world === 'cave' ? 5 : 0); gl.uniform3fv(PM.uStr, W.str); gl.uniform3fv(PM.uFor, W.for); gl.uniform4fv(PM.uTl, f.tl); } if (TIER > 3) gl.uniform1f(PM.uNdl, G.trees.reduce((s, t) => s + (t.leaf.t === 1 ? t.n : 0), 0) / Math.max(1, G.trees.reduce((s, t) => s + t.n, 0))); } gl.uniform1f(PM.uMat, 3); gl.bindVertexArray(W.hz.v); gl.drawElements(gl.TRIANGLES, W.hz.n, gl.UNSIGNED_SHORT, 0); gl.clear(gl.DEPTH_BUFFER_BIT); }   // the horizon, 3 to 120 km off, in a depth range of its own, behind everything
       geometry(PM, PC, PK, f.V, f.K, R, 0, nf, 0);
       if (TIER > 2 && f.pts.length) {                                    // the air: drawn over the scene, hidden by what is nearer, leaving the stored depth alone
         gl.enable(gl.BLEND); gl.depthMask(false); com(PPT, f, f.V, f.K, R, 0, nf); gl.bindVertexArray(vQ);

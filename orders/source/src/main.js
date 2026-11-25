@@ -92,8 +92,8 @@ function sun3() {
   const A = G.air, t0 = asin(pow((A.sun[0] - 6) / 62, 1 / 1.2)) / PI, dc = clamp(day, 0, 1), oc = TIER > 2 ? sstep(0.5, 1, f.wx[2]) : 0;
   let el = 6 + 62 * pow(sin(PI * dc), 1.2) - Math.abs(day - dc) * 160, az = (A.sun[1] + (day - t0) * 170) * RAD;   // past either end of the day the sun goes under
   if (TIER > 3 && G.cl) {                                                   // on Earth: the real sun for this latitude and season, the slider running from 3 in the morning to 9 at night
-    const la = G.cl.lat * RAD, dl = [0, 23.44, 0, -23.44][season] * (G.cl.south ? -1 : 1) * RAD, H = (day * 18 + 3 - 12) * 15 * RAD, se = sin(la) * sin(dl) + cos(la) * cos(dl) * cos(H);
-    el = asin(clamp(se, -1, 1)) / RAD; az = A.sun[1] * RAD + Math.atan2(sin(H), cos(H) * sin(la) - Math.tan(dl) * cos(la));
+    const la = G.cl.lat * RAD, dl = 23.44 * sin(2 * PI * (yearF - 0.054)) * (G.cl.south ? -1 : 1) * RAD, H = (day * 18 + 3 - 12) * 15 * RAD, se = sin(la) * sin(dl) + cos(la) * cos(dl) * cos(H);   // the sun's declination through the year (year 0 the first of March, the start of spring); the season here is local
+    el = asin(clamp(se, -1, 1)) / RAD; az = G.cl.az === 0 ? -Math.atan2(sin(H), cos(H) * sin(la) - Math.tan(dl) * cos(la)) : A.sun[1] * RAD + Math.atan2(sin(H), cos(H) * sin(la) - Math.tan(dl) * cos(la));   // a real place: south is +z, east +x, as on the range
   }
   const k = sstep(5, 38, el), grey = (c) => c.map((v) => v * (0.3 + 0.7 * k));
   night = TIER > 3 ? sstep(3, -7, el) : 0;
@@ -268,7 +268,7 @@ function frame(now) {
   view();
   if (TIER > 2) {                                                          // weather moves toward what was asked for; rain wets, snow settles, both pass slowly
     const w = WXS[wx], go = (i, to, r) => { const d = to - f.wx[i]; f.wx[i] += clamp(d, -r * dt, r * dt); return Math.abs(d) > 1e-3; };
-    let ch = go(2, w[0], 0.12); ch = go(0, w[2], w[2] ? 0.3 : 0.04) || ch; ch = go(1, max(w[3], season === 3 ? 0.95 * (TIER > 3 && G.cl ? G.cl.snow : 1) : 0), w[3] ? 0.08 : 0.03) || ch;
+    let ch = go(2, w[0], 0.12); ch = go(0, w[2], w[2] ? 0.3 : 0.04) || ch; ch = go(1, max(w[3], TIER > 3 && G.cl && G.cl.tl ? 0.95 * clamp(-mon() / 3, 0, 1) * clamp(G.cl.Pa / 300, 0.2, 1) : season === 3 ? 0.95 * (TIER > 3 && G.cl ? G.cl.snow : 1) : 0), w[3] ? 0.08 : 0.03) || ch;   // on Earth, snow lies when this month freezes
     const d = w[1] - fogK; if (Math.abs(d) > 1e-3) { fogK += clamp(d, -dt * 0.7, dt * 0.7); ch = 1; } f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke); if (smoke > 0.01) ch = 1;
     rainA += clamp(w[2] - rainA, -dt * 0.5, dt * 0.5); snowA += clamp(w[3] - snowA, -dt * 0.5, dt * 0.5); f.wx[3] = rainA;
     if (TIER > 3) { if (rainA > 0.8 && Math.random() < dt * 0.09) { flash = 1; if (audio) audio.boom(); } if (flash > 0.01) { flash *= Math.exp(-dt * 7) * (Math.random() < 0.3 ? 1.6 : 1); flash = min(flash, 1); ch = 1; } }
@@ -285,6 +285,8 @@ function frame(now) {
     R.life(LIFE.out, LIFE.step(calm ? 0 : dt, time, eye, night, yrs, season, f.wx[1]));
     if (audio && fr % 12 === 0) { audio.set(ws, 1 - night); audio.fx(rainA, B.strm ? clamp(1 - B.strm.dist(eye[0], eye[2]) / 16, 0, 1) : 0, night, season, TIER > 3 ? smoke : 0, TIER > 3 && key === 'earth' ? 'earth' + G.cl.now[0] : key, day); }
   }
+  if (TIER > 3) { const c = G.cl, t = c && c.tl, s = max(f.wx[1], f.se[1] * 0.6), m = t && max(0, mon()) / 6.5;   // the snowline: on Earth the higher of where this month freezes and where it never thaws, else fixed
+    f.tl = t ? [t[0], t[1], min(t[2], m * 1000), min(t[3], t[1] - t[0] / 1000 + m)].map((v, i) => i > 1 ? v * (1 - 0.7 * f.wx[1]) : v) : [460, 1.85, 900 - 630 * s, 2.95 - 1.77 * f.se[1]]; }
   if (TIER > 3) { f.nf = rad > 300 && !fp ? [2, 9000] : [0.1, 4000]; f.fog[0] = G.air.fog * fogK * (1 + 5 * smoke) * (fp || G.span ? 1 : clamp(70 / rad, 0.08, 1)); }   // from high up the valley's air is clear
   f.focus = TIER > 3 && fp ? f.focus + (fd - f.focus) * 0.15 : rad; f.shadow = dirty || fr % (ema < 0.02 ? 2 : 6) === 0; dirty = 0;   // the shadow map follows the wind when there is time for it
   if (TIER > 3) glideStep(now);
@@ -404,13 +406,16 @@ if (TIER > 3) {   // anywhere on Earth: a map of the measured climate classes; c
   $('b-grow').addEventListener('click', () => { if (pick2 && earthAt(pick2[0], pick2[1], +$('climb').value)) { $('earth').hidden = true; key = 'earth'; mut = 0; grow(); } });
 }
 for (const k in act) $('b-' + k).addEventListener('click', act[k]);
+// this month's temperature at the plot, between the measured months: the calendar month runs two ahead of the year
+// here, which starts on the first of March (eight in the south, where March is autumn)
+const mon = () => { const T = G.cl.T, x = ((yearF % 1) * 12 + (G.cl.south ? 8 : 2) - 0.5 + 12) % 12, i = Math.floor(x), u = x - i; return T[i] * (1 - u) + T[(i + 1) % 12] * u; };
 const setWx = (v) => { wx = v; $('b-wx').textContent = 'Weather: ' + v; }, setSea = (v) => {
   if (v === 0 && season !== 0 && LIFE) LIFE.spring();
   season = v; $('b-sea').textContent = SEA[v]; const dc = TIER > 3 && G.cl ? G.cl.dec : 1; f.se[0] = v === 2 ? dc : 0; f.se[1] = (v === 3 ? 1 : v === 2 ? 0.35 : 0) * dc; f.se[3] = v === 0 ? 1 : 0; dirty = 1;
 };
 if (TIER > 2) $('b-wx').addEventListener('click', () => setWx(WXN[(WXN.indexOf(wx) + 1) % WXN.length]));
 if (TIER > 3) {
-  $('b-sea').addEventListener('click', () => { const v = (season + 1) % 4; if (!v) year++; yearF = Math.floor(yearF) + (v ? 0 : 1) + v / 4 + 0.01; setSea(v); });
+  $('b-sea').addEventListener('click', () => { const v = (season + 1) % 4; if (!v) year++; yearF = Math.floor(yearF) + (v ? 0 : 1) + v / 4 + 0.01; setSea(v); if (TIER > 3) setSun(); });
   $('day').min = -120; $('day').max = 1120;
   $('b-rw').addEventListener('click', () => {
     if (G.world === 'range') { GENOMES.range.stage = max(0, (G.stage ?? 10) - 1); grow(1); return; }

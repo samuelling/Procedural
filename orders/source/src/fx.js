@@ -758,7 +758,7 @@ export const FEATHD = `
 // turf above the trees, snow on the tops, wet ground along the river
 export const FARD = `
   } else if (uMat > 2.5) {
-    float d = xx.x, alt = pw.y, sl = 1. - n.y, wetb = xx.y, tl = uTl.x + 50. * vn(pw.xz * .003), sn = mix(uTl.z, uTl.z * .3, max(uWx.y, uSe.y * .6)) + 40. * vn(pw.xz * .004 + 3.);
+    float d = xx.x, alt = pw.y, sl = 1. - n.y, wetb = xx.y, tl = uTl.x + 50. * vn(pw.xz * .003), sn = uTl.z + 40. * vn(pw.xz * .004 + 3.);
     float fo = smoothstep(.6, .42, sl) * smoothstep(tl + 25., tl - 25., alt) * (1. - smoothstep(.55, .85, wetb) * .6);
     vec3 cv = vor(pw.xz / 4.5), cs = vor((pw.xz + uSun.xz * 1.6) / 4.5);
     float crown = smoothstep(.95, .2, cv.x), lit = smoothstep(.1, .9, cs.x - cv.x + .5), dec = 1. - uNdl;
@@ -819,7 +819,7 @@ export const CAVEG = `
 export const RANGEG = `
   } else if (uMat < 1.5 && uLeaf > 2.5) {
     vec2 p = pw.xz; float y = pw.y, sl = 1. - n.y, w1 = vn(p * 1.3), w2 = vn(p * 5.3 + 3.), w3 = vn(p * 21. + 7.);
-    float tl = uTl.y + .4 * (w1 - .5) + .35 * n.x - .4 * sl, sn = mix(uTl.w, uTl.w * .4, uSe.y) + .35 * (w1 - .5) - .25 * n.x;
+    float tl = uTl.y + .4 * (w1 - .5) + .35 * n.x - .4 * sl, sn = uTl.w + .35 * (w1 - .5) - .25 * n.x;
     vec3 fo = mix(vec3(.04, .1, .045), vec3(.09, .17, .06), w2 * .7 + w3 * .3); if (uFor.g > .01) fo = mix(fo, uFor * (.3 + .35 * w2), .75);
     fo = mix(fo, mix(vec3(.42, .26, .06), vec3(.3, .14, .05), w3), uSe.x * smoothstep(1.3, .8, y) * smoothstep(.3, .7, w2) * .8);
     alb = mix(fo, mix(vec3(.24, .28, .12), vec3(.4, .37, .28), smoothstep(.2, .5, sl)) * (.85 + .3 * w3), smoothstep(tl - .12, tl + .12, y));

@@ -23,7 +23,7 @@ import { KG } from './kg.js';
 import { DATA } from './data.js';
 
 // the measured grids (see tools/pack_data.py), inflated by the browser once the page has loaded
-let ELM = null, ELN = null, CI = null, CT = null, CP = null;
+let ELM = null, ELN = null, ELX = null, CI = null, CT = null, CP = null;
 const hq = (q) => (q / 255) ** 2 * 7500 - 500;
 export const ready = TIER > 3 && new Response(new Blob([Uint8Array.from(atob(DATA), (c) => c.charCodeAt(0))]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer().then((b) => {
   const u = new Uint8Array(b), g = kg(), E = Math.expm1, L = Math.log1p(2500); let o = 32400, n = 0;
@@ -32,10 +32,16 @@ export const ready = TIER > 3 && new Response(new Blob([Uint8Array.from(atob(DAT
   CT = new Float32Array(n * 12); CP = new Float32Array(n * 12);
   for (let c = 0; c < n; c++) for (let k = 0, t = 0, p = 0; k < 12; k++) { t = (t + Q[c * 24 + k]) & 255; p = (p + Q[c * 24 + 12 + k]) & 255; CT[c * 12 + k] = t / 2 - 60; CP[c * 12 + k] = E(p / 255 * L); }
   const pl = () => { const q = new Uint8Array(1036800); for (let j = 0; j < 720; j++) for (let i = 0, P = 0; i < 1440; i++) { const x = j * 1440 + i; if (g[x]) { P = (P + u[o++]) & 255; q[x] = P; } else P = 0; } return q; };
-  ELM = pl(); ELN = pl();
+  ELM = pl(); ELN = pl(); ELX = pl();
 });
-// the measured mean height of the land (m) near a point, or null at sea or before the grids are in
-export const elev = (lat, lon) => { if (!ELM) return null; const [j, i] = cell(lat, lon), x = j * 1440 + i; return kg()[x] ? hq(ELM[x]) : null; };
+// the measured mean height of the land (m) at a point, between the four nearest cells (land ones only); null where
+// the point is more sea than land, or before the grids are in. Q picks the plane: ELM the mean, ELX the highest.
+export const top = (lat, lon) => elev(lat, lon, ELX);
+export const elev = (lat, lon, Q = ELM) => {
+  if (!Q) return null; const g = kg(), v = (90 - lat) * 4 - 0.5, u = (lon + 180) * 4 - 0.5, j = Math.floor(v), i = Math.floor(u), b = v - j, a = u - i; let s = 0, w = 0;
+  for (const [dj, di, k] of [[0, 0, (1 - a) * (1 - b)], [0, 1, a * (1 - b)], [1, 0, (1 - a) * b], [1, 1, a * b]]) { const x = cl(j + dj, 0, 719) * 1440 + (((i + di) % 1440) + 1440) % 1440; if (g[x]) { s += hq(Q[x]) * k; w += k; } }
+  return w < 0.5 ? null : s / w;
+};
 
 export const KC = ['Af', 'Am', 'As', 'Aw', 'BSh', 'BSk', 'BWh', 'BWk', 'Cfa', 'Cfb', 'Cfc', 'Csa', 'Csb', 'Csc', 'Cwa', 'Cwb', 'Cwc', 'Dfa', 'Dfb', 'Dfc', 'Dfd', 'Dsa', 'Dsb', 'Dsc', 'Dsd', 'Dwa', 'Dwb', 'Dwc', 'Dwd', 'EF', 'ET'];
 // the usual colours of Köppen maps, by class (approximate), and sea
@@ -160,7 +166,7 @@ export function earthGenome(p, G0, pool) {
   const lit = sc.map((v) => v * 1.3), grass = g === 'E' ? 900 : k[1] === 'S' || k === 'Aw' || k === 'As' ? 1400 : k[1] === 'W' ? 120 : B.floor.grass[0];
   const lat = Math.abs(p.lat).toFixed(1) + '°' + (p.lat < 0 ? 'S' : 'N') + ' ' + Math.abs(p.lon).toFixed(1) + '°' + (p.lon < 0 ? 'W' : 'E'), hr = (h) => { const m = round(h * 60); return ((m / 60) | 0) + ' h ' + String(m % 60).padStart(2, '0'); };
   const txt = lat + (p.climb ? ', ' + p.climb.toLocaleString() + ' m up' : '') + ' · ' + p.now + ' ' + describe(p.now) + (p.now !== p.code ? ' (' + p.code + ' at the foot)' : ' (measured)') + ' · ' + p.Ta.toFixed(1) + ' °C a year, ' + round(min(...p.T)) + ' to ' + round(Tmax) + ' by month, ' + round(p.Pa).toLocaleString() + ' mm' + (p.src ? ' (measured, CRU 1961–90' + (p.nud && (p.nud[0] || p.nud[1] !== 1 || p.nud[2] !== 1) ? ', nudged ' + (p.nud[0] >= 0 ? '+' : '') + p.nud[0] + ' °C, swing ×' + p.nud[1].toFixed(2) + ', rain ×' + p.nud[2].toFixed(2) + ' to fit the class' : '') + ')' : ' (modelled)') + (p.elev !== null && p.elev !== undefined ? ' · ground ' + round(max(p.elev, 0)).toLocaleString() + ' m (measured)' : '') + ' · daylight ' + hr(p.day[0]) + ' in ' + (p.south ? 'June' : 'December') + ', ' + hr(p.day[1]) + ' in ' + (p.south ? 'December' : 'June') + ' · ' + snm;
-  return { ...B, nm: 'Earth, ' + lat, cl: { ...p, txt, snow, dec: g === 'A' ? (k === 'Aw' || k === 'As' ? 0.4 : 0) : k[1] === 's' || k === 'BSh' || k === 'BWh' ? 0.2 : (r === 'au' ? 0.1 : 1), soil: sc },
+  return { ...B, nm: 'Earth, ' + lat, cl: { ...p, txt, az: 0, snow, dec: g === 'A' ? (k === 'Aw' || k === 'As' ? 0.4 : 0) : k[1] === 's' || k === 'BSh' || k === 'BWh' ? 0.2 : (r === 'au' ? 0.1 : 1), soil: sc },
     land: { ...B.land, stream: p.Pa > 700 && g !== 'B' && g !== 'E' ? [1.1, 6, 0.2, 4] : undefined, ra: dry ? [0.55, 0.45, 0.36] : B.land.ra, log: round(B.land.log * cl(dens, 0, 1)) },
     air: { ...B.air, fog: B.air.fog * (k === 'Af' || k === 'Am' ? 1.15 : dry ? 0.5 : 1), haze: dry ? [0.86, 0.8, 0.7] : B.air.haze, aur: abs(p.lat) > 58 ? 1 : 0 },
     floor: { ...B.floor, lit, la: g === 'E' ? 0.1 : B.floor.la, moss: g === 'E' ? 0.8 : dry ? 0.05 : cl(B.floor.moss * wetf, 0, 1), fern: [round((k === 'Af' || k === 'Am' ? 520 : dry || g === 'E' ? 0 : B.floor.fern[0]) * cl(wetf, 0, 1)), B.floor.fern[1]], grass: [grass, B.floor.grass[1]],
