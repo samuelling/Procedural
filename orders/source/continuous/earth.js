@@ -93,7 +93,7 @@ export function lights() {
   for (let i = 0; i < q.length; i++) a[i] = (q[i] / 15) ** 3; return (LIT = { w: 2160, h: 1080, a });
 }
 // the fine ground round the Go-to places (patchdata.js, from ETOPO 2022 15"): what the 6' map misses there, in metres,
-// tapered to nothing at each patch's edges; read bicubic, with how much of it is there (for holding back the invented
+// tapered to nothing at each patch's edges; read bilinear (the GPU reads the slope too, so its light stays smooth), with how much of it is there (for holding back the invented
 // octaves it replaces)
 let PAT = null;
 export function patches() {
@@ -106,8 +106,8 @@ const sst = (a, b, x) => { const t = min(1, max(0, (x - a) / (b - a))); return t
 export function patchAt(Pt, u) {
   const lat = asin(max(-1, min(1, u[2]))), lon = atan2(u[1], u[0]), N = Pt.N;
   for (let i = 0; i < Pt.n; i++) { const [la0, lo0] = Pt.o[i]; let dl = lon - lo0; dl -= 2 * PI * floor((dl + PI) / (2 * PI)); const x = dl / Pt.d, y = (la0 - lat) / Pt.d; if (x < 0 || y < 0 || x > N - 1 || y > N - 1) continue;
-    const ix = floor(x), iy = floor(y), fx = x - ix, fy = y - iy, wt = (t) => [((-t + 2) * t - 1) * t / 2, ((3 * t - 5) * t * t + 2) / 2, ((-3 * t + 4) * t + 1) * t / 2, (t - 1) * t * t / 2], wx = wt(fx), wy = wt(fy), A = Pt.a, o = i * N * N;
-    let h = 0; for (let b = 0; b < 4; b++) { const jj = min(N - 1, max(0, iy - 1 + b)); let r = 0; for (let c = 0; c < 4; c++) r += wx[c] * A[o + jj * N + min(N - 1, max(0, ix - 1 + c))]; h += wy[b] * r; }
+    const ix = min(N - 2, floor(x)), iy = min(N - 2, floor(y)), fx = x - ix, fy = y - iy, A = Pt.a, o = i * N * N + iy * N + ix;   // bilinear, as the GPU reads it
+    const h = (A[o] * (1 - fx) + A[o + 1] * fx) * (1 - fy) + (A[o + N] * (1 - fx) + A[o + N + 1] * fx) * fy;
     return { h, w: sst(0, 10, x) * sst(N - 1, N - 11, x) * sst(0, 10, y) * sst(N - 1, N - 11, y), i }; }
   return null;
 }

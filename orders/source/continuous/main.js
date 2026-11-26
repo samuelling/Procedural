@@ -281,7 +281,10 @@ function octaves(F) {
     S.dt = { tex: DT, h0, g: [(fx[0] - fx[1]) / (2 * e), 0, (fz[0] - fz[1]) / (2 * e)], H: [hxx, 0, hxz, 0, 0, 0, hxz, 0, hzz], m0: reliefAt(G, u) };
     if (G.real === 'earth' && !G.E) { const Pt = patches(), uf = nrm(foot), lat = Math.asin(uf[2]), lon = Math.atan2(uf[1], uf[0]); let bi = -1, bd = 0.021;   // the nearest Go-to place's fine ground, within 1.2 degrees
       Pt.o.forEach(([la0, lo0], i) => { const cl = la0 - Pt.d * (Pt.N - 1) / 2, co = lo0 + Pt.d * (Pt.N - 1) / 2, dd = Math.hypot(lat - cl, (((lon - co + PI) % (2 * PI) + 2 * PI) % (2 * PI) - PI) * Math.cos(lat)); if (dd < bd) { bd = dd; bi = i; } });
-      if (bi >= 0) { if (!DT.pat) DT.pat = texOf(Pt.N, Pt.N * Pt.n, gl.R32F, gl.RED, Pt.a, false); const at = patchOf(G, uf), here = at && at.i === bi; S.dt.pt = { i: bi, o: Pt.o[bi], d: Pt.d, h0: here ? at.h : 0, w0: here ? at.w : 0, N: Pt.N };
+      if (bi >= 0) { if (!DT.pat) { gl.activeTexture(gl.TEXTURE12); const A = Pt.a, N = Pt.N, T = new Float32Array(A.length * 4); for (let k = 0; k < A.length; k++) { const x = k % N, r = k - x, y = (r / N) % N, o = r - y * N; T[k * 4] = A[k]; T[k * 4 + 1] = (A[o + y * N + min(N - 1, x + 1)] - A[o + y * N + max(0, x - 1)]) / 2; T[k * 4 + 2] = (A[o + min(N - 1, y + 1) * N + x] - A[o + max(0, y - 1) * N + x]) / 2; } DT.pat = texOf(N, N * Pt.n, gl.RGBA32F, gl.RGBA, T, false); }   // (height and slope at each node)
+        const at = patchOf(G, uf), here = at && at.i === bi, [la0, lo0] = Pt.o[bi], px = (q) => { const v = nrm(madd(foot, toPlanet(F, q), 1)), lt = Math.asin(v[2]); let dl = Math.atan2(v[1], v[0]) - lo0; dl -= 2 * PI * floor((dl + PI) / (2 * PI)); return [dl / Pt.d, (la0 - lt) / Pt.d]; };
+        const x0 = px([0, 0, 0]), e = 200, Ja = [[e, 0, 0], [0, e, 0], [0, 0, e]].map((q) => { const a = px(q), b = px(q.map((v) => -v)); return [(a[0] - b[0]) / (2 * e), (a[1] - b[1]) / (2 * e)]; });   // where the foot lies in the patch, and per local metre
+        S.dt.pt = { i: bi, o: Pt.o[bi], d: Pt.d, h0: here ? at.h : 0, w0: here ? at.w : 0, N: Pt.N, x0, Jx: Ja.map((r) => r[0]), Jy: Ja.map((r) => r[1]) };
         gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D, DT.pat); gl.activeTexture(gl.TEXTURE0); } }
     gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, DT.dat); gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, DT.rel);
     if (DT.can) { gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, DT.can); } if (DT.lit) { gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D, DT.lit); } gl.activeTexture(gl.TEXTURE0);
@@ -297,7 +300,8 @@ const setNoise = (P) => {
   if (P.uRivC) gl.uniform1f(P.uRivC, S.rivC);
   if (P.uNpl) { gl.uniform1i(P.uNpl, S.pl ? 12 : 0); if (S.pl) { gl.uniform1i(P.uPlC, S.pl.cam); gl.uniform1f(P.uK0, S.pl.K0); gl.uniform1f(P.uOc, S.pl.Oc); } }
   if (P.uFootD) { gl.uniform3fv(P.uFootD, S.foot); gl.uniformMatrix3fv(P.uFrmD, false, S.F.flat()); }
-  if (P.uDw) { const d = S.dt; gl.uniform1i(P.uDw, d ? 1 : 0); if (d) { gl.uniform1i(P.uKd, G.kdat); gl.uniform1f(P.uDh0, d.h0); gl.uniform1f(P.uDm0, d.m0); gl.uniform3fv(P.uDg, d.g); gl.uniformMatrix3fv(P.uDH, false, d.H); gl.uniform2f(P.uDsz, G.dat.g.w, G.dat.g.h); gl.uniform1f(P.uDcell, G.dat.cell); gl.uniform1f(P.uDbase, G.base || 0); gl.uniform1i(P.uDat, 8); gl.uniform1i(P.uRel, 9); const pt = d.pt; gl.uniform1i(P.uPon, pt ? 1 : 0); if (pt) { gl.uniform4f(P.uPo, pt.o[0], pt.o[1], pt.d, pt.i * pt.N); gl.uniform1f(P.uPt0, pt.h0); gl.uniform1f(P.uPw0, pt.w0); gl.uniform1i(P.uPat, 12); } } }
+  if (P.uPat) gl.uniform1i(P.uPat, 12);
+  if (P.uDw) { const d = S.dt; gl.uniform1i(P.uDw, d ? 1 : 0); if (d) { gl.uniform1i(P.uKd, G.kdat); gl.uniform1f(P.uDh0, d.h0); gl.uniform1f(P.uDm0, d.m0); gl.uniform3fv(P.uDg, d.g); gl.uniformMatrix3fv(P.uDH, false, d.H); gl.uniform2f(P.uDsz, G.dat.g.w, G.dat.g.h); gl.uniform1f(P.uDcell, G.dat.cell); gl.uniform1f(P.uDbase, G.base || 0); gl.uniform1i(P.uDat, 8); gl.uniform1i(P.uRel, 9); const pt = d.pt; gl.uniform1i(P.uPon, pt ? 1 : 0); if (pt) { gl.uniform4f(P.uPo, pt.o[0], pt.o[1], pt.d, pt.i * pt.N); gl.uniform2fv(P.uPx0, pt.x0); gl.uniform3fv(P.uPJx, pt.Jx); gl.uniform3fv(P.uPJy, pt.Jy); gl.uniform1f(P.uPt0, pt.h0); gl.uniform1f(P.uPw0, pt.w0); } } }   // (the sampler always on its own unit: left at 0 it would point at the frame being drawn, and the draw is refused)
   if (P.uCrP) { gl.uniform1f(P.uCrP, S.dt && G.crP || 0); if (S.cr) { gl.uniform3fv(P.uCf, S.cr.f); gl.uniform3iv(P.uCb, S.cr.b); } }
   if (P.uCl) { gl.uniform1i(P.uCl, G.dat && G.dat.cl ? 1 : 0); gl.uniform1i(P.uClim, 9); gl.uniform1f(P.uSph, S.sph || 0); }
   if (P.uLapse) gl.uniform1f(P.uLapse, G.lapse ?? 6.5);
@@ -450,7 +454,7 @@ const common = (P) => {
 let flash = 0, flashC = [1, 1, 1];
 function frame(now) {
   const dt = min(0.1, (now - (frame.t || now)) / 1000); frame.t = now; fps += (1 / max(dt, 1e-3) - fps) * 0.05;
-  if (fps < 28 && scale > 0.5) scale *= 0.97; else if (fps > 50 && scale < 1) scale = min(1, scale * 1.02);
+  if (now - (frame.rs || 0) > 1500) { const L = [1, 0.85, 0.7, 0.6, 0.5], i = max(0, L.indexOf(scale)); if (fps < 28 && i < 4) { scale = L[i + 1]; frame.rs = now; } else if (fps > 50 && i > 0) { scale = L[i - 1]; frame.rs = now; } }   // the resolution in a few steps, each held a second and a half (resizing reallocates every buffer: done each frame it stutters)
   const dpr = min(devicePixelRatio || 1, 2) * scale; W = max(2, round(canvas.clientWidth * dpr)); Hp = max(2, round(canvas.clientHeight * dpr));
   if (canvas.width !== W || canvas.height !== Hp) { canvas.width = W; canvas.height = Hp; }
   fly(dt);
@@ -688,9 +692,19 @@ const LY = 9.4607e15, fmtBig = (m) => { for (const [u, n] of [[LY * 1e9, ' billi
 const fmtSmall = (m) => { for (const [u, n] of [[1e-6, ' µm'], [1e-9, ' nm'], [1e-12, ' pm'], [1e-15, ' fm'], [0, ' am']]) if (m >= u * 0.9999 || n === ' am') { const k = n === ' am' ? 1e-18 : u; return Number((m / k).toPrecision(2)) + n; } };
 const fmt = (m) => m >= 1e7 ? fmtBig(m) : m < 1e-6 ? fmtSmall(m) : m >= 1000 ? (m / 1000).toPrecision(m >= 1e4 ? 3 : 2).replace(/\.0+$/, '') + ' km' : m >= 1 ? Number(m.toPrecision(2)) + ' m' : m >= 0.01 ? Number((m * 100).toPrecision(2)) + ' cm' : m >= 1e-3 ? Number((m * 1000).toPrecision(2)) + ' mm' : Number((m * 1e6).toPrecision(2)) + ' µm';
 const BANDS = [[3e25, 'the cosmic web'], [3e23, 'clusters of galaxies'], [3e21, 'galaxies'], [3e19, 'a galaxy'], [3e16, 'neighbouring stars'], [3e13, 'a star alone'], [3e10, 'a planetary system'], [2e8, 'a planet and its moons'], [2e6, 'a planet'], [2e5, 'a continent'], [2e4, 'mountain ranges'], [2e3, 'a valley'], [200, 'a forest'], [20, 'a stand of trees'], [2, 'the ground'], [0.2, 'leaf litter'], [0.02, 'a handful of soil'], [2e-3, 'grains'], [2e-4, 'silt and cells'], [2e-6, 'clay'], [3e-8, 'a clay platelet'], [2e-9, 'terraces of atoms'], [3e-10, 'atoms'], [5e-11, 'an atom'], [2e-14, 'inside an atom'], [2e-15, 'a nucleus'], [3e-16, 'a proton'], [0, 'quarks and gluons']];
+// the HUD's distance: read back a frame or two later through a pixel buffer, so the CPU never waits on the GPU
+// (a plain readPixels stalls the pipeline: every sixth frame took twice as long, a visible hitch in any motion)
+const PB = { buf: null, sync: null, val: null };
+function pickLate(px, py) {
+  if (PB.sync) { if (gl.clientWaitSync(PB.sync, 0, 0) === gl.TIMEOUT_EXPIRED) return PB.val; gl.deleteSync(PB.sync); PB.sync = null; const o = new Float32Array(4); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, PB.buf); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, o); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); PB.val = o[0] < 1e11 ? o[0] : null; }
+  if (!FB) return PB.val; if (!PB.buf) { PB.buf = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, PB.buf); gl.bufferData(gl.PIXEL_PACK_BUFFER, 16, gl.STREAM_READ); }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.readBuffer(gl.COLOR_ATTACHMENT1); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, PB.buf);
+  gl.readPixels(Math.floor(px * W / canvas.clientWidth), Math.floor(Hp - 1 - py * Hp / canvas.clientHeight), 1, 1, gl.RGBA, gl.FLOAT, 0);
+  gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); gl.bindFramebuffer(gl.FRAMEBUFFER, null); PB.sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); return PB.val;
+}
 function hud() {
   if ((hud.n = (hud.n || 0) + 1) % 6) return;
-  const c = pick(canvas.clientWidth / 2, canvas.clientHeight / 2), d = micro.M.on && micro.M.s < 1.5e-9 ? micro.M.s * 1.2 : c ?? (micro.M.on ? micro.M.s : S.hc * 3), w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
+  const c = pickLate(canvas.clientWidth / 2, canvas.clientHeight / 2), d = micro.M.on && micro.M.s < 1.5e-9 ? micro.M.s * 1.2 : c ?? (micro.M.on ? micro.M.s : S.hc * 3), w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
   if (micro.M.on && c !== null && !micro.M.att) micro.M.s = c;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = micro.M.on && w < 0.05 ? micro.label(w) : BANDS.find((b) => w >= b[0])[1];
   $('alt').textContent = micro.M.on ? (micro.M.P[1] > 0 ? `${fmt(micro.M.P[1])} above the ` : 'in among the atoms of the ') + (micro.MATS[micro.M.mat] || { on: 'ground' }).on + (w < 2e-7 ? ' · finer than light can show: the colours are a convention' : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);

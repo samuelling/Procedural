@@ -398,20 +398,20 @@ float coarseRel(int r0, vec3 q, float cmin, float m0, out float dh, out vec3 g) 
 // relief scales the invented octaves finer than its cells; near the shore the invented part is held back (see dataGround)
 uniform int uDw, uKd; uniform highp sampler2D uDat, uRel; uniform float uDh0, uDm0, uDbase, uDcell; uniform vec3 uDg; uniform mat3 uDH; uniform vec2 uDsz;
 vec4 cubW(float t) { return vec4(((-t + 2.) * t - 1.) * t, (3. * t - 5.) * t * t + 2., ((-3. * t + 4.) * t + 1.) * t, (t - 1.) * t * t) * .5; }
-vec4 cubD(float t) { return vec4((-3. * t + 4.) * t - 1., (9. * t - 10.) * t, (-9. * t + 8.) * t + 1., (3. * t - 2.) * t) * .5; }   // (their slopes)
-// the measured fine ground near a Go-to place (see patchAt in earth.js): its height, slope, and how much of it is there
-uniform int uPon; uniform vec4 uPo; uniform float uPt0, uPw0; uniform highp sampler2D uPat;
+// the measured fine ground near a Go-to place (see patchAt in earth.js): its height, slope, and how much of it is there.
+// Where in the patch a point lies comes from the camera's foot (exact, from the CPU) and how that changes per metre:
+// GPU asin and atan are good to about 1e-4, a kilometre on the ground, which put the drawn ground a few hundred
+// metres off the one walked on. Linear over the 44 km is off by tens of metres at the edges, nothing near the camera.
+uniform int uPon; uniform vec4 uPo; uniform vec2 uPx0; uniform vec3 uPJx, uPJy; uniform float uPt0, uPw0; uniform highp sampler2D uPat;
 float patchG(vec3 q, out vec3 gq, out float wp) {
   gq = vec3(0.); wp = 0.; if (uPon == 0) return 0.;
-  vec3 p = uFootD + uFrmD * q, u = normalize(p); float lat = asin(clamp(u.z, -1., 1.)), lon = atan(u.y, u.x), dl = uPo.z, dn = lon - uPo.y; dn -= 6.2831853 * floor((dn + 3.14159265) / 6.2831853);
-  vec2 x = vec2(dn / dl, (uPo.x - lat) / dl); if (x.x < 0. || x.y < 0. || x.x > 95. || x.y > 95.) return 0.;
-  vec2 i = floor(x), f = x - i; vec4 wx = cubW(f.x), wy = cubW(f.y), dx = cubD(f.x), dy = cubD(f.y); float h = 0., hx = 0., hy = 0.;
-  for (int b = 0; b < 4; b++) { int jj = clamp(int(i.y) - 1 + b, 0, 95) + int(uPo.w); float r = 0., rd = 0.;
-    for (int a = 0; a < 4; a++) { float v = texelFetch(uPat, ivec2(clamp(int(i.x) - 1 + a, 0, 95), jj), 0).x; r += wx[a] * v; rd += dx[a] * v; }
-    h += wy[b] * r; hx += wy[b] * rd; hy += dy[b] * r; }
+  vec2 x = uPx0 + vec2(dot(uPJx, q), dot(uPJy, q)); if (x.x < 0. || x.y < 0. || x.x > 95. || x.y > 95.) return 0.;
+  ivec2 i = ivec2(min(floor(x), vec2(94.))); vec2 f = x - vec2(i); int r0 = int(uPo.w);   // bilinear, four reads: height, and the slope interpolated so the light stays smooth
+  vec4 a = texelFetch(uPat, ivec2(i.x, i.y + r0), 0), b = texelFetch(uPat, ivec2(i.x + 1, i.y + r0), 0), c = texelFetch(uPat, ivec2(i.x, i.y + 1 + r0), 0), e = texelFetch(uPat, ivec2(i.x + 1, i.y + 1 + r0), 0);
+  vec4 v = mix(mix(a, b, f.x), mix(c, e, f.x), f.y);
   vec2 sx = smoothstep(0., 10., x) * smoothstep(95., 85., x); wp = sx.x * sx.y;
-  float R = length(p); vec3 E = normalize(vec3(-u.y, u.x, 0.)), Nn = cross(u, E); gq = transpose(uFrmD) * (E * (hx / (dl * R * cos(lat))) - Nn * (hy / (dl * R)));
-  return h; }
+  gq = v.y * uPJx + v.z * uPJy;
+  return v.x; }
 float pdampG(float s, float w) { return 1. - w * clamp((s - 250.) / 750., 0., 1.); }
 vec2 dTC(vec3 u) { return vec2(atan(u.y, u.x) / 6.28318531 + .5, .5 - asin(clamp(u.z, -1., 1.)) / 3.14159265); }
 float dTex(vec3 u) {
