@@ -5,8 +5,13 @@
 // any distance the nearest stars of every class are as bright as each other and the sky is never empty or crowded.
 // The galaxy is a density (disc, spiral arms, bulge, dust lanes) the view is marched through; seen from inside it is
 // the band across the night sky behind the air, seen from outside a spiral.
+// Round the real Sun the stars are the real ones (stardata.js: every star the eye can see, and every star within 20
+// parsecs, at its measured place, distance, brightness and colour); invented stars only fill in below what the eye can
+// see, until you are a hundred parsecs out.
 import { rng, sunAt, H, climate, forestF } from './planet.js';
 import { helio, moonGeo, frame, toBody, fromBody, NGP, GC, unit } from './ephem.js';
+import { inflateSync } from 'fflate';
+import { STARS } from './stardata.js';
 // the real system: radius (m) and colour from afar of each body, and which world each is (REAL numbers in real.js)
 const RB = { mercury: [2.4397e6, [0.55, 0.52, 0.5], 102], venus: [6.0518e6, [0.95, 0.88, 0.7], 103], earth: [6.371e6, [0.35, 0.5, 0.8], 100], moon: [1.7374e6, [0.6, 0.58, 0.55], 101], mars: [3.3895e6, [0.8, 0.47, 0.32], 104],
   jupiter: [6.9911e7, [0.85, 0.75, 0.6], 105], saturn: [5.8232e7, [0.86, 0.78, 0.58], 106], uranus: [2.5362e7, [0.62, 0.83, 0.86], 107], neptune: [2.4622e7, [0.36, 0.5, 0.9], 108] };
@@ -91,14 +96,14 @@ void main() {
   const STAR_N = 6, SW = 2 * STAR_N + 1;
   const stars = prog(PRE + NOISE + `
 layout(location = 0) in vec2 aC;
-uniform ivec3 uCell; uniform vec3 uFrac, uCS, uCG, uGe1, uGe2, uGn; uniform float uC, uL, uK; uniform mat3 uM; uniform vec2 uPx;
+uniform ivec3 uCell; uniform vec3 uFrac, uCS, uCG, uGe1, uGe2, uGn; uniform float uC, uL, uK, uCap; uniform mat3 uM; uniform vec2 uPx;
 out vec3 vCol; out vec2 vQ;
 void main() {
   int i = gl_InstanceID, n = ${SW}; ivec3 o = ivec3(i % n, (i / n) % n, i / (n * n)) - ${STAR_N}; vec3 cell = vec3((uCell + o) & 1048575);
   vec3 h = h33(cell + uK * 17.13), j = h33(cell * 1.37 + uK * 3.1 + 7.7); vec3 rel = (vec3(o) + j - uFrac) * uC;   // where its star stands, from the camera
   vec3 gp = rel / ${KPC.toExponential()} + uCG, g = vec3(dot(gp, uGe1), dot(gp, uGe2), dot(gp, uGn));
   float p = .12 * stars3(g), d = length(rel / uC) * uC, edge = smoothstep(float(${STAR_N}) * uC, float(${STAR_N} - 1) * uC, max(abs(rel.x), max(abs(rel.y), abs(rel.z))));
-  float dp = d / ${PC.toExponential()}, bri = uL * (.3 + 1.4 * h.y * h.y) / (dp * dp) * .3 * edge;
+  float dp = d / ${PC.toExponential()}, bri = min(uL * (.3 + 1.4 * h.y * h.y) / (dp * dp) * .3 * edge, uCap);
   if (h.x > p || bri < 2e-4 || length((rel + uCS) / ${PC.toExponential()}) < .3) { gl_Position = vec4(2., 2., 2., 1.); return; }
   float T = 3000. + 2500. * pow(uK, .8) + 3000. * h.z;                       // brighter classes are hotter and bluer
   vCol = mix(vec3(1., .55, .25), vec3(.65, .75, 1.), clamp((T - 3000.) / 12000., 0., 1.)) * min(bri * 60., 8.);
@@ -107,6 +112,36 @@ void main() {
 }`, `#version 300 es
 precision highp float; in vec3 vCol; in vec2 vQ; layout(location = 0) out vec4 oC;
 void main() { float r = dot(vQ, vQ); if (r > 1.) discard; oC = vec4(vCol * exp(-r * 4.) * 2., 1.); }`);
+  // ---- the real stars: each instance one star, at its place in parsecs from the Sun, its light (10^(-0.4 M)) and B-V
+  const realS = prog(PRE + `
+layout(location = 0) in vec2 aC; layout(location = 1) in vec4 aS; layout(location = 2) in float aB;
+uniform vec3 uCSp; uniform mat3 uM; uniform vec2 uPx;
+out vec3 vCol; out vec2 vQ;
+void main() {
+  vec3 rel = aS.xyz - uCSp; float dp = length(rel), bri = 11.9 * aS.w / max(dp * dp, 1e-12);   // 11.9: a star of magnitude 6.5 just shows
+  if (bri < 2e-4) { gl_Position = vec4(2., 2., 2., 1.); return; }
+  float T = 4600. * (1. / (.92 * aB + 1.7) + 1. / (.92 * aB + .62));       // its temperature from its colour index (Ballesteros 2012)
+  vCol = mix(vec3(1., .55, .25), vec3(.65, .75, 1.), clamp((T - 3000.) / 12000., 0., 1.)) * min(bri * 60., 8.);
+  vec4 q = uVP * vec4(uM * rel, 1.); if (q.w <= 0.) { gl_Position = vec4(2., 2., 2., 1.); return; }
+  float sz = 1.3 + min(2.5, sqrt(bri * 60.) * .5); vQ = aC; gl_Position = vec4(q.xy + aC * uPx * sz * q.w, 0., q.w);
+}`, `#version 300 es
+precision highp float; in vec3 vCol; in vec2 vQ; layout(location = 0) out vec4 oC;
+void main() { float r = dot(vQ, vQ); if (r > 1.) discard; oC = vec4(vCol * exp(-r * 4.) * 2., 1.); }`);
+  let realVao = null, realN = 0;
+  function realStars() {
+    if (realVao) return;
+    const b = atob(STARS), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); const r = inflateSync(u), n = r[0] | r[1] << 8 | r[2] << 16 | r[3] << 24; let o = 4;
+    const p16 = () => { const a = new Uint16Array(n); for (let i = 0; i < n; i++) a[i] = r[o + i] | r[o + n + i] << 8; o += 2 * n; return a; }, p8 = () => { const a = r.subarray(o, o + n); o += n; return a; };
+    const dra = p16(), de = p16(), ld = p16(), am = p8(), bv = p8(), F = new Float32Array(n * 5); let ra = 0;
+    for (let i = 0; i < n; i++) { ra = (ra + dra[i]) & 65535; const a = ra / 65535 * 2 * PI, d = (de[i] / 65535 * 180 - 90) * PI / 180, dist = 10 ** (ld[i] / 65535 * 5 - 1);
+      F.set([dist * cos(d) * cos(a), dist * cos(d) * sin(a), dist * sin(d), 10 ** (-0.4 * (am[i] / 8 - 12)), bv[i] / 80 - 0.5], i * 5); }
+    realVao = gl.createVertexArray(); gl.bindVertexArray(realVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, F, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 20, 0); gl.vertexAttribDivisor(1, 1);
+    gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 20, 16); gl.vertexAttribDivisor(2, 1);
+    gl.bindVertexArray(null); realN = n;
+  }
   // ---- galaxies, and at larger scales clumps of them: the same lattice idea, megaparsec cells upward
   const GAL_N = 5, GW = 2 * GAL_N + 1;
   const gals = prog(PRE + NOISE + `
@@ -232,9 +267,11 @@ void main() {
       const camS = add(Lo.camI, Lo.star, -1), camG = add(Lo.camI, Lo.gc, -1), wrap = (x) => ((x % 1048576) + 1048576) % 1048576;
       gl.useProgram(stars.p); common(stars); gl.uniformMatrix3fv(stars.uM, false, M); gl.uniform2fv(stars.uPx, px); gl.uniform3fv(stars.uCS, camS); gl.uniform3fv(stars.uCG, camG.map((v) => v / KPC));
       gl.uniform3fv(stars.uGe1, Y.gal.e1); gl.uniform3fv(stars.uGe2, Y.gal.e2); gl.uniform3fv(stars.uGn, Y.gal.n);
+      const dSun = hypot(...camS) / PC; gl.uniform1f(stars.uCap, G.real ? (dSun < 20 ? 2.6e-4 : dSun < 100 ? 2.6e-4 * 10 ** ((dSun - 20) / 80 * 7) : 1e9) : 1e9);   // near the Sun the invented stars stay below what the eye can see
       for (let k = 0; k < 11; k++) { const c = PC * 2 ** k, f = camS.map((v) => v / c), ci = f.map(floor); if (hypot(...camS) > c * 2e6) continue;
         gl.uniform3i(stars.uCell, ...ci.map(wrap)); gl.uniform3fv(stars.uFrac, f.map((v, i) => v - ci[i])); gl.uniform1f(stars.uC, c); gl.uniform1f(stars.uL, 0.05 * 4 ** k); gl.uniform1f(stars.uK, k);
         gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, SW * SW * SW); }
+      if (G.real && dSun < 3e4) { realStars(); gl.useProgram(realS.p); common(realS); gl.uniformMatrix3fv(realS.uM, false, M); gl.uniform2fv(realS.uPx, px); gl.uniform3fv(realS.uCSp, camS.map((v) => v / PC)); gl.bindVertexArray(realVao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, realN); gl.bindVertexArray(quad); }
       gl.useProgram(gals.p); common(gals); gl.uniformMatrix3fv(gals.uM, false, M); gl.uniform2fv(gals.uPx, px); gl.uniform3fv(gals.uCG, camG.map((v) => v / MPC));
       for (let j = 0; j < 10; j++) { const c = MPC * 2 ** j, f = camG.map((v) => v / c), ci = f.map(floor); if (hypot(...camG) < 2e21 && j > 0) continue;
         gl.uniform3i(gals.uCell, ...ci.map(wrap)); gl.uniform3fv(gals.uFrac, f.map((v, i) => v - ci[i])); gl.uniform1f(gals.uC, c); gl.uniform1f(gals.uJ, j);

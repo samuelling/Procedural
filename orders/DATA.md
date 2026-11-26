@@ -26,6 +26,22 @@ Each is stored as the residual of the median edge predictor (MED, as in LOCO-I) 
   The Moon and Mars as the mean over half-degree cells in 50 m steps, Venus and Mercury over one-degree cells in 40 m
   steps, each raised by its lowest point plus a margin so none of it is
   under a sea.
+- **Fine ground round the Go-to places: ETOPO 2022 15 arc-seconds** (as above), fetched from NOAA's CoastWatch
+  ERDDAP server (`ETOPO_2022_v1_15s`): for each of the 24 places on the Earth, 96 × 96 cells (about 44 km) centred on
+  it, stored as the measured height less the page's own 6′ ground there (land only), tapered to nothing over the
+  outer 10 cells, in 5 m steps; packed by `source/tools/patchpack.py` into `source/continuous/patchdata.js`. Inside a
+  patch it replaces the invented octaves coarser than a kilometre.
+- **The Earth's lights at night: NASA Earth Observatory's Black Marble 2016** (Suomi NPP VIIRS day/night band;
+  Román et al. 2018; NASA imagery, public domain), the 3 km colour composite, its lights taken as what is warmer than
+  the moonlit ground, back to linear light, averaged over sixth-of-a-degree cells, 16 levels of the cube root
+  (`source/tools/lightpack.py`, `source/continuous/lightdata.js`). Drawn on the night side from afar; near by, the
+  invented towns are drawn instead.
+- **The stars: the HYG database v3.8** (David Nash, astronexus.com; CC BY-SA 4.0, so this derived table is shared
+  under the same terms), itself from the Hipparcos, Yale Bright Star and Gliese catalogues: every star of visual
+  magnitude 6.5 or brighter and every star within 20 parsecs, 10,526 in all, with its J2000 direction, distance
+  (unknown distances set to 500 pc, the brightness kept as seen from the Sun), absolute magnitude and B−V colour
+  (`source/tools/starpack.py`, `source/continuous/stardata.js`). Invented stars are held below naked-eye brightness
+  until 100 pc from the Sun.
 - **Not data, but measured:** planet positions from JPL's approximate Keplerian elements (Standish), the Moon from
   the largest terms of its theory, the turning of every body from the IAU rotation models (Archinal et al. 2011),
   the Milky Way's orientation from the IAU galactic pole and centre. Everything finer than the maps (the octaves of

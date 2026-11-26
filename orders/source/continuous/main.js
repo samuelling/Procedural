@@ -1,5 +1,6 @@
 // Worlds, continuous: a family of invented planets, each grown from its own genome (planet.js), each viewed at any
 // scale without a cut, from the whole globe down to the cells of a leaf, and joined by wormholes (wormhole.js).
+import { lights, patches } from './earth.js';
 import { K, sOf, H, H0, river, RIVD, genome, octTable, climate, GLSL_NOISE, GLSL_GROUND, GLSL_CLIMATE, MASKK, octN, TREE, AX, LOT } from './planet.js';
 import { mkCity } from './city.js';
 import { mkFauna } from './fauna.js';
@@ -17,7 +18,7 @@ import { mkSky } from './sky.js';
 import { mkHoles, RL4 } from './wormhole.js';
 import { realWorld, REAL, region, NAMES } from './real.js';
 import { dayOf, msOf, moonGeo, helio, frame as bodyFrame, toBody, unit as unitV } from './ephem.js';
-import { dataH, reliefAt, lakeAt, speciesW, CRS } from './planet.js';
+import { dataH, reliefAt, lakeAt, speciesW, CRS, patchOf } from './planet.js';
 
 const $ = (id) => document.getElementById(id), canvas = $('c');
 const gl = canvas.getContext('webgl2', { antialias: false, depth: false, alpha: false, powerPreference: 'high-performance' });
@@ -138,7 +139,7 @@ void main() {
 }`, PRE + GLSL_NOISE + GLSL_GROUND + CLIM + SPEC + `
 in vec3 vP, vQ, vGr; in vec2 vPl; in float vW, vCe, vH, vM, vPw, vBu;
 uniform float uG0, uNight; uniform vec4 uFine; uniform vec3 uFoot, uTf, uLf; uniform ivec3 uTb, uLb; uniform mat3 uF;
-uniform vec3 uGrass, uDry, uSoil, uRock, uSand, uLiq; uniform float uGiant, uSnowOff, uHmid, uHalb; uniform int uCan; uniform highp sampler2D uCanT;
+uniform vec3 uGrass, uDry, uSoil, uRock, uSand, uLiq; uniform float uGiant, uSnowOff, uHmid, uHalb; uniform int uCan, uLit; uniform highp sampler2D uCanT, uLitT;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 float vor(vec2 u, out float id) { vec2 i = floor(u), f = u - i; float d = 9.; id = 0.; for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 o = vec2(x, y), r = o + vec2(h1(i + o), h1(i + o + 7.3)) - f; float e = dot(r, r); if (e < d) { d = e; id = h1(i + o + 3.1); } } return sqrt(d); }
 void main() {
@@ -226,6 +227,7 @@ void main() {
     if (hA < 0.) { alb = mix(uSand * .8, uSoil * .5, smoothstep(5., 60., -hA)) * (.8 + .4 * NF(wp, 3.)); dif *= .6 + 1.1 * pow(1. - abs(n2(wp * .9 + vec2(uT * .5, uT * .37)) * 2. - 1.), 5.) * smoothstep(40., 2., -hA); }   // the sea bed: sand, then mud, under rippling caustics
     col = alb * (uSunC * dif + uSky * am * .55 * (.15 + .85 * smoothstep(-.2, .2, dot(up, uSun)))); }
   col += em;
+  if (uLit > 0) col += vec3(1., .7, .4) * texture(uLitT, dTC(normalize(uFootD + uFrmD * vQ))).r * .35 * smoothstep(.04, -.12, dot(up, uSun)) * smoothstep(2e3, 3e4, d);   // the lights of the night side, measured (seen from afar: near by, the towns are drawn)
   col = air(col, normalize(vP), d, uAlt, max(hA, 0.));
   // what the microscope finds here: 2 water, 3 snow, 4 sand, 5 rock, 1 soil (and on airless worlds, regolith)
   float mrk = smoothstep(.42, .62, sl + .1 * NF(wp, 30.)) * (1. - fo * .7), msd = max(1. - smoothstep(.12, .3, W), smoothstep(5., 1.5, hA) * (1. - fo) * step(pdep, -1.));
@@ -252,7 +254,7 @@ function texOf(w, h, fmt, f, data, lin) { const t = gl.createTexture(); gl.bindT
   for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, lin ? gl.LINEAR : gl.NEAREST], [gl.TEXTURE_MAG_FILTER, lin ? gl.LINEAR : gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v); return t; }
 function dataTex(Gd) {
   if (!Gd.dat) return null; const key = Gd.real + (Gd.E || 0); if (dtex.has(key)) return dtex.get(key); const D = Gd.dat; let o;
-  if (D.cl) { const base = dtex.get(Gd.real + '0'); o = base && base.dat ? { ...base } : { dat: texOf(D.g.w, D.g.h, gl.RG16F, gl.RG, D.g.a, false), rel: texOf(D.cl.w, D.cl.h, gl.RGBA16F, gl.RGBA, D.cl.a, true) }; o.can = texOf(360 * 2, 180 * 2, gl.RGBA16F, gl.RGBA, canopy(Gd), true); }
+  if (D.cl) { const base = dtex.get(Gd.real + '0'); o = base && base.dat ? { ...base } : { dat: texOf(D.g.w, D.g.h, gl.RG16F, gl.RG, D.g.a, false), rel: texOf(D.cl.w, D.cl.h, gl.RGBA16F, gl.RGBA, D.cl.a, true) }; o.can = texOf(360 * 2, 180 * 2, gl.RGBA16F, gl.RGBA, canopy(Gd), true); if (Gd.real === 'earth' && !Gd.E) { const Lt = lights(); o.lit = texOf(Lt.w, Lt.h, gl.R16F, gl.RED, Lt.a, true); } }
   else { const t = texOf(D.g.w, D.g.h, gl.RGBA16F, gl.RGBA, D.g.a, true); o = { dat: t, rel: t }; }
   gl.activeTexture(gl.TEXTURE0); dtex.set(key, o); return o;
 }
@@ -277,8 +279,12 @@ function octaves(F) {
     const hxx = (fx[0] - 2 * h0 + fx[1]) / (e * e), hzz = (fz[0] - 2 * h0 + fz[1]) / (e * e), hxz = (f([e, 0, e]) - f([e, 0, -e]) - f([-e, 0, e]) + f([-e, 0, -e])) / (4 * e * e);
     if (G.crP) { const f = new Float32Array(15), b = new Int32Array(15); CRS.forEach((Sc, s) => foot.forEach((v, i) => { const x = v / Sc, fl = floor(x); f[s * 3 + i] = x - fl; b[s * 3 + i] = ((fl % 1048576) + 1048576) % 1048576; })); S.cr = { f, b }; }
     S.dt = { tex: DT, h0, g: [(fx[0] - fx[1]) / (2 * e), 0, (fz[0] - fz[1]) / (2 * e)], H: [hxx, 0, hxz, 0, 0, 0, hxz, 0, hzz], m0: reliefAt(G, u) };
+    if (G.real === 'earth' && !G.E) { const Pt = patches(), uf = nrm(foot), lat = Math.asin(uf[2]), lon = Math.atan2(uf[1], uf[0]); let bi = -1, bd = 0.021;   // the nearest Go-to place's fine ground, within 1.2 degrees
+      Pt.o.forEach(([la0, lo0], i) => { const cl = la0 - Pt.d * (Pt.N - 1) / 2, co = lo0 + Pt.d * (Pt.N - 1) / 2, dd = Math.hypot(lat - cl, (((lon - co + PI) % (2 * PI) + 2 * PI) % (2 * PI) - PI) * Math.cos(lat)); if (dd < bd) { bd = dd; bi = i; } });
+      if (bi >= 0) { if (!DT.pat) DT.pat = texOf(Pt.N, Pt.N * Pt.n, gl.R32F, gl.RED, Pt.a, false); const at = patchOf(G, uf), here = at && at.i === bi; S.dt.pt = { i: bi, o: Pt.o[bi], d: Pt.d, h0: here ? at.h : 0, w0: here ? at.w : 0, N: Pt.N };
+        gl.activeTexture(gl.TEXTURE12); gl.bindTexture(gl.TEXTURE_2D, DT.pat); gl.activeTexture(gl.TEXTURE0); } }
     gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, DT.dat); gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, DT.rel);
-    if (DT.can) { gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, DT.can); } gl.activeTexture(gl.TEXTURE0);
+    if (DT.can) { gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, DT.can); } if (DT.lit) { gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D, DT.lit); } gl.activeTexture(gl.TEXTURE0);
   }
   S.axis = toLocal(F, G.axis); S.sun = toLocal(F, sunAt(G, G.t || 0)); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
   S.tb = foot.map((v) => floor(v / TREE)); S.tf = foot.map((v, i) => v / TREE - S.tb[i]); S.lb = foot.map((v) => floor(v / LOT)); S.lf = foot.map((v, i) => v / LOT - S.lb[i]);
@@ -291,7 +297,7 @@ const setNoise = (P) => {
   if (P.uRivC) gl.uniform1f(P.uRivC, S.rivC);
   if (P.uNpl) { gl.uniform1i(P.uNpl, S.pl ? 12 : 0); if (S.pl) { gl.uniform1i(P.uPlC, S.pl.cam); gl.uniform1f(P.uK0, S.pl.K0); gl.uniform1f(P.uOc, S.pl.Oc); } }
   if (P.uFootD) { gl.uniform3fv(P.uFootD, S.foot); gl.uniformMatrix3fv(P.uFrmD, false, S.F.flat()); }
-  if (P.uDw) { const d = S.dt; gl.uniform1i(P.uDw, d ? 1 : 0); if (d) { gl.uniform1i(P.uKd, G.kdat); gl.uniform1f(P.uDh0, d.h0); gl.uniform1f(P.uDm0, d.m0); gl.uniform3fv(P.uDg, d.g); gl.uniformMatrix3fv(P.uDH, false, d.H); gl.uniform2f(P.uDsz, G.dat.g.w, G.dat.g.h); gl.uniform1f(P.uDcell, G.dat.cell); gl.uniform1f(P.uDbase, G.base || 0); gl.uniform1i(P.uDat, 8); gl.uniform1i(P.uRel, 9); } }
+  if (P.uDw) { const d = S.dt; gl.uniform1i(P.uDw, d ? 1 : 0); if (d) { gl.uniform1i(P.uKd, G.kdat); gl.uniform1f(P.uDh0, d.h0); gl.uniform1f(P.uDm0, d.m0); gl.uniform3fv(P.uDg, d.g); gl.uniformMatrix3fv(P.uDH, false, d.H); gl.uniform2f(P.uDsz, G.dat.g.w, G.dat.g.h); gl.uniform1f(P.uDcell, G.dat.cell); gl.uniform1f(P.uDbase, G.base || 0); gl.uniform1i(P.uDat, 8); gl.uniform1i(P.uRel, 9); const pt = d.pt; gl.uniform1i(P.uPon, pt ? 1 : 0); if (pt) { gl.uniform4f(P.uPo, pt.o[0], pt.o[1], pt.d, pt.i * pt.N); gl.uniform1f(P.uPt0, pt.h0); gl.uniform1f(P.uPw0, pt.w0); gl.uniform1i(P.uPat, 12); } } }
   if (P.uCrP) { gl.uniform1f(P.uCrP, S.dt && G.crP || 0); if (S.cr) { gl.uniform3fv(P.uCf, S.cr.f); gl.uniform3iv(P.uCb, S.cr.b); } }
   if (P.uCl) { gl.uniform1i(P.uCl, G.dat && G.dat.cl ? 1 : 0); gl.uniform1i(P.uClim, 9); gl.uniform1f(P.uSph, S.sph || 0); }
   if (P.uLapse) gl.uniform1f(P.uLapse, G.lapse ?? 6.5);
@@ -481,7 +487,7 @@ function frame(now) {
   gl.uniform1f(tprog.uH0, S.g0 - S.cy); gl.uniform1f(tprog.uG0, S.g0); gl.uniformMatrix3fv(tprog.uF, false, S.F.flat()); gl.uniform3fv(tprog.uFoot, S.foot);
   gl.uniform3fv(tprog.uTf, S.tf); gl.uniform3i(tprog.uTb, ...S.tb); gl.uniform3fv(tprog.uLf, S.lf); gl.uniform3i(tprog.uLb, ...S.lb); gl.uniform1f(tprog.uNight, S.night);
   for (const [n, v] of [['uGrass', G.grass], ['uDry', G.grassDry], ['uSoil', G.soil], ['uRock', G.rock], ['uSand', G.sand], ['uLiq', G.liquid]]) gl.uniform3fv(tprog[n], v);
-  gl.uniform1f(tprog.uGiant, G.giant ? 1 : 0); gl.uniform1f(tprog.uHalb, G.hMid ? 1 : 0); gl.uniform1f(tprog.uHmid, G.hMid || 0); gl.uniform1f(tprog.uSnowOff, G.snowOff || 0); gl.uniform1i(tprog.uCan, S.dt && S.dt.tex.can ? 1 : 0); gl.uniform1i(tprog.uCanT, 10);
+  gl.uniform1f(tprog.uGiant, G.giant ? 1 : 0); gl.uniform1f(tprog.uHalb, G.hMid ? 1 : 0); gl.uniform1f(tprog.uHmid, G.hMid || 0); gl.uniform1f(tprog.uSnowOff, G.snowOff || 0); gl.uniform1i(tprog.uCan, S.dt && S.dt.tex.can ? 1 : 0); gl.uniform1i(tprog.uCanT, 10); gl.uniform1i(tprog.uLit, S.dt && S.dt.tex.lit ? 1 : 0); gl.uniform1i(tprog.uLitT, 11);
   gl.bindVertexArray(grid.vao);
   const c0 = max(min(S.hc / 40, G.R / 150), 1e-6), Rr = G.R + max(S.cy, 0), horizon = G.R * acos(min(1, G.R / Rr)) + 2 * max(S.hc, 0), reach = min(PI * G.R * 0.98, max(8000, horizon * 1.15, S.hc * 40));
   let fine = [1, 1, -1, -1];

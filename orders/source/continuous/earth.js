@@ -3,6 +3,8 @@
 // map becomes a grid of floats here (for the camera, picking and placing) and a texture (for drawing).
 import { inflateSync } from 'fflate';
 import { EARTH } from './earthdata.js';
+import { LIGHTS } from './lightdata.js';
+import { PATCHES } from './patchdata.js';
 
 const { floor, max, min, sqrt, hypot, asin, atan2, PI, abs } = Math;
 let raw = null, hdr = null;
@@ -83,6 +85,31 @@ export function earth() {
   const gm = Gn.w * Gn.h, gen = new Uint16Array(gm); for (let k = 0; k < gm; k++) gen[k] = Gn.b[k] | Gn.b[gm + k] << 8;
   EARTHD = { g, cl, r: cl, gen, gw: Gn.w, gh: Gn.h, cell: 2 * PI * 6.371e6 / W };
   return EARTHD;
+}
+// the Earth's lights at night (lightdata.js, from NASA's Black Marble 2016): sixth-of-a-degree cells, linear light 0 .. 1
+let LIT = null;
+export function lights() {
+  if (LIT) return LIT; const b = atob(LIGHTS), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); const q = inflateSync(u), a = new Float32Array(q.length);
+  for (let i = 0; i < q.length; i++) a[i] = (q[i] / 15) ** 3; return (LIT = { w: 2160, h: 1080, a });
+}
+// the fine ground round the Go-to places (patchdata.js, from ETOPO 2022 15"): what the 6' map misses there, in metres,
+// tapered to nothing at each patch's edges; read bicubic, with how much of it is there (for holding back the invented
+// octaves it replaces)
+let PAT = null;
+export function patches() {
+  if (PAT) return PAT; const b = atob(PATCHES), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); const r = inflateSync(u), hl = r[0] | r[1] << 8 | r[2] << 16 | r[3] << 24;
+  const H = JSON.parse(new TextDecoder().decode(r.subarray(4, 4 + hl))), N = H.N, nn = N * N, M = H.n * nn, lo = r.subarray(4 + hl, 4 + hl + M), hi = r.subarray(4 + hl + M, 4 + hl + 2 * M), a = new Float32Array(M), R = PI / 180;
+  for (let i = 0; i < H.n; i++) { const q = unmed(lo.subarray(i * nn, (i + 1) * nn), N, N, 65536, hi.subarray(i * nn, (i + 1) * nn), -32768); for (let k = 0; k < nn; k++) a[i * nn + k] = q[k] * H.step; }
+  return (PAT = { n: H.n, N, d: H.d * R, o: H.o.map(([la, lo]) => [la * R, lo * R]), a });
+}
+const sst = (a, b, x) => { const t = min(1, max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+export function patchAt(Pt, u) {
+  const lat = asin(max(-1, min(1, u[2]))), lon = atan2(u[1], u[0]), N = Pt.N;
+  for (let i = 0; i < Pt.n; i++) { const [la0, lo0] = Pt.o[i]; let dl = lon - lo0; dl -= 2 * PI * floor((dl + PI) / (2 * PI)); const x = dl / Pt.d, y = (la0 - lat) / Pt.d; if (x < 0 || y < 0 || x > N - 1 || y > N - 1) continue;
+    const ix = floor(x), iy = floor(y), fx = x - ix, fy = y - iy, wt = (t) => [((-t + 2) * t - 1) * t / 2, ((3 * t - 5) * t * t + 2) / 2, ((-3 * t + 4) * t + 1) * t / 2, (t - 1) * t * t / 2], wx = wt(fx), wy = wt(fy), A = Pt.a, o = i * N * N;
+    let h = 0; for (let b = 0; b < 4; b++) { const jj = min(N - 1, max(0, iy - 1 + b)); let r = 0; for (let c = 0; c < 4; c++) r += wx[c] * A[o + jj * N + min(N - 1, max(0, ix - 1 + c))]; h += wy[b] * r; }
+    return { h, w: sst(0, 10, x) * sst(N - 1, N - 11, x) * sst(0, 10, y) * sst(N - 1, N - 11, y), i }; }
+  return null;
 }
 const BODIES = new Map();
 // a rocky body's ground: a one-degree map of height (above the lowest point, plus a margin: nothing there is under

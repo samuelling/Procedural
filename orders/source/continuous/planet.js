@@ -9,7 +9,7 @@
 // in double precision (for the camera, picking and placing) and in GLSL (for drawing). They agree to the bit in the
 // lattice hash and to float precision elsewhere.
 
-import { earth, body, genAt } from './earth.js';
+import { earth, body, genAt, patches, patchAt } from './earth.js';
 import { sunReal } from './ephem.js';
 export { earth, body, genAt };
 export const K = 40, LS = 22, GOLD = 2.39996323, PLA = 1.32471795724;
@@ -160,9 +160,12 @@ export function H0(G, p, kmax = K) {
 export const dataH = (G, u) => G.dat.g.cubicC(u) + (G.base || 0);
 export const reliefAt = (G, u) => G.dat.r.lin(u, 3);
 export const damp = (hd, d) => (hd > 0) === (d < 0) ? d * (0.04 + 0.96 * ss(0, 80, Math.abs(hd))) : d;
+// near a Go-to place on the Earth the measured fine ground is added (patchAt), and holds back the invented octaves it replaces
+export const pdamp = (k, w) => 1 - w * Math.min(1, Math.max(0, (sOf(k) - 250) / 750));
+export const patchOf = (G, u) => (G.real === 'earth' && !G.E ? patchAt(patches(), u) : null);
 function dataGround(G, q, kmax) {
-  const l = Math.hypot(...q), u = q.map((v) => v / l), hd = dataH(G, u), m = reliefAt(G, u);
-  let c = 0; for (let k = G.kdat; k < Math.min(kmax, KD); k++) c += G.amp[k] * (octN(G, k, q) - 0.5);
+  const l = Math.hypot(...q), u = q.map((v) => v / l), pt = patchOf(G, u), hd = dataH(G, u) + (pt ? pt.h : 0), m = reliefAt(G, u), wp = pt ? pt.w : 0;
+  let c = 0; for (let k = G.kdat; k < Math.min(kmax, KD); k++) c += G.amp[k] * pdamp(k, wp) * (octN(G, k, q) - 0.5);
   return hd + damp(hd, m * c) + fineH(G, q, kmax) + (G.crP && kmax > 12 ? craters(G, q) : 0);
 }
 // craters, on the airless worlds: invented, finer than their maps (24 km cells down to 95 m), each a bowl with a raised
@@ -395,6 +398,21 @@ float coarseRel(int r0, vec3 q, float cmin, float m0, out float dh, out vec3 g) 
 // relief scales the invented octaves finer than its cells; near the shore the invented part is held back (see dataGround)
 uniform int uDw, uKd; uniform highp sampler2D uDat, uRel; uniform float uDh0, uDm0, uDbase, uDcell; uniform vec3 uDg; uniform mat3 uDH; uniform vec2 uDsz;
 vec4 cubW(float t) { return vec4(((-t + 2.) * t - 1.) * t, (3. * t - 5.) * t * t + 2., ((-3. * t + 4.) * t + 1.) * t, (t - 1.) * t * t) * .5; }
+vec4 cubD(float t) { return vec4((-3. * t + 4.) * t - 1., (9. * t - 10.) * t, (-9. * t + 8.) * t + 1., (3. * t - 2.) * t) * .5; }   // (their slopes)
+// the measured fine ground near a Go-to place (see patchAt in earth.js): its height, slope, and how much of it is there
+uniform int uPon; uniform vec4 uPo; uniform float uPt0, uPw0; uniform highp sampler2D uPat;
+float patchG(vec3 q, out vec3 gq, out float wp) {
+  gq = vec3(0.); wp = 0.; if (uPon == 0) return 0.;
+  vec3 p = uFootD + uFrmD * q, u = normalize(p); float lat = asin(clamp(u.z, -1., 1.)), lon = atan(u.y, u.x), dl = uPo.z, dn = lon - uPo.y; dn -= 6.2831853 * floor((dn + 3.14159265) / 6.2831853);
+  vec2 x = vec2(dn / dl, (uPo.x - lat) / dl); if (x.x < 0. || x.y < 0. || x.x > 95. || x.y > 95.) return 0.;
+  vec2 i = floor(x), f = x - i; vec4 wx = cubW(f.x), wy = cubW(f.y), dx = cubD(f.x), dy = cubD(f.y); float h = 0., hx = 0., hy = 0.;
+  for (int b = 0; b < 4; b++) { int jj = clamp(int(i.y) - 1 + b, 0, 95) + int(uPo.w); float r = 0., rd = 0.;
+    for (int a = 0; a < 4; a++) { float v = texelFetch(uPat, ivec2(clamp(int(i.x) - 1 + a, 0, 95), jj), 0).x; r += wx[a] * v; rd += dx[a] * v; }
+    h += wy[b] * r; hx += wy[b] * rd; hy += dy[b] * r; }
+  vec2 sx = smoothstep(0., 10., x) * smoothstep(95., 85., x); wp = sx.x * sx.y;
+  float R = length(p); vec3 E = normalize(vec3(-u.y, u.x, 0.)), Nn = cross(u, E); gq = transpose(uFrmD) * (E * (hx / (dl * R * cos(lat))) - Nn * (hy / (dl * R)));
+  return h; }
+float pdampG(float s, float w) { return 1. - w * clamp((s - 250.) / 750., 0., 1.); }
 vec2 dTC(vec3 u) { return vec2(atan(u.y, u.x) / 6.28318531 + .5, .5 - asin(clamp(u.z, -1., 1.)) / 3.14159265); }
 float dTex(vec3 u) {
   vec2 x = dTC(u) * uDsz - .5, i = floor(x), f = x - i; vec4 wx = cubW(f.x), wy = cubW(f.y); float s = 0., lo = 1e9, hi = -1e9; int W = int(uDsz.x), Hh = int(uDsz.y);
@@ -423,12 +441,13 @@ float groundD(vec3 q, float cmin, out float dh, out vec3 g) {
   if (tw < 1.) { vec3 Hq = uDH * q; hd = uDh0 + dot(uDg, q) + .5 * dot(q, Hq); gd = uDg + Hq; }
   if (tw > 0.) { vec3 p = uFootD + uFrmD * q, u = normalize(p); float e = uDcell * .3, h0 = dTex(u) + uDbase, hx = dTex(normalize(p + uFrmD[0] * e)) + uDbase, hz = dTex(normalize(p + uFrmD[2] * e)) + uDbase;
     hd = mix(hd, h0, tw); gd = mix(gd, vec3((hx - h0) / e, 0., (hz - h0) / e), tw); m = mix(m, texture(uRel, dTC(u)).w, tw); }
+  vec3 gpt; float wpt, pt = patchG(q, gpt, wpt); hd += pt; gd += gpt;
   float c = 0., c0 = 0., f = 0.; vec3 gc = vec3(0.), gF = vec3(0.);
   for (int k = 0; k < ${K}; k++) { if (k < uKd) continue; float s = sOf(k), w = clamp(s / cmin - 1.5, 0., 1.); if (w <= 0.) break;
     vec4 o = oct(k, q); float a = OT(k, 1).w * w, n0 = OT(k, 0).w - .5;
-    if (k < ${KD}) { c += a * (n0 + o.x); c0 += a * n0; gc += a * o.yzw; } else { f += a * o.x; gF += a * o.yzw; } }
+    if (k < ${KD}) { c += a * pdampG(s, wpt) * (n0 + o.x); c0 += a * pdampG(s, uPw0) * n0; gc += a * pdampG(s, wpt) * o.yzw; } else { f += a * o.x; gF += a * o.yzw; } }
   float d = m * c, dd = dDamp(hd, d);
-  dh = (hd + dd) - (uDh0 + dDamp(uDh0, uDm0 * c0)) + f; g = gd + m * gc * (abs(d) > 1e-6 ? dd / d : 1.) + gF;
+  dh = (hd + dd) - (uDh0 + uPt0 + dDamp(uDh0 + uPt0, uDm0 * c0)) + f; g = gd + m * gc * (abs(d) > 1e-6 ? dd / d : 1.) + gF;
   if (uCrP > 0.) { vec3 g1, g0; dh += craterG(q, cmin, g1) - craterG(vec3(0.), cmin, g0); g += g1; }
   return m;
 }
