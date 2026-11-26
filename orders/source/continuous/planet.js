@@ -35,7 +35,7 @@ const hsl = (h, s, l) => { const f = (n) => { const k = (n + h * 12) % 12, a = s
 const lin = (c) => c.map((v) => v ** 2.2);
 export function genome(n) {
   const r = rng(n * 977 + 13), pick = (a) => a[Math.floor(r() * a.length)], lerp = (a, b) => a + (b - a) * r();
-  const earth = n === 0, G = { n, name: NAMES[n % NAMES.length], kseed: n * 41 };
+  const earth = n === 0, G = { n, id: n, E: 0, name: NAMES[n % NAMES.length], kseed: n * 41 };
   G.R = earth ? 6.371e6 : lerp(2.2e6, 8.5e6);
   G.g = earth ? 1 : +(lerp(0.38, 1.9)).toFixed(2);                        // surface gravity, in Earth gravities
   G.relief = (earth ? 1 : lerp(0.6, 1.7)) * G.g ** -0.7;                   // weaker pull, taller mountains
@@ -58,6 +58,7 @@ export function genome(n) {
   G.soil = lin(hsl(earth ? 0.08 : r(), earth ? 0.22 : lerp(0.1, 0.45), earth ? 0.17 : lerp(0.15, 0.4)));
   G.rock = lin(hsl(earth ? 0.08 : r(), earth ? 0.05 : lerp(0, 0.25), earth ? 0.42 : lerp(0.3, 0.55)));
   G.sand = lin(hsl(earth ? 0.11 : r() * 0.2, earth ? 0.4 : 0.4, earth ? 0.7 : lerp(0.5, 0.75)));
+  { const m = Math.max(...G.liquid); G.liqA = G.liquid.map((v) => 0.015 + 0.15 * (1 - v / m) ** 1.5); G.liqC = G.liquid.map((v) => v / m * 0.06); }
   G.rings = earth ? 0 : r() < 0.3 ? lerp(1.6, 2.6) : 0; G.ringTilt = r() * 0.5;
   G.moons = earth ? [[0.0045, 0.9, 0.3, 0.7]] : Array.from({ length: Math.floor(r() * 3.2) }, () => [lerp(0.003, 0.03), r() * 6.28, lerp(-0.6, 0.8), r()]);
   G.cities = earth || r() < 0.4;
@@ -113,7 +114,7 @@ function flora(G, r) {
 // species i of family f: its own genes, and a name that says something about them
 export function species(G, f, i) {
   const key = f * 100000 + i; G.spc = G.spc || new Map(); let s = G.spc.get(key); if (s) return s;
-  const F = G.species[f], r = rng(G.n * 7919 + f * 104729 + i * 31 + 3), nrm = () => (r() + r() + r() - 1.5) * 1.15;
+  const F = G.species[f], r = rng(G.n * 7919 + f * 104729 + i * 31 + 3 + Math.round((G.E || 0) * 1000) * 7), nrm = () => (r() + r() + r() - 1.5) * 1.15;
   const hM = Math.exp(nrm() * 0.28), wM = Math.exp(nrm() * 0.2), lL = Math.exp(nrm() * 0.3), lW = Math.exp(nrm() * 0.3), dh = nrm() * (G.n === 0 ? 0.025 : 0.06), ds = nrm() * 0.12, dl = nrm() * 0.035;
   const lobes = F.leaf[2] > 0 ? Math.max(0, Math.round(F.leaf[2] + nrm() * 1.5)) : r() < 0.06 ? 3 : 0;
   const canopy = lin(hsl((F.hue + dh + 1) % 1, Math.min(0.95, Math.max(0.05, F.sat + ds)), Math.min(0.5, Math.max(0.05, F.lit + dl))));
@@ -312,3 +313,55 @@ float forestF(vec3 q, float h, float T, float W, float fp) {
   return smoothstep(.3, .55, W) * smoothstep(-9., -5., T) * clamp((n - .3 + .25 * (W - .5)) * 4., 0., 1.) * (1. - min(1., cityRho(q) * citySuit(h, T, W, 0.) * 2.5));
 }
 `;
+
+// ---- deep time: the same planet, an age ago. The ground is the same (no drift of continents: that is beyond this),
+// but the sea stands higher or lower, the climate is warmer or colder, and the plants are other plants: each family
+// has the age it arose and the age it died out, and those alive have drifted (taller, paler, broader-leaved) with
+// every species a different one, its own name. On Sylva the families and their dates are Earth's.
+export const AGES = [0, 0.02, 3, 50, 150, 310, 385, 450];
+export const ageName = (E) => E === 0 ? 'today' : E < 0.1 ? 'the last ice age, 20,000 years ago' : `${E} million years ago`;
+const SYLVA_PAST = { 0.02: [-6, -120, 8, 0], 3: [2, 20, 0, 0], 50: [10, 60, -12, 0.05], 150: [7, 120, -12, 0], 310: [2, 60, 5, 0.12], 385: [6, 100, -5, 0], 450: [3, 150, 0, -0.1] };   // warmer (°C), sea higher (m), pole-to-equator gradient, wetter
+const SYLVA_SPAN = { Quercus: 56, Fagus: 80, Betula: 70, Acer: 60, Salix: 65, Picea: 140, Pinus: 150, Ficus: 80, Arecaria: 90, Acacia: 25, Cereus: 30 };
+const SYLVA_OLD = [
+  { name: 'ginkgo', genus: 'Ginkgo', form: 'broad', T: [12, 9], W: [0.55, 0.3], h: 25, spread: 0.45, depth: 4, kids: 2, droop: 0, leaf: [0.06, 0.9, 2], hue: 0.24, sat: 0.5, lit: 0.2, bark: [0.3, 0.27, 0.22], barkRough: 0.7, decid: 1, fall: 0.15, o: 270, x: 0.5 },
+  { name: 'monkey puzzle', genus: 'Araucaria', form: 'umbrella', T: [17, 9], W: [0.5, 0.3], h: 40, spread: 0.35, depth: 3, kids: 4, droop: 0.2, leaf: [0.04, 0.25, 0], hue: 0.33, sat: 0.45, lit: 0.12, bark: [0.3, 0.25, 0.2], barkRough: 0.8, o: 230, x: 1 },
+  { name: 'cycad', genus: 'Cycas', form: 'palm', T: [24, 7], W: [0.45, 0.25], h: 4, spread: 0, depth: 1, kids: 16, droop: 0.3, leaf: [0.9, 0.1, 0], hue: 0.3, sat: 0.5, lit: 0.14, bark: [0.25, 0.2, 0.12], barkRough: 0.9, o: 280, x: 1 },
+  { name: 'tree fern', genus: 'Dicksonia', form: 'palm', T: [18, 7], W: [0.85, 0.2], h: 8, spread: 0, depth: 1, kids: 14, droop: 0.5, leaf: [1.6, 0.14, 0], hue: 0.28, sat: 0.55, lit: 0.18, bark: [0.15, 0.1, 0.07], barkRough: 1, o: 200, x: 1 },
+  { name: 'tree fern', genus: 'Psaronius', form: 'palm', T: [24, 8], W: [0.75, 0.25], h: 10, spread: 0, depth: 1, kids: 12, droop: 0.4, leaf: [2, 0.14, 0], hue: 0.3, sat: 0.5, lit: 0.16, bark: [0.18, 0.12, 0.08], barkRough: 1, o: 330, x: 250 },
+  { name: 'scale tree', genus: 'Lepidodendron', form: 'spire', T: [25, 8], W: [0.85, 0.2], h: 35, spread: 0.3, depth: 3, kids: 2, droop: -0.1, leaf: [0.12, 0.06, 0], hue: 0.36, sat: 0.45, lit: 0.13, bark: [0.25, 0.28, 0.2], barkRough: 0.3, o: 360, x: 295 },
+  { name: 'giant horsetail', genus: 'Calamites', form: 'column', T: [22, 8], W: [0.92, 0.15], h: 15, spread: 0.2, depth: 2, kids: 6, droop: 0, leaf: [0.08, 0.05, 0], hue: 0.3, sat: 0.4, lit: 0.16, bark: [0.35, 0.33, 0.25], barkRough: 0.2, o: 360, x: 250 },
+  { name: 'cordaite', genus: 'Cordaites', form: 'broad', T: [18, 9], W: [0.6, 0.3], h: 30, spread: 0.4, depth: 3, kids: 3, droop: 0.1, leaf: [0.5, 0.18, 0], hue: 0.3, sat: 0.45, lit: 0.14, bark: [0.2, 0.16, 0.12], barkRough: 0.6, o: 320, x: 250 },
+  { name: 'first tree', genus: 'Archaeopteris', form: 'cone', T: [22, 10], W: [0.6, 0.3], h: 25, spread: 0.3, depth: 3, kids: 4, droop: 0.2, leaf: [0.03, 0.6, 0], hue: 0.32, sat: 0.45, lit: 0.15, bark: [0.25, 0.2, 0.15], barkRough: 0.8, o: 385, x: 359 },
+  { name: 'cladoxylopsid', genus: 'Wattieza', form: 'palm', T: [24, 8], W: [0.75, 0.25], h: 8, spread: 0, depth: 1, kids: 10, droop: 0.1, leaf: [0.8, 0.1, 0], hue: 0.3, sat: 0.45, lit: 0.17, bark: [0.22, 0.18, 0.12], barkRough: 0.7, o: 390, x: 375 },
+  { name: 'giant fungus', genus: 'Prototaxites', form: 'column', T: [18, 12], W: [0.45, 0.35], h: 8, spread: 0.05, depth: 1, kids: 1, droop: 0, leaf: [0.01, 0.1, 0], hue: 0.1, sat: 0.2, lit: 0.35, bark: [0.55, 0.5, 0.42], barkRough: 0.3, o: 420, x: 370 },
+];
+const ages = new Map();
+export function ageWorld(G0, E) {
+  if (!E) return G0; const key = `${G0.n}@${E}`; if (ages.has(key)) return ages.get(key);
+  const r = rng(G0.n * 6151 + Math.round(E * 100)), lerp = (a, b) => a + (b - a) * r(), syl = G0.n === 0;
+  const G = { ...G0, E, id: key, ageName: ageName(E), cities: false, spc: new Map() };
+  const [dT, dS, dG, dW] = syl ? SYLVA_PAST[E] : [E < 0.1 ? -lerp(3, 9) : lerp(-6, 12), E < 0.1 ? -lerp(40, 150) : lerp(-80, 200), lerp(-12, 8), lerp(-0.1, 0.15)];
+  G.Teq += dT; G.Tgrad = Math.max(15, G.Tgrad + dG); G.wet += dW; G.base = G0.base - dS;
+  // who was alive: on Sylva the dated families; elsewhere each family gets an age of origin, and there are families
+  // long gone, invented the same way as the living ones
+  let fam;
+  if (syl) fam = [...G0.species.map((f) => ({ ...f, o: SYLVA_SPAN[f.genus], x: 0 })), ...SYLVA_OLD.map((f) => ({ ...f }))];
+  else { const q = rng(G0.n * 991 + 4), first = 380 + q() * 300;   // when this planet's land first went green
+    fam = G0.species.map((f) => ({ ...f, o: 5 + q() ** 1.6 * (first - 5), x: 0 }));
+    for (let i = 0; i < 9; i++) { const o = 60 + q() * (first - 60), base = G0.species[Math.floor(q() * G0.species.length)], gen = base.genus.slice(0, 3) + ['opsis', 'odon', 'ites', 'axylon', 'aria', 'ella'][Math.floor(q() * 6)];
+      fam.push({ ...base, name: gen.toLowerCase() + ' family', genus: cap(gen), form: FORMS[Math.floor(q() * FORMS.length)], h: base.h * (0.6 + q() * 1.2), hue: (base.hue + (q() - 0.5) * 0.15 + 1) % 1, leaf: [base.leaf[0] * (0.5 + q() * 2), base.leaf[1], base.leaf[2]], T: [base.T[0] + (q() - 0.5) * 12, base.T[1]], o, x: Math.max(0.5, o - 40 - q() * 200), nSp: 120 + Math.floor(q() * 400) }); } }
+  G.species = fam.filter((f) => f.o >= E && f.x < E).slice(0, 16).map((f) => {   // drifted, a little, by how long ago
+    const k = Math.min(1, E / 100), d = (a) => (r() - 0.5) * 2 * a * k;
+    const s = { ...f, h: f.h * Math.exp(d(0.25)), hue: (f.hue + d(0.03) + 1) % 1, lit: Math.max(0.06, f.lit + d(0.03)), leaf: [f.leaf[0] * Math.exp(d(0.3)), f.leaf[1], f.leaf[2]], nSp: f.nSp || 150 + Math.floor(r() * 500) };
+    s.canopy = lin(hsl(s.hue, s.sat, s.lit)); return s; });
+  // what covers the open ground: grass came late; before land plants, bare rock and crusts
+  G.ground = E >= 430 ? 'bare' : E >= 40 ? 'ferns' : 'grass';
+  if (G.ground === 'ferns') G.grass = lin(hsl(syl ? 0.3 : G0.leafHue, 0.45, 0.22));
+  if (G.ground === 'bare') { G.grass = G0.soil.map((v, i) => v * 0.7 + G0.rock[i] * 0.3); G.grassDry = G0.rock; }
+  // the animals of the age
+  G.fauna = syl ? ({ 0.02: { scale: 1.5, neck: 0.4, col: [0.22, 0.12, 0.06] }, 3: {}, 50: { scale: 0.55 }, 150: { scale: 3.2, neck: 2.6, len: 1.6, hscale: 2.2 }, 310: { legs: 6, neck: 0.01, len: 2.4, L: 0.3, scale: 1, col: [0.18, 0.07, 0.04], noHunt: 1, span: 0.35 }, 385: { none: 1 }, 450: { none: 1 } })[E]
+    : E > 300 ? { none: 1 } : { scale: lerp(0.5, 3), neck: lerp(0.3, 2.5) };
+  G.birds = syl ? E < 160 && E !== 385 || E === 310 : E < 200;
+  G.whales = E < 40;
+  ages.set(key, G); return G;
+}

@@ -34,6 +34,8 @@ void main() {
   vec3 cl = climate(q, h + ${RIVD}. * uRivC); float rd, rw, rm = riverM(q, h + ${RIVD}. * uRivC, cl.y, rd, rw); h -= ${RIVD}. * (rm - uRivC); o.y -= ${RIVD}. * (rm - uRivC);
   float fo = forestF(q, h, cl.x, cl.y, 0.) * (1. - step(.2, rm));
   float urb = cityRho(q) * citySuit(h, cl.x, cl.y, 0.);
+  float ba = burnAge(q), bt = ba >= 0. ? 1. - smoothstep(.3, 1.5, ba / uFyr) : 0.; fo *= 1. - bt; urb = max(urb, bt * .5);   // burnt bare
+  float hp = h; vec2 pd = pond(q, hp); if (pd.x > h - .05 || pd.y > .05) urb = 1.;   // under a beaver pond, or on its dam
   tA = vec4(o, .6 + .8 * hh(c, 4)); tB = vec4(hh(c, 3), hh(c, 5) * 6.2832, fo, cl.x < -6. || rm > .3 ? 0. : cl.y); tC = vec4(urb, h, cn(c, 9), hh(c, 7));
   gl_Position = vec4(0.);
 }`;
@@ -48,6 +50,7 @@ void main() {
   const tfo = gl.createTransformFeedback(), emptyVao = gl.createVertexArray();
   const VS = `
 layout(location = 0) in vec3 aP; layout(location = 5) in vec4 iA; layout(location = 6) in vec4 iB; layout(location = 7) in vec4 iC;
+uniform float uGcov;   // what covers open ground: grass (0), ferns (1, before there was grass), nothing (2, before land plants)
 uniform vec4 uBand; uniform float uFade;
 out vec3 vP, vN, vL; out float vW, vF, vSd, vT, vS;
 // this instance's cell, as placed: where it stands, size, seed, turn; the forest, wetness, warmth and height there; a
@@ -77,7 +80,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
   // plants: a tuft of grass blades in the open; under trees, ferns; none where it is too dry or too cold
   const plant = mk(`
 void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, W, T, h, pa); ${edge}
-  vT = fo; bool fern = fo > .5; if (fern && sd > .45 * smoothstep(.35, .75, pa)) vF = 0.; if (!fern && sd > .3 + .7 * smoothstep(.3, .7, pa)) vF = 0.; if (h < 1. || W < .15 + .5 * sd * sd || T < -6.) vF = 0.;
+  vT = fo; bool fern = fo > .5 || uGcov > .5; if (fern && sd > .45 * smoothstep(.35, .75, pa)) vF = 0.; if (!fern && sd > .3 + .7 * smoothstep(.3, .7, pa)) vF = 0.; if (h < 1. || W < .15 + .5 * sd * sd || T < -6. || uGcov > 1.5) vF = 0.;
   vS = W; sz *= .7 + .6 * pa;
   float bi = floor(aP.x), b = fract(aP.x), lat = aP.z, ht = (fern ? .45 : .3) * sz / sqrt(max(uGrav, .3));
   float ba = a + bi * 2.4, lean = fern ? 1.1 : .35 + .3 * h1(vec2(bi, sd)), len = ht * (fern ? 1. : .7 + .5 * h1(vec2(sd, bi)));
@@ -95,7 +98,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
   const grains = mk(`
 uniform vec3 uKind;
 void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, W, T, h, pa); ${edge}
-  if (uKind.y < .5 && sd > (fo > .3 ? .25 : .45) * (.4 + 1.2 * pa)) vF = 0.; if (h < -.5) vF = 0.;
+  if (uKind.y < .5 && sd > (fo > .3 ? .25 : .45) * (.4 + 1.2 * pa)) vF = 0.;
   float r = uKind.x * sz * (.5 + sd); vec3 qq = aP * vec3(1., .55 + .3 * h1(vec2(sd, 1.)), .8 + .4 * h1(vec2(sd, 2.))); qq *= 1. + .25 * (h1(aP.xy * 13. + sd) - .5);
   float c = cos(a), s = sin(a); vec3 p = vec3(c * qq.x - s * qq.z, qq.y, s * qq.x + c * qq.z) * r; vP = o + p + vec3(0., r * .25, 0.); vN = normalize(p); vSd = sd; vT = uKind.y; ${END}`,
   `vec3 n = normalize(cross(dFdx(vP), dFdy(vP))); if (dot(n, vP) > 0.) n = -n; n = normalize(mix(n, normalize(vN), .6));
@@ -136,7 +139,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
         // and draw them
         const P = bd.P; gl.useProgram(P.p); common(P); setNoise(P);
         gl.uniform4f(P.uBand, bd.s, bd.n, ub - ib, uc - ic); gl.uniform1f(P.uFade, fade); gl.uniform1f(P.uCy, S.cy);
-        for (const [n, v] of [['uGrass', G.grass], ['uDry', G.grassDry], ['uSoil', G.soil], ['uRock', G.rock], ['uSand', G.sand], ['uLitter', dead]]) if (P[n]) gl.uniform3fv(P[n], v);
+        for (const [n, v] of [['uGrass', G.grass], ['uDry', G.grassDry], ['uSoil', G.soil], ['uRock', G.rock], ['uSand', G.sand], ['uLitter', dead]]) if (P[n]) gl.uniform3fv(P[n], v); if (P.uGcov) gl.uniform1f(P.uGcov, G.ground === 'ferns' ? 1 : G.ground === 'bare' ? 2 : 0);
         if (bd.kind) gl.uniform3fv(P.uKind, bd.kind);
         gl.bindVertexArray(bd.va.v); gl.drawArraysInstanced(gl.TRIANGLES, 0, bd.va.n, bd.n * bd.n);
       }

@@ -10,7 +10,7 @@ export function mkLife(world) {
   const css = (c) => `rgb(${c.map((v) => Math.round(255 * Math.min(1, Math.pow(v * 1.8, 1 / 2.2)))).join(',')})`;
   function draw(G) {
     const W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = cv.clientHeight * devicePixelRatio, cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.46;
-    ctx.clearRect(0, 0, W, H); const total = nSpecies(G), S = seen.get(G.n) || new Set();
+    ctx.clearRect(0, 0, W, H); const total = nSpecies(G), S = seen.get(G.id) || new Set();
     let k = 0; ctx.lineCap = 'round';
     G.species.forEach((F, f) => {
       const a0 = k / total * Math.PI * 2, a1 = (k + F.nSp) / total * Math.PI * 2, am = (a0 + a1) / 2, r1 = R * 0.28, r2 = R * 0.62;
@@ -30,13 +30,13 @@ export function mkLife(world) {
       ctx.fillText(F.genus, cx + Math.cos(am) * R * 0.44, cy + Math.sin(am) * R * 0.44);
       k += F.nSp;
     });
-    $('lifeh').textContent = `${G.name}: ${total.toLocaleString()} tree species in ${G.species.length} families · you have met ${S.size.toLocaleString()}`;
+    $('lifeh').textContent = `${G.name}${G.E ? ', ' + G.ageName : ''}: ${total.toLocaleString()} tree species in ${G.species.length} families · you have met ${S.size.toLocaleString()}`;
   }
   $('lifeb').addEventListener('click', () => { open = !open; panel.hidden = !open; if (open) { document.exitPointerLock?.(); draw(world()); } });
   $('lifex').addEventListener('click', () => { open = false; panel.hidden = true; });
   return {
-    meet(G, codes) { let S = seen.get(G.n); if (!S) seen.set(G.n, S = new Set()); for (const c of codes) S.add(c); },
-    count(G) { return (seen.get(G.n) || new Set()).size; },
+    meet(G, codes) { let S = seen.get(G.id); if (!S) seen.set(G.id, S = new Set()); for (const c of codes) S.add(c); },
+    count(G) { return (seen.get(G.id) || new Set()).size; },
     look(G, code) { const c = code > 0.5 ? Math.round(code) : null; if (c !== cur) { cur = c; if (open) draw(G); } return c ? species(G, Math.floor((c - 1) / 10000), (c - 1) % 10000) : null; },
     redraw(G) { if (open) draw(G); },
   };

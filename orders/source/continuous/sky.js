@@ -46,6 +46,12 @@ void main() {
         float lit = max(dot(nn, uSun), 0.); c = c * .1 + (uSunC * .35 * (.55 + .45 * hh(floor(rd * 900.))) * lit + vec3(.004)) * tr; } }
     float sd = dot(rd, uSun), sz = uSunSz; c += uSunC * tr * (smoothstep(cos(sz * 1.2), cos(sz * .8), sd) * 40. + pow(max(sd, 0.), 1500. / (sz * 200.)) * .4);   // the star, and its glare
   }
+  if (uUnder > .5) {                                                       // from under the water: the surface overhead, the sky through its window
+    float t = rd.y > 0. ? uCamDep / rd.y : 1e5; vec2 w = rd.xz / max(rd.y, .05) * uCamDep * .15 + uT * .3;
+    float win = smoothstep(.62, .7, rd.y + .03 * (n2(w * 3.) - .5)), rip = .6 + .8 * n2(w * 7. + uT);
+    vec3 top = mix(uLiqC * uSky * 2., (uSky * 2.5 + uSunC * pow(max(dot(rd, uSun), 0.), 40.) * 3.) * rip, win);
+    c = rd.y > 0. ? sea(top * seaLight(0.), t) : sea(vec3(0.), 1e5);
+  }
   oC = vec4(c, 1.); oD = vec4(1e12, 0, 0, 1);
 }`);
   // the clouds and the rings, over whatever is drawn, no farther than it

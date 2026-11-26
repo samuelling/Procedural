@@ -81,14 +81,15 @@ layout(location = 4) in vec4 iP;   // where the tree stands, from the camera; ho
 layout(location = 5) in vec4 iS;   // scale, turn, seed, species
 uniform float uWd, uCy;
 layout(location = 6) in vec4 iG; layout(location = 7) in vec4 iC; layout(location = 8) in vec4 iB; layout(location = 9) in vec4 iX;   // a species' genes: height and spread, leaf size and width; leaf colour and lobes; bark; its code
-flat out vec4 vLc, vBk, vLf; flat out float vCode;
+flat out vec4 vLc, vBk, vLf; flat out float vCode, vBn;
 vec3 fallC(float h) { vec3 k = clamp(abs(mod(h * 6. + vec3(0., 4., 2.), 6.) - 3.) - 1., 0., 1.); return pow(mix(vec3(.4), k, .85) * .55, vec3(2.2)); }   // a species' autumn colour
-void genes() { vLc = iC; vBk = iB; vLf = vec4(iG.zw, iC.w, iX.y); vCode = iX.x; if (iX.y > .5) { vLc.rgb = mix(vLc.rgb, fallC(iX.z), uAut) * (1. + uSpr * vec3(.6, .9, .2)); } }
+void genes() { vLc = iC; vBk = iB; vLf = vec4(iG.zw, iC.w, iX.y); vCode = iX.x; vBn = iX.w; if (iX.y > .5) { vLc.rgb = mix(vLc.rgb, fallC(iX.z), uAut) * (1. + uSpr * vec3(.6, .9, .2)); } if (vBn > .5) vBk.rgb = vec3(.03, .027, .025); }
 vec3 place(vec3 p) { float c = cos(iS.y), s = sin(iS.y); p *= iS.x; p.y *= iG.x; p.xz *= iG.y; float h = max(p.y, 0.) / 20.; p.xz += vec2(sin(uT * .9 + iS.z * 40.), cos(uT * .7 + iS.z * 23.)) * h * h * .25 * uWd; return vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z) + iP.xyz; }
 vec3 turn(vec3 n) { float c = cos(iS.y), s = sin(iS.y); return vec3(c * n.x - s * n.z, n.y, s * n.x + c * n.z); }`;
   const DITHER = `bool gone(float f) { return h1(gl_FragCoord.xy + fract(f * 13.7) * 91.) > f; }
 uniform vec4 uForm[16];
-flat in vec4 vLc, vBk, vLf; flat in float vCode;`;
+flat in vec4 vLc, vBk, vLf; flat in float vCode, vBn;
+vec3 flame(vec2 u) { return vec3(5., 1.7, .35) * (.4 + .6 * n2(u + vec2(0., -uT * 3.))); }`;
   const OUT = `col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), vCode, 0, 1); gl_FragDepth = fdep(vW);`;
   const wood = prog(PRE + INST + `
 layout(location = 0) in vec3 aP; layout(location = 1) in vec3 aN; layout(location = 2) in vec2 aU;
@@ -108,6 +109,7 @@ void main() {
   if (fp < 3e-4) { float c = vor(u * vec2(3000., 1800.)); alb *= mix(1., .7 + .5 * smoothstep(.15, .5, c), smoothstep(3e-4, 6e-5, fp)); }
   vec3 n = normalize(vN); float dif = max(dot(n, uSun), 0.) * shadow(vP), am = .45 + .35 * n.y;
   vec3 col = alb * (uSunC * dif * .8 + uSky * am * .5) * (.55 + .45 * clamp(vR / 14., 0., 1.));
+  if (vBn > 1.5) col += flame(u * 6.) * smoothstep(.55, .3, fur) * .5;
   ${OUT}
 }`);
   const leaf = prog(PRE + INST + `
@@ -141,6 +143,8 @@ void main() {
     if (s > 0. && s < L && abs(w) < .0008 * (1. - .4 * s / L) && q.x < vL * .95) { inside = 1.; lp = vec2(s, w); ll = L; }
   }
   if (inside < .5 && stem < .5) discard;
+  if (vBn > .5 && vBn < 1.5) discard;
+  if (vBn > 1.5 && h1(gl_FragCoord.xy * .37 + floor(uT * 12.)) < .45) discard;
   if (vLf.w > .5 && inside > .5 && fract(vSd * 91.7 + vCode * .013) < uBare) discard;   // deciduous: the leaves fall in autumn and come back in spring
   CAST
   vec3 base = vLc.rgb * (.85 + .3 * h1(vec2(vSd * 9.1, 1.)));
@@ -150,6 +154,7 @@ void main() {
   float sh = shadow(vP + n * .05), dif = max(dot(n, uSun), 0.) * sh, tr = max(dot(-n, uSun), 0.) * .6 * sh;
   float occ = .35 + .65 * clamp(vY / 20., 0., 1.);
   vec3 col = alb * (uSunC * (dif + tr * (.6 + .6 * normalize(alb + .01))) * .85 + uSky * (.35 + .25 * n.y)) * occ;
+  if (vBn > 1.5) col = flame(vU * 3. + vSd * 9.);
   ${OUT}
 }`);
   // the mid band: each tree a camera-facing card, its crown the outline of its form, lit as a volume
@@ -157,7 +162,7 @@ void main() {
 layout(location = 0) in vec2 aC; layout(location = 4) in vec4 iP; layout(location = 5) in vec4 iS;
 uniform vec3 uRt; uniform vec4 uForm[16];
 out vec2 vC; out vec3 vP; out float vW, vF, vSd; flat out int vSp;
-layout(location = 6) in vec4 iG; layout(location = 7) in vec4 iC; layout(location = 8) in vec4 iB; layout(location = 9) in vec4 iX; flat out vec4 vLc, vBk, vLf; flat out float vCode;
+layout(location = 6) in vec4 iG; layout(location = 7) in vec4 iC; layout(location = 8) in vec4 iB; layout(location = 9) in vec4 iX; flat out vec4 vLc, vBk, vLf; flat out float vCode, vBn;
 vec3 fallC(float h) { vec3 k = clamp(abs(mod(h * 6. + vec3(0., 4., 2.), 6.) - 3.) - 1., 0., 1.); return pow(mix(vec3(.4), k, .85) * .55, vec3(2.2)); }
 void main() { vSp = int(iS.w); vLc = iC; vBk = iB; vLf = vec4(0., 0., 0., iX.y); vCode = iX.x; if (iX.y > .5) vLc.rgb = mix(mix(vLc.rgb, fallC(iX.z), uAut), iB.rgb * .7, uBare * .7); vec4 fm = uForm[vSp]; float h = iS.x * fm.y * iG.x, w = iS.x * fm.y * fm.z * iG.y; vec3 c = iP.xyz + vec3(0., h * .5, 0.); vP = c + uRt * aC.x * w + vec3(0., 1., 0.) * aC.y * h * .52; vC = aC; vF = iP.w; vSd = iS.z; vec4 q = uVP * vec4(vP, 1.); vW = q.w; gl_Position = vec4(q.xy, 0., q.w); }`, PRE + DITHER + `
 in vec2 vC; in vec3 vP; in float vW, vF, vSd; flat in int vSp; uniform float uCy; uniform vec3 uRt;
@@ -176,11 +181,15 @@ void main() {
   else { wdt = (1. - y) * .35 + .03; bot = -.4; }
   float rag = form > 2.5 && form < 3.5 ? 0. : n2(c * 9. + vSd * 40.) * .25; bool trunk = abs(c.x) < .035 && c.y < bot + .05;
   if ((form < 2.5 && form > 1.5) ? wdt < .5 && !trunk : (abs(c.x) > wdt - rag * wdt || c.y < bot) && !trunk) discard;
-  if (vLf.w > .5 && !trunk && n2(c * 23. + vSd * 7.) < uBare * .75) discard; CAST
+  if (vLf.w > .5 && !trunk && n2(c * 23. + vSd * 7.) < uBare * .75) discard;
+  if (vBn > .5 && vBn < 1.5 && !trunk && n2(c * vec2(30., 6.) + vSd * 7.) < .82) discard;   // a snag: bare black limbs
+  if (vBn > 1.5 && !trunk && n2(c * 6. + vec2(0., -uT * 2.) + vSd * 7.) < .35) discard; CAST
   vec3 n = normalize(uRt * c.x / max(wdt, .1) * .8 + vec3(0., .5 + .5 * c.y, 0.) - normalize(vP) * sqrt(max(0., 1. - c.x * c.x)));
   vec3 alb = trunk || form > 2.5 && form < 3.5 ? vBk.rgb * .6 : vLc.rgb * (.75 + .5 * n2(c * 14. + vSd * 9.));
   float dif = max(dot(n, uSun), 0.) * shadow(vP + uSun * 2.);
+  if (vBn > .5) alb = vBk.rgb;
   vec3 col = alb * (uSunC * dif * .8 + uSky * .45) * (.6 + .4 * y);
+  if (vBn > 1.5 && !trunk) col = flame(c * 5. + vSd * 9.);
   ${OUT}
 }`);
 
@@ -191,7 +200,7 @@ void main() {
   inst(quad, cib); gl.bindVertexArray(null);
   const kits = new Map();
   function kit(G) {
-    if (kits.has(G.n)) return kits.get(G.n);
+    if (kits.has(G.id)) return kits.get(G.id);
     const T = [];
     G.species.forEach((sp, s) => { for (let v = 0; v < V; v++) {
       const g = grow(sp, v + 1 + G.n * 10), o = { h: g.h, s };
@@ -209,7 +218,7 @@ void main() {
     const U = { form: new Float32Array(64) };
     G.species.forEach((sp, i) => { if (i >= 16) return; const f = FORM[sp.form];
       U.form.set([f, sp.h, f === 1 ? 0.24 : f === 7 ? 0.12 : f === 3 ? 0.3 : f === 2 ? 0.55 : f === 4 ? 0.5 + sp.spread * 0.3 : 0.3 + sp.spread * 0.25, 0], i * 4); });
-    const k = { T, U, memo: new Map(), block: new Map() }; kits.set(G.n, k); return k;
+    const k = { T, U, memo: new Map(), block: new Map() }; kits.set(G.id, k); return k;
   }
   const setU = (P, U) => { gl.uniform4fv(P.uForm, U.form); };
 
@@ -236,10 +245,14 @@ void main() {
           const pos = [q[0] + q[0] * t.h / G.R, q[1] + (t.h - S.cy) + q[1] * t.h / G.R, q[2] + q[2] * t.h / G.R];
           const sc2 = 0.75 + t.seed * 0.5, rot = t.seed * 40, v = floor(t.seed * 997) % V, idx = t.sp * V + v;
           const fNear = min(1, max(0, (R1 - d) / 14)), fFar = min(1, max(0, (d - (R1 - 14)) / 14)) * min(1, max(0, (r2 - d) / 60));
-          const g = t.spc, gx = [g.hM, g.wM, g.leaf[0], g.leaf[1], g.canopy[0], g.canopy[1], g.canopy[2], g.leaf[2], g.bark[0], g.bark[1], g.bark[2], g.rough, g.code, g.decid, g.fall, 0];
+          // after a fire: burning, then a black snag, which in a few years falls; then a sapling, growing back
+          let bs = 0, s3 = sc2; const ba = S.fireAge ? S.fireAge(t.p) : -1;
+          if (ba >= 0) { const yr = ba / G.yearD; if (ba < 0.12) bs = 2; else if (yr < 7) { bs = 1; if (yr > 2.5 && (t.seed * 7.31) % 1 < (yr - 2.5) / 4.5) continue; } else s3 = sc2 * (0.05 + 0.95 * min(1, ((yr - 7) / 50) ** 0.8)); }
+          if (S.pondAt) { const pa = S.pondAt(t.p, t.h); if (pa === 1) bs = max(bs, 1); else if (pa < 0) continue; else if (pa > 0) s3 = min(s3, sc2 * (0.05 + 0.95 * pa)); }
+          const g = t.spc, gx = [g.hM, g.wM, g.leaf[0], g.leaf[1], g.canopy[0], g.canopy[1], g.canopy[2], g.leaf[2], g.bark[0], g.bark[1], g.bark[2], g.rough, g.code, g.decid, g.fall, bs];
           if (d < 40) metNow.push(g.code);
-          if (fNear > 0 && T[idx]) near[idx].push(pos[0], pos[1], pos[2], fNear, sc2, rot, t.seed, t.sp, ...gx);
-          if (fFar > 0) far.push(pos[0], pos[1], pos[2], fFar, sc2 * (T[idx] ? T[idx].h / G.species[t.sp].h : 1), rot, t.seed, t.sp, ...gx);
+          if (fNear > 0 && T[idx]) near[idx].push(pos[0], pos[1], pos[2], fNear, s3, rot, t.seed, t.sp, ...gx);
+          if (fFar > 0) far.push(pos[0], pos[1], pos[2], fFar, s3 * (T[idx] ? T[idx].h / G.species[t.sp].h : 1), rot, t.seed, t.sp, ...gx);
         }
       }
       if (K.memo.size > 300000) K.memo.clear();

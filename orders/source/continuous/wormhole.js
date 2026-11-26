@@ -41,6 +41,7 @@ export function mkHoles(gl, prog, PRE, world, NP) {
       let best = null; for (const m of mouths(G.n)) { const d = hypot(cam.P[0] - m.C[0], cam.P[1] - m.C[1], cam.P[2] - m.C[2]); if (!best || d < best.d) best = { d, to: m.to }; }
       return best ? `wormhole to ${world(best.to).name} ${fmt(best.d)}` : '';
     },
+    none() { shown = []; },
     // find the mouths on screen this frame
     draw(common, cam, G, S, FB, VP, W, Hh) {
       shown = [];

@@ -21,10 +21,12 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
   'The real-Earth forest: every animal, every age, every scale, grown on the climate of anywhere you click. The Earth is measured in 300 km squares.',
   'a novella', TRY[:2], None),
  ('2mb', 2000000, 'w/index.html', 'Worlds without a cut',
-  'Six whole planets, each grown from a genome of physics and plant genetics, with thousands of tree species apiece, days, seasons and weather, joined by wormholes. Zoom from a globe in space to a leaf’s cells without one cut.',
+  'Six whole planets, each grown from a genome of physics and plant genetics, with thousands of tree species apiece, seas, caves, fire, beavers and 450 million years of past, joined by wormholes. Zoom from a globe in space to a leaf’s cells without one cut.',
   'one photo from your phone', [
    'Click to look, press <b>F</b> and fly to the glowing sphere ahead, then go in. You come out on another planet',
    'Press <b>F</b> and fly up until the planet is a globe with moons, then scroll back down into a single grain of soil',
+   'Pick an age from the menu at the bottom right (or press <b>,</b> and <b>.</b>): the same hillside 150 or 310 million years ago',
+   'Press <b>L</b> to call lightning down where you look, then speed time up and watch the fire run before the wind',
    'Fly round to the night side and find a city: its streets and windows are lit'], [
    ('Planets', 'Six genomes: size, gravity, the colour the air scatters, the star, the liquid in the seas, rings and moons. Weaker gravity makes taller mountains, deeper air, taller trees, longer wings and higher jumps.'),
    ('Genetics', 'Ten to sixteen families per planet, each a body plan (dome, cone, palm, column, umbrella, weeping, orb or spire) and hundreds of species within each: some 3,500 to 5,000 per planet, every one a mutation of its family, named from its genes. Look at a tree to read its name; the Tree of life shows them all, and lights the ones you have met.'),
@@ -33,7 +35,12 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
    ('One world, every scale', 'A single height field of 40 octaves from 4,000 km to micrometres, measured from the camera so a grain beside you is as exact as a continent: the globe, continents and rivers, forests tree by tree, leaves, litter, stones, soil grains, silt.'),
    ('Weather and light', 'Volumetric clouds over the whole globe, fronts and clear spells, rain and snow under storms with lightning, a night side with stars, aurora over the poles, sun shadows through the canopy.'),
    ('Towns', 'On inhabited planets: street grids, towers that rise toward the core, brick, glass and concrete, windows lit at night.'),
-   ('Wormholes', 'Three on each planet, bending the light around them and showing the far world inside. Every planet is a few jumps from every other.')]),
+   ('Wormholes', 'Three on each planet, bending the light around them and showing the far world inside. Every planet is a few jumps from every other.'),
+   ('Seas', 'Swim out and dive: light dims and takes the colour of each sea’s own liquid with depth. Kelp forests, seagrass and coral reefs where the depth and warmth suit them; schools of fish, jellyfish, and whales in deep water.'),
+   ('Caves', 'Dark mouths in hillsides lead into winding caves: stalactites and stalagmites, flowstone and still pools, glow-worms on the roof, lit by your lamp.'),
+   ('Fire', 'Lightning starts fires where the land is dry enough, now and then by itself, or where you call it down. The wind drives the front: fast downwind, slow against it. Behind it, ash; trees left as black snags that fall over the years; then saplings, and the forest back in half a century.'),
+   ('Beavers', 'On small rivers in cool, wet woods, beavers dam the stream. The water backs up into a pond that drowns what it reaches, with a lodge out in it and the beavers swimming. After a dozen years the dam fails, the pond drains to a meadow, and the woods come back until beavers do.'),
+   ('Deep time', 'Eight ages of every planet, back 450 million years. The ground keeps its shape (no drifting continents), but the climate warms or cools, the sea rises or falls, and the plants are other plants. On Sylva: ice-age woods; palms and figs before grass; monkey puzzles, cycads and tree ferns; scale trees and giant horsetails; the first trees; then bare rock. Every species in every age is its own, with its own name, and the animals change with them.')]),
 ]
 os.makedirs('site/thumbs', exist_ok=True)
 for f in os.listdir('thumbs'): shutil.copyfile('thumbs/' + f, 'site/thumbs/' + f)

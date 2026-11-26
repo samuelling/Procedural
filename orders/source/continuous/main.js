@@ -4,7 +4,11 @@ import { K, sOf, H, H0, river, RIVD, genome, octTable, climate, GLSL_NOISE, GLSL
 import { mkCity } from './city.js';
 import { mkFauna } from './fauna.js';
 import { mkLife } from './life.js';
-import { nSpecies, sunAt, season, vn3 } from './planet.js';
+import { mkMarine } from './marine.js';
+import { mkCave } from './cave.js';
+import { mkFire, FIRE_GLSL } from './fire.js';
+import { mkBeavers, POND_GLSL } from './beaver.js';
+import { nSpecies, sunAt, season, vn3, AGES, ageWorld } from './planet.js';
 import { mkTrees } from './trees.js';
 import { mkCover } from './cover.js';
 import { mkSky } from './sky.js';
@@ -39,13 +43,18 @@ float shadow(vec3 p) {
 #define CAST if (uSh == 1.) { oC = vec4(dot(vP, uSun)); gl_FragDepth = clamp(.5 - (dot(vP, uSun) - uShC) * uShK, 0., 1.); return; }
 float h1(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n2(vec2 p) { vec2 i = floor(p), f = p - i; f = f * f * (3. - 2. * f); return mix(mix(h1(i), h1(i + vec2(1, 0)), f.x), mix(h1(i + vec2(0, 1)), h1(i + 1.), f.x), f.y); }
+// under water: light dims and colours with depth, and the water itself fills the view (its own absorption and colour)
+uniform float uUnder, uCamDep; uniform vec3 uLiqA, uLiqC;
+vec3 seaLight(float z) { return exp(-uLiqA * max(z, 0.) * 1.1); }
+vec3 sea(vec3 col, float d) { vec3 tr = exp(-uLiqA * d), amb = uLiqC * (uSunC * max(uSun.y, 0.) * .5 + uSky * .8) * seaLight(uCamDep) * 1.4; return col * tr + amb * (1. - tr); }
 vec3 air(vec3 col, vec3 rd, float d, float y0, float y1) {
+  if (uUnder > .5) return sea(col * (y1 < 0. ? seaLight(-y1) : vec3(.6)), d);
   float a = exp(-clamp(y0, -100., 3e5) / uHs), b = exp(-clamp(y1, -100., 3e5) / uHs), od = d * (abs(y1 - y0) > 1. ? (a - b) * uHs / (y1 - y0) : a);
   vec3 tr = exp(-od * uBeta * 1.4); float mu = dot(rd, uSun), ph = .75 * (1. + mu * mu);
   vec3 sc = uSunC * (uBeta / max(max(uBeta.x, uBeta.y), uBeta.z)) * ph * .25 * smoothstep(-.15, .1, uSun.y + .1) + uSunC * .5 * pow(max(mu, 0.), 8.) * .15 + uSky * .05;
   return col * tr + sc * (1. - tr);
 }
-`;
+` + FIRE_GLSL + POND_GLSL;
 export const prog = (vs, fs) => {
   const p = gl.createProgram();
   for (const [t, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) + src.split('\n').map((l, i) => i + 1 + ': ' + l).join('\n')); gl.attachShader(p, s); }
@@ -71,6 +80,7 @@ function axes() {                                                          // lo
 }
 const toLocal = (F, v) => [dot(v, F[0]), dot(v, F[1]), dot(v, F[2])], toPlanet = (F, v) => [F[0][0] * v[0] + F[1][0] * v[1] + F[2][0] * v[2], F[0][1] * v[0] + F[1][1] * v[1] + F[2][1] * v[2], F[0][2] * v[0] + F[1][2] * v[1] + F[2][2] * v[2]];
 const ground = (p) => H(G, p);
+const stand = (p) => { const h = H(G, p); return S.pondTop ? max(h, S.pondTop(p, h)) : h; };   // what you stand on: the ground, or a beaver pond's water or dam
 const alt = () => hypot(...cam.P) - G.R;
 // a good place to stand on a planet: temperate, wooded, gentle, and with the star well up
 function landing(Gp) {
@@ -85,7 +95,7 @@ function landing(Gp) {
   return best || [0, 0, Gp.R];
 }
 function arrive(n, P, look) {                                              // stand on planet n (at P, or near its first wormhole)
-  G = world(n); let p = P;
+  G = world(n); let p = P; $('age').value = 0;
   if (!p) { const m = holes.mouths(n)[0], u0 = m.u, t = nrm(cross(u0, [0.31, 0.52, 0.79])); let best = null, bs = -1e9;
     for (let k = 0; k < 24; k++) { const a = k / 24 * 6.2832, dd = 1200 + (k % 3) * 400, dir = nrm(madd(t.map((v) => v * cos(a)), cross(u0, t), sin(a))), q = nrm(madd(u0, dir, dd / G.R)).map((v) => v * G.R), h = H(G, q); if (h < 5) continue; const c = climate(G, q, h), sc = -abs(c.W - 0.65) - (h > 2500 ? 2 : 0); if (sc > bs) { bs = sc; best = q; } }
     p = best || landing(G); look = madd(m.C, p, -1); }
@@ -103,7 +113,7 @@ const SPEC = `uniform vec4 uSpN[16], uSpC[16]; uniform int uNsp;`;
 const tprog = prog(PRE + GLSL_NOISE + GLSL_GROUND + CLIM + `
 layout(location = 0) in vec2 aG;
 uniform vec3 uLv; uniform float uH0, uSea, uG0;
-out vec3 vP, vQ, vGr; out vec2 vPl; out float vW, vCe, vH, vM;
+out vec3 vP, vQ, vGr; out vec2 vPl; out float vW, vCe, vH, vM, vPw, vBu;
 void main() {
   float c = uLv.z, m = smoothstep(.72, .94, max(abs(aG.x), abs(aG.y)) / ${Hh}.);   // the outer band blends into the next ring's coarser grid
   vec2 g = aG - fract(aG * .5) * 2. * m, p = uLv.xy + g * c; float ce = c * (1. + m);
@@ -112,12 +122,12 @@ void main() {
   vec3 q = vec3(dir.x * r * sx, -2. * s2 * s2 * uR, dir.y * r * sx);    // the point on the sphere, from the foot
   float dh; vec3 gr; vM = ground(q, ce, dh, gr);
   float h = uG0 + dh; vec3 cl = climate(q, h + ${RIVD}. * uRivC); float rd, rw, rm = riverM(q, h + ${RIVD}. * uRivC, cl.y, rd, rw);   // rivers: carve the channel,
-  h -= ${RIVD}. * (rm - uRivC); vH = h; vQ = q; vGr = gr; vCe = ce; vPl = p;
-  float hv = max(max(h, rm > .02 ? h + ${RIVD}. * rm - ${RIVD}. * .7 : -1e9), 0.);   // and fill it; the sea is a surface of its own
+  h -= ${RIVD}. * (rm - uRivC); vec2 pd = pond(q, h); vPw = pd.x; vBu = pd.y; vH = h; vQ = q; vGr = gr; vCe = ce; vPl = p;
+  float hv = max(max(max(h, rm > .02 ? h + ${RIVD}. * rm - ${RIVD}. * .7 : -1e9), pd.x), uUnder > .5 ? -1e9 : 0.);   // and fill it; the sea is a surface of its own (seen from above)
   vP = q + vec3(0., uH0 + (hv - uG0), 0.) + q * (hv / uR);
   vec4 qq = uVP * vec4(vP, 1.); vW = qq.w; gl_Position = vec4(qq.xy, 0., qq.w);
 }`, PRE + GLSL_NOISE + GLSL_GROUND + CLIM + SPEC + `
-in vec3 vP, vQ, vGr; in vec2 vPl; in float vW, vCe, vH, vM;
+in vec3 vP, vQ, vGr; in vec2 vPl; in float vW, vCe, vH, vM, vPw, vBu;
 uniform float uG0, uNight; uniform vec4 uFine; uniform vec3 uFoot, uTf, uLf; uniform ivec3 uTb, uLb; uniform mat3 uF;
 uniform vec3 uGrass, uDry, uSoil, uRock, uSand, uLiq;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
@@ -131,7 +141,7 @@ void main() {
   float hA = vH, sl = 1. - dot(n, up);
   vec3 cl = climate(vQ, hA); float T = cl.x, W = cl.y;
   float rd, rw, rm = riverM(vQ, hA + 4., W, rd, rw), wet = rw > 0. ? clamp((rw * .42 - rd) / max(fp * 1.5, .05) + .5, 0., 1.) : 0.;   // the water's width, softened to the pixel
-  bool sea = hA < 0. || wet > .5;
+  float pdep = vPw - hA; bool sea = (hA < 0. && uUnder < .5) || wet > .5 || pdep > 0.;
 #define NF(q, S) mix(n2((q) / (S)), .5, smoothstep(.2, .8, fp / (S)))   // a noise, smoothed to its mean once a pixel covers it
   vec3 D = uF * vQ, ab = abs(uFoot + D); vec2 wp = ab.x > ab.y && ab.x > ab.z ? D.yz : ab.y > ab.z ? D.zx : D.xy;   // a flat map of the nearby ground, for small textures
   // what the ground is made of, as it would look from far off: forest, grassland, desert, rock, snow and ice, beach
@@ -172,7 +182,17 @@ void main() {
     alb = mix(alb, paved, urb); fo *= 1. - urb;
     em = vec3(1., .72, .38) * uNight * rho * (road * 1.4 + (1. - road) * .25 * step(.6, h1(vec2(li) * .37))) * mix(.6, 1., kr);   // street lights and windows
   }
-  alb = mix(alb, uSand, smoothstep(5., 1.5, hA) * (1. - fo));               // beaches
+  // fire: the front a band of flame, embers glowing just behind it; then ash, black for a season or two, greening as
+  // the grass comes back; where there was forest, from afar, the grey of dead snags, then young trees
+  float ba = burnAge(vQ);
+  if (ba >= 0. && !sea) { float fuel = smoothstep(.15, .3, W) * step(-2., T) * (1. - smoothstep(.02, .2, rho)) * step(.5, hA), yr = ba / uFyr;
+    float bw = max(fp * 4. / 1500., .015), ff = NF(wp, 3.);
+    alb = mix(alb, vec3(.035, .032, .03) * (.7 + .8 * ff), fuel * (1. - smoothstep(.3, 3., yr)) * .92);
+    float sn = fo * far * fuel * (1. - smoothstep(4., 45., yr)); alb = mix(alb, mix(vec3(.09, .085, .08), uGrass * .6, smoothstep(5., 35., yr)), sn * .85);
+    em += vec3(5., 1.6, .35) * fuel * smoothstep(0., .004, ba) * (1. - smoothstep(bw, bw * 4., ba)) * (.45 + .55 * n2(wp * .4 + uT * 2.3));
+    em += vec3(1.6, .32, .05) * fuel * (1. - smoothstep(.03, .3, ba)) * smoothstep(.7, .85, n2(wp * 2. + vec2(uT * .3, 0.)) * .5 + .5 * ff) * .35; }
+  if (vBu > .02) alb = mix(alb, vec3(.12, .08, .05) * (.5 + .9 * n2(wp * vec2(9., 1.3) + n2(wp * 3.) * 4.)), smoothstep(.02, .3, vBu));   // dam and lodge: sticks and mud
+  alb = mix(alb, uSand, smoothstep(5., 1.5, hA) * (1. - fo) * step(pdep, -1.));               // beaches
   float snow = smoothstep(-3., -9., T + uSeasT + 3. * NF(wp, 500.)) * smoothstep(.8, .5, sl);   // snow and ice where it is cold enough
   alb = mix(alb, vec3(.8, .83, .88), snow);
   // close up: the floor's own grain, scale by scale, each fading in as it grows big enough to see
@@ -187,10 +207,12 @@ void main() {
   vec3 col; float sh = max(dot(up, uSun), 0.);
   if (sea) {
     vec3 v = normalize(vP), wn = normalize(up + (vec3(n2(wp / 9. + uT * .3), 0., n2(wp / 7. - uT * .25)) - .5) * .06 * smoothstep(3e3, 50., d)), r = reflect(v, wn);
-    float fr = .02 + .98 * pow(1. - max(dot(-v, wn), 0.), 5.), dep = hA < 0. ? clamp(-hA / 40., 0., 1.) : .55;
+    float fr = .02 + .98 * pow(1. - max(dot(-v, wn), 0.), 5.), dep = pdep > 0. ? clamp(.2 + pdep / 2.5, 0., 1.) : hA < 0. ? clamp(.25 - hA / 12., 0., 1.) : .55;
     vec3 below = mix(alb * uSunC * sh * .5, uLiq * (uSunC * sh + uSky * .5), dep);
     col = mix(below, uSky * .8 * (.3 + .7 * sh) + uSunC * pow(max(dot(r, uSun), 0.), 600.) * 12., fr);
-  } else { float dif = max(dot(nl, uSun), 0.) * shadow(vP), am = .55 + .45 * dot(nl, up); col = alb * (uSunC * dif + uSky * am * .55 * (.15 + .85 * smoothstep(-.2, .2, dot(up, uSun)))); }
+  } else { float dif = max(dot(nl, uSun), 0.) * shadow(vP), am = .55 + .45 * dot(nl, up);
+    if (hA < 0.) { alb = mix(uSand * .8, uSoil * .5, smoothstep(5., 60., -hA)) * (.8 + .4 * NF(wp, 3.)); dif *= .6 + 1.1 * pow(1. - abs(n2(wp * .9 + vec2(uT * .5, uT * .37)) * 2. - 1.), 5.) * smoothstep(40., 2., -hA); }   // the sea bed: sand, then mud, under rippling caustics
+    col = alb * (uSunC * dif + uSky * am * .55 * (.15 + .85 * smoothstep(-.2, .2, dot(up, uSun)))); }
   col += em;
   col = air(col, normalize(vP), d, uAlt, max(hA, 0.));
   oC = vec4(col, 1.); oD = vec4(d, 0, 0, 1); gl_FragDepth = fdep(vW);
@@ -219,6 +241,7 @@ function octaves(F) {
 }
 // every program that reads the ground calls this
 const setNoise = (P) => {
+  fire.set(P, G, S); beavers.set(P);
   gl.uniform1i(P.uOct, 7); gl.uniform1i(P.uKs, G.kseed); gl.uniform1f(P.uR, G.R); gl.uniform1f(P.uMaskR, G.ridge); gl.uniform1f(P.uM0, S.m0);
   if (P.uRivC) gl.uniform1f(P.uRivC, S.rivC);
   if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? 1 : 0); }
@@ -279,6 +302,10 @@ const cover = mkCover(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const city = mkCity(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const fauna = mkFauna(gl, prog, PRE);
 const life = mkLife(() => G);
+const marine = mkMarine(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
+const cave = mkCave(gl, prog, PRE);
+const fire = mkFire(gl, prog, PRE);
+const beavers = mkBeavers(gl, prog, PRE);
 
 
 // ---- light: the planet's star, where it stands over this spot ------------------------------------------------------
@@ -310,6 +337,17 @@ function clock(dt) {
 }
 addEventListener('keydown', (e) => { if (e.code === 'BracketRight') speed = min(SPEEDS.length - 1, speed + 1); if (e.code === 'BracketLeft') speed = max(0, speed - 1); if (e.code === 'KeyT') speed = speed ? 0 : 1; });
 document.getElementById('faster').addEventListener('click', () => { speed = (speed + 1) % SPEEDS.length; });
+// lightning, called down where you are looking (or a little ahead): a flash, and if the ground is dry enough, a fire
+function strike() {
+  const F = axes(), d = pick(canvas.clientWidth / 2, canvas.clientHeight / 2); let v = dir(), dd = d && d < 5000 ? d : 0; if (!dd) { v = dir(cam.yaw, 0); dd = 300; }
+  fire.strike(G, madd(cam.P, toPlanet(F, v), dd)); flash = 0.9; flashC = [0.88, 0.9, 1]; if (!speed) speed = 1;
+}
+document.getElementById('bolt').addEventListener('click', strike);
+// deep time: the same planet an age ago (planet.js ageWorld); the clock and where you stand carry over
+const ageSel = $('age'); ageSel.innerHTML = AGES.map((E) => `<option value="${E}">${E === 0 ? 'today' : E < 0.1 ? '20,000 years ago' : E + ' million years ago'}</option>`).join('');
+function setAge(E) { const t = G.t, up = alt() - max(ground(cam.P), 0); G = ageWorld(world(G.n), E); G.t = t; const u = nrm(cam.P); cam.P = u.map((v) => v * (G.R + max(ground(cam.P), 0) + up)); /* the same height above the ground */ ageSel.value = E; setLight(); hint(); life.redraw(G); }
+ageSel.addEventListener('change', () => { setAge(+ageSel.value); ageSel.blur(); });
+addEventListener('keydown', (e) => { const i = AGES.indexOf(G.E || 0); if (e.code === 'Comma' && i < AGES.length - 1) setAge(AGES[i + 1]); if (e.code === 'Period' && i > 0) setAge(AGES[i - 1]); }); addEventListener('keydown', (e) => { if (e.code === 'KeyL' && !e.repeat) strike(); });
 function setLight() {
   const s = S.sun || [0, 1, 0], el = Math.asin(max(-1, min(1, s[1])));
   const k = min(1, max(0, (el * 180 / PI + 2) / 25)), sc = G.sunCol, beta = G.beta, bm = max(...beta);
@@ -333,6 +371,8 @@ const common = (P) => {
   gl.uniformMatrix4fv(P.uVP, false, SH.cast ? SH.VP : VP);
   if (P.uSh) { gl.uniform1f(P.uSh, SH.cast ? 1 : SH.on ? 0 : 2); gl.uniformMatrix4fv(P.uShM, false, SH.VP); gl.uniform1f(P.uShK, SH.k); gl.uniform1f(P.uShC, SH.c); gl.uniform1f(P.uShB, SH.bias); gl.uniform1i(P.uShT, 6); } gl.uniform3fv(P.uSun, L.sun); gl.uniform3fv(P.uSunC, L.sunC); gl.uniform3fv(P.uSky, L.sky); gl.uniform1f(P.uT, (performance.now() - t0) / 1000);
   gl.uniform1f(P.uPix, 2 * Math.tan(cam.fov / 2) / Hp); gl.uniform1f(P.uAlt, S.cy); gl.uniform1f(P.uHs, G.Hs); gl.uniform3fv(P.uBeta, G.beta);
+  if (P.uUnder) { gl.uniform1f(P.uUnder, S.under ? 1 : 0); gl.uniform1f(P.uCamDep, max(0, -S.cy)); gl.uniform3fv(P.uLiqA, G.liqA); gl.uniform3fv(P.uLiqC, G.liqC); }
+  fire.set(P, G, S); beavers.set(P);
   if (P.uSeasT) gl.uniform1f(P.uSeasT, S.seasT); if (P.uAut) gl.uniform1f(P.uAut, S.aut); if (P.uBare) gl.uniform1f(P.uBare, S.bare); if (P.uSpr) gl.uniform1f(P.uSpr, S.spr); if (P.uRain) gl.uniform1f(P.uRain, S.rain); if (P.uAur) { gl.uniform1f(P.uAur, S.aur); gl.uniform3fv(P.uAurC, G.aurora); }
 };
 let flash = 0, flashC = [1, 1, 1];
@@ -342,10 +382,12 @@ function frame(now) {
   const dpr = min(devicePixelRatio || 1, 2) * scale; W = max(2, round(canvas.clientWidth * dpr)); Hp = max(2, round(canvas.clientHeight * dpr));
   if (canvas.width !== W || canvas.height !== Hp) { canvas.width = W; canvas.height = Hp; }
   fly(dt);
-  let F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.hc = max(S.cy - max(S.g0, 0), 1e-7);
+  let F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.under = S.cy < -0.02 && S.g0 < S.cy; S.hc = max(S.cy - (S.under ? S.g0 : max(S.g0, 0)), 1e-7);
   if (holes.step(cam, G, S, dt, jump)) { F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.hc = max(S.cy - max(S.g0, 0), 1e-7); }
-  clock(dt); setLight();
+  clock(dt); setLight(); S.sunC = L.sunC; S.skyC = L.sky; fire.update(G, S); beavers.update(G, S);
+  if (!cave.C.in && cave.enter(cam, G, S)) { cam.yaw = 0; }
   targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.meet = (Gp, c) => life.meet(Gp, c); S.cast = () => SH.cast; S.shR = () => SH.r;
+  if (cave.C.in) { gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]); gl.disable(gl.DEPTH_TEST); cave.render(common, cam, G, S, W, Hp); holes.none(); finish(dt); return; }
   shadowPass();
   gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp);
   gl.clearBufferfv(gl.COLOR, 1, [1e12, 0, 0, 1]); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
@@ -368,14 +410,21 @@ function frame(now) {
   trees.draw(common, setNoise, cam, G, S);
   cover.draw(common, setNoise, cam, G, S);
   city.draw(common, setNoise, cam, G, S);
+  marine.draw(common, setNoise, cam, G, S);
   fauna.draw(common, cam, G, S);
   fauna.beasts(common, cam, G, S);
+  cave.draw(common, cam, G, S);
+  beavers.draw(common, G, S);
+  fire.draw(common, cam, G, S);
   holes.draw(common, cam, G, S, FB, VP, W, Hp);
-  sky.clouds(common, cam, G, S, FB);
+  if (!S.under) sky.clouds(common, cam, G, S, FB);
+  finish(dt);
+}
+function finish(dt) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, Hp); gl.disable(gl.DEPTH_TEST);
   flash = max(0, flash - dt * 1.2);
   gl.useProgram(post.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, FB.t[0]); gl.uniform1i(post.uS, 0); gl.uniform1f(post.uEx, 0.62); gl.uniform1f(post.uFlash, flash); gl.uniform3fv(post.uFlashC, flashC);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FB.t[1]); gl.uniform1i(post.uD, 1); gl.activeTexture(gl.TEXTURE0); holes.setPost(post, W, Hp); const pr = (S.rain || 0) * (S.cy < G.cloudBase ? 1 : 0); gl.uniform1f(post.uRainP, S.snow ? 0 : pr); gl.uniform1f(post.uSnowP, S.snow ? pr : 0); gl.uniform1f(post.uT, (performance.now() - t0) / 1000);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FB.t[1]); gl.uniform1i(post.uD, 1); gl.activeTexture(gl.TEXTURE0); holes.setPost(post, W, Hp); const pr = cave.C.in ? 0 : (S.rain || 0) * (S.cy < G.cloudBase ? 1 : 0); gl.uniform1f(post.uRainP, S.snow ? 0 : pr); gl.uniform1f(post.uSnowP, S.snow ? pr : 0); gl.uniform1f(post.uT, (performance.now() - t0) / 1000);
   gl.bindVertexArray(VQ); gl.drawArrays(gl.TRIANGLES, 0, 3);
   hud();
   requestAnimationFrame(frame);
@@ -397,8 +446,9 @@ function rayAt(px, py) {
   const r = nrm([-d[2], 0, d[0]]), u = cross(r, d); return nrm([d[0] + r[0] * sx + u[0] * sy, d[1] + r[1] * sx + u[1] * sy, d[2] + r[2] * sx + u[2] * sy]);
 }
 function moveLocal(v) {                                                    // move by a camera-local vector, keep off the ground
+  if (cave.C.in) { if (cave.move(v, false, 0, S)) leaveCave(); return; }
   const F = axes(); cam.P = madd(cam.P, toPlanet(F, v), 1);
-  const u = nrm(cam.P), g = max(ground(u.map((x) => x * G.R)), 0), r = hypot(...cam.P), lo = G.R + g + 1e-6; if (r < lo) cam.P = u.map((x) => x * lo);
+  const u = nrm(cam.P), g0 = stand(u.map((x) => x * G.R)), g = ctl.mode === 'fly' ? g0 : max(g0, 0), r = hypot(...cam.P), lo = G.R + g + 1e-6; if (r < lo) cam.P = u.map((x) => x * lo);
 }
 function zoomAt(px, py, f) {                                               // f < 1 goes in, toward whatever is under the pointer
   const r = rayAt(px, py); let dist = pick(px, py); const hc = S.hc || 1, wh = holes.hit(cam, G, S, r);
@@ -406,7 +456,7 @@ function zoomAt(px, py, f) {                                               // f 
   if (dist === null) { if (f < 1) return; dist = max(1, hc * 3); }
   if (f > 1 && S.cy > G.R * 6) return;
   moveLocal(r.map((v) => v * dist * (1 - f)));
-  const u = nrm(cam.P), g = max(ground(u.map((x) => x * G.R)), 0), lo = G.R + g + dist * f * 0.02 + 1e-7; if (hypot(...cam.P) < lo) cam.P = u.map((x) => x * lo);
+  const u = nrm(cam.P), g0 = ground(u.map((x) => x * G.R)), g = S.under || ctl.mode === 'fly' && g0 < 0 && S.cy < 0 ? g0 : max(g0, 0), lo = G.R + g + dist * f * 0.02 + 1e-7; if (hypot(...cam.P) < lo) cam.P = u.map((x) => x * lo);
 }
 // Two ways to be here, as in Ashland: walking (the mouse captured by a click, WASD or the arrows to walk, Shift to run,
 // Z to creep, Space to jump, under this planet's own gravity) and flying (F, or any scroll: W and S go where you look,
@@ -434,7 +484,7 @@ canvas.addEventListener('wheel', (e) => { e.preventDefault(); setMode('fly'); co
 addEventListener('keydown', (e) => {
   if (e.repeat) return; keys[e.code] = 1;
   if (e.code === 'KeyF') setMode(ctl.mode === 'walk' ? 'fly' : 'walk');
-  if (e.code === 'Space' && ctl.mode === 'walk' && ctl.ground) jumpUp();
+  if (e.code === 'Space' && ctl.mode === 'walk' && ctl.ground && !(ctl.dive > 0)) jumpUp();
   if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
 });
 addEventListener('keyup', (e) => { keys[e.code] = 0; });
@@ -448,6 +498,7 @@ addEventListener('keyup', (e) => { keys[e.code] = 0; });
   $('bjump').addEventListener('pointerup', () => { keys.Space = 0; });
   $('bfly').addEventListener('pointerdown', (e) => { e.stopPropagation(); setMode(ctl.mode === 'walk' ? 'fly' : 'walk'); });
 })();
+function leaveCave() { const o = cave.exit(G); cam.P = o.P; const F = axes(); cam.ref = nrm(madd(o.look, F[1], -dot(o.look, F[1]))); cam.yaw = 0; cam.pitch = 0; }
 function jumpUp() { ctl.vy = 4.2; ctl.ground = false; }                     // the same legs everywhere: under weak gravity you go high
 let flyV = [0, 0, 0];
 function fly(dt) {
@@ -461,11 +512,17 @@ function fly(dt) {
     if (hypot(...flyV) > 1e-12) moveLocal(flyV.map((q) => q * dt));
     return;
   }
-  // walking: along the ground at a person's pace, held down by this planet's gravity
+  // walking: along the ground at a person's pace, held down by this planet's gravity (or along a cave floor)
+  if (cave.C.in) { const sp = (run ? 6.2 : k.KeyZ ? 1.6 : 3.6) / max(1, hypot(f, s)), d = dir(cam.yaw, 0); if (cave.move([(d[0] * f - d[2] * s) * sp * dt, 0, (d[2] * f + d[0] * s) * sp * dt], true, dt, S)) leaveCave(); return; }
   const sp = (run ? 6.2 : k.KeyZ ? 1.6 : 3.6) / max(1, hypot(f, s)), d = dir(cam.yaw, 0), want = [(d[0] * f - d[2] * s) * sp, 0, (d[2] * f + d[0] * s) * sp];
   flyV = flyV.map((q, i) => i === 1 ? 0 : q + (want[i] - q) * min(1, dt * (ctl.ground ? 10 : 1.5)));
   if (hypot(...flyV) > 1e-6) { const F = axes(); cam.P = madd(cam.P, toPlanet(F, flyV.map((q) => q * dt)), 1); }
-  const u = nrm(cam.P), gnd = max(ground(u.map((x) => x * G.R)), 0), above = hypot(...cam.P) - G.R - gnd;
+  const u = nrm(cam.P), graw = stand(u.map((x) => x * G.R)), gnd = max(graw, 0), above = hypot(...cam.P) - G.R - gnd;
+  if (graw < -1.2 && ctl.land <= 0) {                                       // swimming: float at the surface; hold Space to dive, let go to come up
+    ctl.dive = min(-graw - 0.6, max(0, (ctl.dive || 0) + (k.Space ? 1.6 : -0.9) * dt)); ctl.ground = false; ctl.vy = 0;
+    flyV = flyV.map((q) => q * 0.5); cam.P = u.map((x) => x * (G.R + (ctl.dive > 0.05 ? -ctl.dive : 0.25 + Math.sin(performance.now() / 700) * 0.05))); return;
+  }
+  ctl.dive = 0;
   ctl.bob += hypot(flyV[0], flyV[2]) * dt * (ctl.ground ? 1 : 0);
   let a;
   if (ctl.land > 0 && above > EYE + 0.5) a = EYE + (above - EYE) * exp(-dt * 2.2);            // down from the air: a glide, then gravity
@@ -481,16 +538,16 @@ function hud() {
   if ((hud.n = (hud.n || 0) + 1) % 6) return;
   const c = pick(canvas.clientWidth / 2, canvas.clientHeight / 2), d = c ?? S.hc * 3, w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = BANDS.find((b) => w >= b[0])[1];
-  $('alt').textContent = fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
+  $('alt').textContent = cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
   const sp = life.look(G, pick.code); $('sp').textContent = sp ? sp.name : ''; $('sp').hidden = !sp;
-  $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met`;
+  $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
   $('bar').style.width = min(100, max(2, (log2(w) + 20) / 44 * 100)) + '%';
 }
 function hint() {
-  $('name').textContent = G.name; const ty = G.starK < 4500 ? 'red' : G.starK < 5500 ? 'orange' : G.starK < 6200 ? 'yellow' : 'white';
+  $('name').textContent = G.name + (G.E ? ', ' + G.ageName : ''); const ty = G.starK < 4500 ? 'red' : G.starK < 5500 ? 'orange' : G.starK < 6200 ? 'yellow' : 'white';
   $('phys').textContent = `${(G.R / 1000).toFixed(0)} km radius · ${G.g.toFixed(2)} g · ${G.air < 0.6 ? 'thin' : G.air > 1.5 ? 'thick' : ''} air · ${ty} star · ${nSpecies(G).toLocaleString()} tree species`.replace(' ·  air', ' · air');
 }
 arrive(0);
 requestAnimationFrame(frame);
-window.sylva = { setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
+window.sylva = { setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
