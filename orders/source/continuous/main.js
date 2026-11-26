@@ -8,6 +8,8 @@ import { mkMarine } from './marine.js';
 import { mkCave } from './cave.js';
 import { mkFire, FIRE_GLSL } from './fire.js';
 import { mkBeavers, POND_GLSL } from './beaver.js';
+import { mkCosmos, COS } from './cosmos.js';
+import { mkMicro, MICRO } from './micro.js';
 import { nSpecies, sunAt, season, vn3, AGES, ageWorld, carry } from './planet.js';
 import { mkTrees } from './trees.js';
 import { mkCover } from './cover.js';
@@ -30,7 +32,7 @@ export const PRE = `#version 300 es
 precision highp float; precision highp int;
 uniform mat4 uVP; uniform vec3 uSun, uSunC, uSky; uniform float uT, uPix, uAlt, uHs; uniform vec3 uBeta;
 uniform float uSeasT, uAut, uBare, uSpr, uRain, uAur; uniform vec3 uAurC;   // the season here (warmth offset, autumn colour, leaf loss, spring flush), rain, aurora
-float fdep(float w) { return log2(max(w, 1e-7) * 1e7 + 1.) / 50.; }
+float fdep(float w) { return log2(max(w, 1e-7) * 1e7 + 1.) / 56.; }
 // sun shadows: one map from the star's side, round the camera's foot, sized to how high the camera is. uSh is 0 when
 // drawing as usual, 1 while drawing the shadow casters into the map, 2 when there is no map
 uniform highp sampler2D uShT; uniform mat4 uShM; uniform float uSh, uShK, uShC, uShB;
@@ -307,6 +309,8 @@ const marine = mkMarine(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const cave = mkCave(gl, prog, PRE);
 const fire = mkFire(gl, prog, PRE);
 const beavers = mkBeavers(gl, prog, PRE);
+const cosmos = mkCosmos(gl, prog, PRE);
+const micro = mkMicro(gl, prog, PRE);
 
 
 // ---- light: the planet's star, where it stands over this spot ------------------------------------------------------
@@ -383,16 +387,27 @@ function frame(now) {
   const dpr = min(devicePixelRatio || 1, 2) * scale; W = max(2, round(canvas.clientWidth * dpr)); Hp = max(2, round(canvas.clientHeight * dpr));
   if (canvas.width !== W || canvas.height !== Hp) { canvas.width = W; canvas.height = Hp; }
   fly(dt);
+  if (micro.M.on) {                                                        // below a micrometre: the ground's own small world
+    clock(dt); setLight(); targets(W, Hp); matrices(); gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    micro.render(common, cam, G, S, W, Hp); holes.none(); finish(dt); return;
+  }
   let F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.under = S.cy < -0.02 && S.g0 < S.cy; S.hc = max(S.cy - (S.under ? S.g0 : max(S.g0, 0)), 1e-7);
   if (holes.step(cam, G, S, dt, jump)) { F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.hc = max(S.cy - max(S.g0, 0), 1e-7); }
   clock(dt); setLight(); S.sunC = L.sunC; S.skyC = L.sky; fire.update(G, S); beavers.update(G, S);
   if (!cave.C.in && cave.enter(cam, G, S)) { cam.yaw = 0; }
+  if (!cave.C.in && !S.under && ctl.mode === 'fly' && S.hc < MICRO && S.g0 > -1e9) { micro.enter(nrm(cam.P).map((v) => v * (G.R + S.cy - S.hc)), S.F.map((v) => v.slice()), S.hc); requestAnimationFrame(frame); return; }
   targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.meet = (Gp, c) => life.meet(Gp, c); S.cast = () => SH.cast; S.shR = () => SH.r;
   if (cave.C.in) { gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]); gl.disable(gl.DEPTH_TEST); cave.render(common, cam, G, S, W, Hp); holes.none(); finish(dt); return; }
+  if (S.cy > COS) {                                                        // far off: the planet as a world in space, its star, the stars, the galaxies
+    gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.clearBufferfv(gl.COLOR, 1, [1e12, 0, 0, 1]); gl.disable(gl.DEPTH_TEST);
+    cosmos.draw(common, cam, G, S, 1, W, Hp); holes.none(); finish(dt); return;
+  }
   shadowPass();
   gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp);
-  gl.clearBufferfv(gl.COLOR, 1, [1e12, 0, 0, 1]); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
-  gl.disable(gl.DEPTH_TEST); sky.draw(common, cam, G, S); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
+  gl.clearBufferfv(gl.COLOR, 1, [1e12, 0, 0, 1]); gl.clearBufferfv(gl.COLOR, 0, [0, 0, 0, 1]); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.disable(gl.DEPTH_TEST);
+  if (!(S.cy < 6e4 && L.sun[1] > 0.12) && !S.under) cosmos.draw(common, cam, G, S, 0, W, Hp);   // behind the air (not worth drawing under a bright sky)
+  sky.draw(common, cam, G, S); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
   // the rings: the finest spacing a fortieth of the height above the ground; out to past the horizon
   gl.useProgram(tprog.p); common(tprog); setNoise(tprog);
   gl.uniform1f(tprog.uH0, S.g0 - S.cy); gl.uniform1f(tprog.uG0, S.g0); gl.uniformMatrix3fv(tprog.uF, false, S.F.flat()); gl.uniform3fv(tprog.uFoot, S.foot);
@@ -446,16 +461,26 @@ function rayAt(px, py) {
   const d = dir(), f = Math.tan(cam.fov / 2), a = canvas.clientWidth / canvas.clientHeight, sx = (px / canvas.clientWidth * 2 - 1) * f * a, sy = (1 - py / canvas.clientHeight * 2) * f;
   const r = nrm([-d[2], 0, d[0]]), u = cross(r, d); return nrm([d[0] + r[0] * sx + u[0] * sy, d[1] + r[1] * sx + u[1] * sy, d[2] + r[2] * sx + u[2] * sy]);
 }
+function leaveMicro() { const M = micro.M, p = micro.exitTo(), F = M.F0; cam.P = [0, 1, 2].map((i) => M.anchor[i] + F[0][i] * p[0] + F[1][i] * p[1] + F[2][i] * p[2]); }
 function moveLocal(v) {                                                    // move by a camera-local vector, keep off the ground
+  if (micro.M.on) { const M = micro.M; M.P = M.P.map((q, i) => q + v[i]); M.att = null; if (M.P[1] > MICRO * 1.5) leaveMicro(); return; }
   if (cave.C.in) { if (cave.move(v, false, 0, S)) leaveCave(); return; }
   const F = axes(); cam.P = madd(cam.P, toPlanet(F, v), 1);
   const u = nrm(cam.P), g0 = stand(u.map((x) => x * G.R)), g = ctl.mode === 'fly' ? g0 : max(g0, 0), r = hypot(...cam.P), lo = G.R + g + 1e-6; if (r < lo) cam.P = u.map((x) => x * lo);
 }
 function zoomAt(px, py, f) {                                               // f < 1 goes in, toward whatever is under the pointer
+  if (micro.M.on) { const M = micro.M, Sc = micro.ride(performance.now() / 1000), T = micro.target(Sc);
+    if (T) {                                                                // deep down, a step goes toward what is at the heart of this scale, and turns to face it
+      const dv = T.c.map((q, i) => q - M.P[i]), D = hypot(...dv), nd = max(D * f, 1.2e-18); if (f < 1 && D <= 1.25e-18) return;
+      M.P = T.c.map((q, i) => q - dv[i] / D * nd); M.s = nd; M.att = T.att;
+      const yw = Math.atan2(dv[0], dv[2]), pt = Math.asin(max(-1, min(1, dv[1] / D))), da = ((yw - cam.yaw + 3 * PI) % (2 * PI)) - PI; cam.yaw += da * 0.3; cam.pitch += (pt - cam.pitch) * 0.3;
+    } else { const r = rayAt(px, py), d = (M.pf !== M.fr ? pick(px, py) : null) ?? M.s; M.pf = M.fr; M.P = M.P.map((q, i) => q + r[i] * d * (1 - f)); M.s = d * f; M.att = null; if (M.P[1] < M.s * 0.05 && M.P[1] + r[1] * d * (f - 1) >= 0) M.P[1] = M.s * 0.05; }   // (one look at what is under the pointer per frame; and no further down than the ground)
+    if (M.s > MICRO * 1.5 && M.P[1] > 0) leaveMicro(); return; }
+  if (S.cy > COS && f < 1 && pick(px, py) === null) { const l = hypot(...cam.P), nl = G.R + S.cy * f; cam.P = cam.P.map((v) => v / l * nl); return; }   // in empty space, a step in heads home
   const r = rayAt(px, py); let dist = pick(px, py); const hc = S.hc || 1, wh = holes.hit(cam, G, S, r);
   if (wh !== null && (dist === null || wh < dist)) dist = wh;
   if (dist === null) { if (f < 1) return; dist = max(1, hc * 3); }
-  if (f > 1 && S.cy > G.R * 6) return;
+  if (f > 1 && S.cy > 3e26) return;
   moveLocal(r.map((v) => v * dist * (1 - f)));
   const u = nrm(cam.P), g0 = ground(u.map((x) => x * G.R)), g = S.under || ctl.mode === 'fly' && g0 < 0 && S.cy < 0 ? g0 : max(g0, 0), lo = G.R + g + dist * f * 0.02 + 1e-7; if (hypot(...cam.P) < lo) cam.P = u.map((x) => x * lo);
 }
@@ -533,18 +558,21 @@ function fly(dt) {
 }
 
 // ---- what you are looking at, in words ---------------------------------------------------------------------------
-const fmt = (m) => m >= 1000 ? (m / 1000).toPrecision(m >= 1e4 ? 3 : 2).replace(/\.0+$/, '') + ' km' : m >= 1 ? m.toPrecision(2).replace(/\.0$/, '') + ' m' : m >= 0.01 ? (m * 100).toPrecision(2) + ' cm' : m >= 1e-3 ? (m * 1000).toPrecision(2) + ' mm' : (m * 1e6).toPrecision(2) + ' µm';
-const BANDS = [[2e6, 'a planet'], [2e5, 'a continent'], [2e4, 'mountain ranges'], [2e3, 'a valley'], [200, 'a forest'], [20, 'a stand of trees'], [2, 'the ground'], [0.2, 'leaf litter'], [0.02, 'a handful of soil'], [2e-3, 'grains'], [2e-4, 'silt and cells'], [0, 'clay']];
+const LY = 9.4607e15, fmtBig = (m) => { for (const [u, n] of [[LY * 1e9, ' billion light-years'], [LY * 1e6, ' million light-years'], [LY * 1e3, ' thousand light-years'], [LY * 0.1, ' light-years'], [1.496e10, ' AU']]) if (m >= u) { const k = n === ' light-years' ? LY : n === ' AU' ? 1.496e11 : u; return Number((m / k).toPrecision(2)).toLocaleString() + n; } return Number((m / 1000).toPrecision(2)).toLocaleString() + ' km'; };
+const fmtSmall = (m) => { for (const [u, n] of [[1e-6, ' µm'], [1e-9, ' nm'], [1e-12, ' pm'], [1e-15, ' fm'], [0, ' am']]) if (m >= u * 0.9999 || n === ' am') { const k = n === ' am' ? 1e-18 : u; return Number((m / k).toPrecision(2)) + n; } };
+const fmt = (m) => m >= 1e7 ? fmtBig(m) : m < 1e-6 ? fmtSmall(m) : m >= 1000 ? (m / 1000).toPrecision(m >= 1e4 ? 3 : 2).replace(/\.0+$/, '') + ' km' : m >= 1 ? m.toPrecision(2).replace(/\.0$/, '') + ' m' : m >= 0.01 ? (m * 100).toPrecision(2) + ' cm' : m >= 1e-3 ? (m * 1000).toPrecision(2) + ' mm' : (m * 1e6).toPrecision(2) + ' µm';
+const BANDS = [[3e25, 'the cosmic web'], [3e23, 'clusters of galaxies'], [3e21, 'galaxies'], [3e19, 'a galaxy'], [3e16, 'neighbouring stars'], [3e13, 'a star alone'], [3e10, 'a planetary system'], [2e8, 'a planet and its moons'], [2e6, 'a planet'], [2e5, 'a continent'], [2e4, 'mountain ranges'], [2e3, 'a valley'], [200, 'a forest'], [20, 'a stand of trees'], [2, 'the ground'], [0.2, 'leaf litter'], [0.02, 'a handful of soil'], [2e-3, 'grains'], [2e-4, 'silt and cells'], [2e-6, 'clay'], [3e-8, 'a clay platelet'], [2e-9, 'terraces of atoms'], [3e-10, 'atoms'], [5e-11, 'an atom'], [2e-14, 'inside an atom'], [2e-15, 'a nucleus'], [3e-16, 'a proton'], [0, 'quarks and gluons']];
 function hud() {
   if ((hud.n = (hud.n || 0) + 1) % 6) return;
-  const c = pick(canvas.clientWidth / 2, canvas.clientHeight / 2), d = c ?? S.hc * 3, w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
+  const c = pick(canvas.clientWidth / 2, canvas.clientHeight / 2), d = micro.M.on && micro.M.s < 1.5e-9 ? micro.M.s * 1.2 : c ?? (micro.M.on ? micro.M.s : S.hc * 3), w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
+  if (micro.M.on && c !== null && !micro.M.att) micro.M.s = c;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = BANDS.find((b) => w >= b[0])[1];
-  $('alt').textContent = cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
-  if (G.E && !cave.C.in) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
+  $('alt').textContent = micro.M.on ? `${fmt(max(micro.M.P[1], 0))} above the ground` + (w < 2e-10 ? ' · colours here are a convention: light is far too coarse to see this' : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
+  if (G.E && !cave.C.in && !micro.M.on && S.cy < 1e8) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
   const sp = life.look(G, pick.code); $('sp').textContent = sp ? sp.name : ''; $('sp').hidden = !sp;
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
-  $('bar').style.width = min(100, max(2, (log2(w) + 20) / 44 * 100)) + '%';
+  $('bar').style.width = min(100, max(1, (Math.log10(w) + 18) / 45 * 100)) + '%';
 }
 function hint() {
   const lat = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; };
@@ -553,4 +581,4 @@ function hint() {
 }
 arrive(0);
 requestAnimationFrame(frame);
-window.sylva = { setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
+window.sylva = { cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
