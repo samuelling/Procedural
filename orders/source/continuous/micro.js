@@ -63,12 +63,14 @@ function nucleus(e) {
   return (NUCS[e] = out);
 }
 
+export const lampK = (S, M) => { const lum = (c) => c ? 0.3 * c[0] + 0.55 * c[1] + 0.15 * c[2] : 0, day = lum(S.sunC) * Math.max(M.sunM ? M.sunM[1] : 0, 0) * 0.9 + lum(S.skyC) * 0.6;   // how far short of a dim day the light here falls
+  return Math.max(0, 0.55 - day); };
 export function mkMicro(gl, prog, PRE) {
   const QV = `#version 300 es
 out vec2 v; void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); v = p; gl_Position = vec4(p * 2. - 1., 0., 1.); }`;
   const P = prog(QV, PRE + `
 in vec2 v; uniform vec3 uR, uU, uF; uniform vec2 uTan;
-uniform vec3 uCam, uA, uN, uKey, uC1, uC2, uC3, uBg0, uBg1, uSunM; uniform ivec3 uAid, uEl; uniform vec4 uNu[28], uQ[3], uSea[6];
+uniform vec3 uLampC; uniform vec3 uCam, uA, uN, uKey, uC1, uC2, uC3, uBg0, uBg1, uSunM; uniform ivec3 uAid, uEl; uniform vec4 uNu[28], uQ[3], uSea[6];
 uniform ivec2 uLB; uniform vec3 uCamL; uniform int uInN, uMat, uMol, uShl, uNn; uniform float uAc, uNs, uRad, uRa, uNr;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 const float A = ${A}, RA = ${RA}, RN = .85, FM = 1e-15, S3 = 1.7320508, OH = ${OH};   // nucleons and quarks are measured in femtometres (metres squared would underflow)
@@ -81,7 +83,7 @@ vec2 vor(vec2 u, out float id) { vec2 rv; return vorr(u, id, rv); }
 float fin(float L, float fp) { return smoothstep(L * .6, L * .15, fp); }   // a feature L across: there once it spans a few pixels
 vec3 dome(vec2 rv, float k) { return normalize(vec3(-rv.x * k, 1., -rv.y * k)); }
 float thread(vec2 w, float L, float wd, float fp, float s) { float f = abs(n2(w / L + s) - .5) * L * .9; return smoothstep(wd + fp, wd * .4, f) * fin(wd * 2., fp); }   // a thread along a noise's mid-line
-vec3 lit(vec3 a, vec3 n) { return a * (uSunC * max(dot(n, uSunM), 0.) * .9 + uSky * (.42 + .25 * n.y)); }
+vec3 lit(vec3 a, vec3 n) { return a * (uSunC * max(dot(n, uSunM), 0.) * .9 + uSky * (.42 + .25 * n.y) + uLampC * (max(dot(n, normalize(vec3(.35, 1., .25))), 0.) * .8 + .25)); }   // (and, in the dark, the microscope's own lamp)
 vec3 glint(vec3 n, vec3 rd, float p) { return uSunC * pow(max(dot(reflect(rd, n), uSunM), 0.), p) * step(0., uSunM.y); }
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
 // atomic steps on a crystal face (and clay platelets), and the first hint of rows of atoms
@@ -121,7 +123,7 @@ vec3 sWater(vec2 w, float fp, vec3 rd, float tp) {
   vec3 n = normalize(vec3((n2(w / 4e-3 + uT * .3) - .5) * .05, 1., (n2(w / 3.3e-3 - uT * .25) - .5) * .05));
   float fr = .02 + .98 * pow(1. - max(dot(-rd, n), 0.), 5.);
   vec3 refl = mix(uBg0, uBg1, .7) + glint(n, rd, 900.) * 10., rr = refract(rd, n, .75);
-  vec3 below = uC1 * 4. * (uSky * .6 + uSunC * max(uSunM.y, 0.) * .5);
+  vec3 below = uC1 * 4. * (uSky * .6 + uSunC * max(uSunM.y, 0.) * .5 + uLampC * .6);
   for (int k = 0; k < 3; k++) {                                                                                 // diatoms, at three depths, seen through the surface
     float D = k == 0 ? 1.5e-4 : k == 1 ? 5e-4 : 1.2e-3, Lc = 2.2e-4 + float(k) * 1.6e-4; vec2 q = w + rr.xz / max(-rr.y, .15) * D + float(k) * 3.7e-3;
     vec2 ci = floor(q / Lc); if (hs(ci + float(k) * 13.1) > .55) continue;
@@ -175,7 +177,7 @@ vec3 sLeaf(vec2 w, float fp, vec3 rd) {
   vec2 fq = rot(an) * wr; float fk = step(nd ? .3 : .55, wi) * smoothstep(.06, .03, abs(fq.y)) * smoothstep(.34, .3, abs(fq.x));
   a = mix(a, vec3(.75, .78, .74), fk * kw * .8); a = mix(a, a * .8 + vec3(.06, .07, .06), kw * .35);
   vec3 col = lit(a, n) + glint(n, rd, 40.) * (.05 + kw * .1);
-  col += a * (uSunC * abs(uSunM.y) * .35 + uSky * .25);                                                         // and light through it: a leaf is thin
+  col += a * (uSunC * abs(uSunM.y) * .35 + uSky * .25 + uLampC * .2);                                                         // and light through it: a leaf is thin
   return col; }
 vec3 sBark(vec2 w, float fp, vec3 rd) {
   vec3 b = uC1; float rid = n2(vec2(w.x / 2.5e-3, w.y / 1.1e-2)) * .5 + n2(w / 7e-4) * .3 + n2(w / 1.5e-4) * .2, fur = smoothstep(.3, .62, rid);
@@ -324,6 +326,7 @@ void main() {
       gl.uniform1i(P.uMat, M.mat); gl.uniform1i(P.uMol, m.mol || 0); gl.uniform3iv(P.uEl, m.el || [8, 8, 8]); gl.uniform1f(P.uRad, m.r || 1e9);
       gl.uniform3fv(P.uC1, look.c1); gl.uniform3fv(P.uC2, look.c2); gl.uniform3fv(P.uC3, look.c3); gl.uniform3fv(P.uBg0, look.bg0); gl.uniform3fv(P.uBg1, look.bg1); gl.uniform3fv(P.uSunM, M.sunM);
       gl.uniform3fv(P.uKey, [0.45, 0.8, 0.4].map((v) => v / 1.03));
+      gl.uniform3fv(P.uLampC, [1, 0.93, 0.8].map((v) => v * lampK(S, M)));
       const at = Sc.at, ac = min(1, max(0, (1.2e-9 - at.d) / 8e-10)); gl.uniform1f(P.uAc, ac); gl.uniform3fv(P.uA, sub(at.c, p)); gl.uniform3i(P.uAid, ...at.id);
       gl.uniform1f(P.uRa, at.el === 1 ? 0.55 * RA : at.el === 6 ? 0.85 * RA : RA); gl.uniform1i(P.uShl, ESH(at.el)); gl.uniform1f(P.uNr, at.el === 1 ? 1e-15 : 3e-15 * cbrt(Sc.nu.length / 16));
       const ns = min(1, max(0, (2e-13 - at.d) / 1.5e-13)); gl.uniform1f(P.uNs, ns);
