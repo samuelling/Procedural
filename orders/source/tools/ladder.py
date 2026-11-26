@@ -25,7 +25,7 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
   'one photo from your phone', [
    'Click to look, press <b>F</b> and fly to the glowing sphere ahead, then go in. You come out on another planet',
    'Press <b>F</b> and fly up until the planet is a globe with moons, then scroll back down into a single grain of soil',
-   'Pick an age from the menu at the bottom right (or press <b>,</b> and <b>.</b>): the same hillside 150 or 310 million years ago',
+   'Pick an age from the menu at the bottom right (or press <b>,</b> and <b>.</b>): the same rock 150 or 310 million years ago. Fly up to see where the continents stood',
    'Press <b>L</b> to call lightning down where you look, then speed time up and watch the fire run before the wind',
    'Fly round to the night side and find a city: its streets and windows are lit'], [
    ('Planets', 'Six genomes: size, gravity, the colour the air scatters, the star, the liquid in the seas, rings and moons. Weaker gravity makes taller mountains, deeper air, taller trees, longer wings and higher jumps.'),
@@ -40,7 +40,7 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
    ('Caves', 'Dark mouths in hillsides lead into winding caves: stalactites and stalagmites, flowstone and still pools, glow-worms on the roof, lit by your lamp.'),
    ('Fire', 'Lightning starts fires where the land is dry enough, now and then by itself, or where you call it down. The wind drives the front: fast downwind, slow against it. Behind it, ash; trees left as black snags that fall over the years; then saplings, and the forest back in half a century.'),
    ('Beavers', 'On small rivers in cool, wet woods, beavers dam the stream. The water backs up into a pond that drowns what it reaches, with a lodge out in it and the beavers swimming. After a dozen years the dam fails, the pond drains to a meadow, and the woods come back until beavers do.'),
-   ('Deep time', 'Eight ages of every planet, back 450 million years. The ground keeps its shape (no drifting continents), but the climate warms or cools, the sea rises or falls, and the plants are other plants. On Sylva: ice-age woods; palms and figs before grass; monkey puzzles, cycads and tree ferns; scale trees and giant horsetails; the first trees; then bare rock. Every species in every age is its own, with its own name, and the animals change with them.')]),
+   ('Deep time', 'Eight ages of every planet, back 450 million years. The continents drift: each planet is cut into twelve plates, each turning about its own pole at 2 to 7 cm a year, so in the past they stand elsewhere, with ocean where plates had not yet parted and mountain belts where they ran into each other. Changing age keeps you on the same rock, carried on its plate, and says what latitude it stood at then and stands at today. The climate warms or cools, the sea rises or falls, and the plants are other plants. On Sylva: ice-age woods; palms and figs before grass; monkey puzzles, cycads and tree ferns; scale trees and giant horsetails; the first trees; then bare rock. Every species in every age is its own, with its own name, and the animals change with them.')]),
 ]
 os.makedirs('site/thumbs', exist_ok=True)
 for f in os.listdir('thumbs'): shutil.copyfile('thumbs/' + f, 'site/thumbs/' + f)

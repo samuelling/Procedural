@@ -74,7 +74,7 @@ void main() { float r = length(vO.xy); vec3 col = mix(vec3(.0015), vec3(.08, .07
     const foot = S.foot, ab = foot.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], sg = foot[a] >= 0 ? 1 : -1, fk = a * 2 + (sg > 0 ? 1 : 0), out = [];
     const i0 = floor(foot[b] / SP), j0 = floor(foot[c] / SP);
     for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) {
-      const key = `${G.n}:${fk}:${i}:${j}`; let f = memo.get(key);
+      const key = `${G.id}:${fk}:${i}:${j}`; let f = memo.get(key);
       if (f === undefined) { f = null; if (hs2(i, j, 400 + fk) < 0.7) for (let tr = 0; tr < 12 && !f; tr++) {
         const p = [0, 0, 0]; p[b] = (i + hs2(i, j, 401 + fk + tr * 7)) * SP; p[c] = (j + hs2(i, j, 402 + fk + tr * 7)) * SP; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d <= 0) continue; p[a] = sg * sqrt(d);
         const h = H(G, p, 22); if (h < 25 || h > 3000 || cityRho(G, p) > 0.05) continue;

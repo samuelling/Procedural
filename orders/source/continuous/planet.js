@@ -144,10 +144,54 @@ export const octN = (G, k, p) => { const u = latK(k, p); return shape(k, vn3(u[0
 // the ground's height above the sea at a point (any radius: it is read along the radius), to octave kmax
 export function H(G, p, kmax = K) { const h = H0(G, p, kmax); if (kmax < 20 || h < 0.5 || h > 2200) return h; const l = Math.hypot(...p), q = p.map((v) => v / l * G.R); return h - RIVD * river(G, q, h, climate(G, q, h).W); }
 export function H0(G, p, kmax = K) {
-  const l = Math.hypot(...p), q = p.map((v) => v / l * G.R); let h = G.base, m = 1;
-  for (let k = 0; k < kmax; k++) { const n = octN(G, k, q); if (k === MASKK) m = belt(n, G); h += G.amp[k] * (masked(k) ? m : 1) * (n - 0.5); }
-  return h;
+  const l = Math.hypot(...p), q = p.map((v) => v / l * G.R);
+  return (G.pl ? drift(G, q, kmax).h : coarseH(G, q, kmax)) + fineH(G, q, kmax);
 }
+// the ground is two parts: the coarse octaves (4,000 km down to 32 m: continents, ranges, hills, all the mountain belts)
+// ride on the plates; the fine ones (16 m down) are the same everywhere, so they need not move
+export const KD = 18;
+function coarseH(G, q, kmax) { let h = G.base, m = 1; for (let k = 0; k < Math.min(kmax, KD); k++) { const n = octN(G, k, q); if (k === MASKK) m = belt(n, G); h += G.amp[k] * (masked(k) ? m : 1) * (n - 0.5); } return h; }
+function fineH(G, q, kmax) { let h = 0; for (let k = KD; k < kmax; k++) h += G.amp[k] * (octN(G, k, q) - 0.5); return h; }
+
+// ---- continental drift. Today's surface is cut into NPL plates (the cells round NPL centres); in an age past each
+// plate stood turned about its own pole by its own rate times the age. A point then belongs to a plate if, turned back
+// to today, it falls in that plate's cell; where none claims it there was ocean floor, where two do they had collided
+// and stand raised in a mountain belt. Within BAND of a cell's edge plates blend, so nothing is cut.
+export const NPL = 12, BAND = 60000, EDGE = 700000, OCEAN = -3500, PB = K + CLIM, PROWS = KD + 2;
+const mv = (M, v) => [M[0][0] * v[0] + M[0][1] * v[1] + M[0][2] * v[2], M[1][0] * v[0] + M[1][1] * v[1] + M[1][2] * v[2], M[2][0] * v[0] + M[2][1] * v[1] + M[2][2] * v[2]];
+const tr = (M) => [0, 1, 2].map((i) => [0, 1, 2].map((j) => M[j][i]));
+export function plates(G0, E) {
+  const r = rng(G0.n * 733 + 9), c = [], R = [];
+  for (let i = 0; i < NPL; i++) {
+    const z = 1 - (2 * i + 1) / NPL + (r() - 0.5) * 0.25, a = i * GOLD + (r() - 0.5) * 0.6, s = Math.sqrt(Math.max(0, 1 - z * z)); c.push([s * Math.cos(a) * G0.R, s * Math.sin(a) * G0.R, Math.max(-1, Math.min(1, z)) * G0.R]);
+    const pz = r() * 2 - 1, pa = r() * 6.2832, ps = Math.sqrt(1 - pz * pz), e = [ps * Math.cos(pa), ps * Math.sin(pa), pz];
+    const th = (0.15 + 0.45 * r()) * (r() < 0.5 ? -1 : 1) * E * Math.PI / 180, C = Math.cos(th), S = Math.sin(th), V = 1 - C;   // 0.15 to 0.6 degrees a million years
+    R.push([[C + e[0] * e[0] * V, e[0] * e[1] * V - e[2] * S, e[0] * e[2] * V + e[1] * S], [e[1] * e[0] * V + e[2] * S, C + e[1] * e[1] * V, e[1] * e[2] * V - e[0] * S], [e[2] * e[0] * V - e[1] * S, e[2] * e[1] * V + e[0] * S, C + e[2] * e[2] * V]]);
+  }
+  return { c, R, Ri: R.map(tr), mc: R.map((M) => c.map((v) => mv(M, v))) };   // mc[i][j]: centre j carried by plate i's turn
+}
+// how far inside its cell (turned back) each plate's claim on q reaches, in metres (negative: outside)
+export function margins(G, q) {
+  const P = G.pl, out = [];
+  for (let i = 0; i < NPL; i++) { const M = P.mc[i], o = M[i], dO = Math.hypot(q[0] - o[0], q[1] - o[1], q[2] - o[2]); let m = 1e12;
+    const t = mv(P.Ri[i], q), w = EDGE * (octN(G, 3, t) * 0.65 + octN(G, 4, t) * 0.35 - 0.5);   // edges that wander, as rifts and sutures do (each edge bent one way from both sides)
+    for (let j = 0; j < NPL; j++) if (j !== i) m = Math.min(m, (Math.hypot(q[0] - M[j][0], q[1] - M[j][1], q[2] - M[j][2]) - dO) * 0.5 + (i < j ? w : -w));
+    out.push(m); }
+  return out;
+}
+const sst = (x) => { const t = Math.min(1, Math.max(0, (x + BAND) / (2 * BAND))); return t * t * (3 - 2 * t); };
+// the coarse ground at q in an age with drift: the plates' own grounds, blended, over ocean floor, raised where they meet
+export function drift(G, q, kmax = K, mg = margins(G, q)) {
+  let T = 0, S = 0, W = 0, tmax = 0, tsec = 0, msec = 0, best = 0, mbest = 0;
+  for (let i = 0; i < NPL; i++) { const t = sst(mg[i]); if (t <= 0) continue;
+    const c = coarseH(G, mv(G.pl.Ri[i], q), kmax), w = t * Math.exp(Math.max(-30, Math.min(30, mg[i] / 1.5e5))); T += t; S += w * c; W += w;   // where two claim, the one further inside its own cell rides over
+    if (t > tmax) { tsec = tmax; msec = mbest; tmax = t; mbest = mg[i]; best = i; } else if (t > tsec) { tsec = t; msec = mg[i]; } }
+  const hl = W > 0 ? S / W : OCEAN, oc = Math.min(1, Math.max(0, (1 - T - 0.25) / 0.6)), ocs = oc * oc * (3 - 2 * oc), up = 2600 * Math.min(1, Math.max(0, T - 1)) * Math.exp(-Math.max(msec, 0) / 4e5);
+  return { h: hl + (OCEAN - hl) * ocs + up, best, T };
+}
+// the plate a point stands on in an age (the strongest claim), and that point carried to another age on that plate
+export const plateOf = (G, q) => { if (!G.pl) return 0; const m = margins(G, q); let b = 0; for (let i = 1; i < NPL; i++) if (m[i] > m[b]) b = i; return b; };
+export const carry = (Gfrom, Gto, p) => { const i = plateOf(Gfrom, p), q = Gfrom.pl ? mv(Gfrom.pl.Ri[i], p) : p; return { p: Gto.pl ? mv(Gto.pl.R[i], q) : q, today: q, i, M: (v) => { const w = Gfrom.pl ? mv(Gfrom.pl.Ri[i], v) : v; return Gto.pl ? mv(Gto.pl.R[i], w) : w; } }; };
 function seaLevel(G) {                                                      // the base that puts the wanted share of the surface under the sea
   const r = rng(G.n + 5), v = [];
   for (let i = 0; i < 1500; i++) { const z = r() * 2 - 1, a = r() * 6.2832, s = Math.sqrt(1 - z * z); v.push(H(G, [s * Math.cos(a) * G.R, s * Math.sin(a) * G.R, z * G.R], 9)); }
@@ -240,8 +284,10 @@ mat3 rotO(int k) { vec4 a = OT(k, 4), b = OT(k, 5); float c = OT(k, 6).x; return
 // octave k at q (camera-local metres from the camera's foot on the sphere): its value less the value at the foot, and
 // its gradient (camera-local, per metre). Near the foot (a five-hundredth of a cell) it is the octave's own Taylor
 // series, so no octave ever has to resolve a millimetre against a continent's coordinates.
-vec4 oct(int k, vec3 q) {
-  vec4 A = OT(k, 0), B = OT(k, 1), C = OT(k, 2), D = OT(k, 3); mat3 M = rotO(k); vec3 du = M * q * D.z; float n; vec3 g;
+vec4 octR(int r, int k, vec3 q);
+vec4 oct(int k, vec3 q) { return octR(k, k, q); }
+vec4 octR(int r, int k, vec3 q) {
+  vec4 A = OT(r, 0), B = OT(r, 1), C = OT(r, 2), D = OT(r, 3); mat3 M = rotO(r); vec3 du = M * q * D.z; float n; vec3 g;
   if (dot(du, du) < 4e-6) { vec3 hx = vec3(C.x, C.w, D.x), hy = vec3(C.w, C.y, D.y), hz = vec3(D.x, D.y, C.z); g = B.xyz + vec3(dot(hx, du), dot(hy, du), dot(hz, du)); n = dot(B.xyz, du) + .5 * dot(du, vec3(dot(hx, du), dot(hy, du), dot(hz, du))); }
   else { vec4 v = vnd3(A.xyz + du, k + uKs); if (D.w > .5) { float sg = sign(2. * v.x - 1.); n = 1. - abs(2. * v.x - 1.) - A.w; g = -2. * sg * v.yzw; } else { n = v.x - A.w; g = v.yzw; } }
   return vec4(n, (transpose(M) * g) * D.z);
@@ -251,16 +297,32 @@ float clim(int i, vec3 q) { int k = ${K} + i; vec4 A = OT(k, 0), D = OT(k, 3); v
 `;
 // the octave table for the camera's foot p (planet metres, on the sphere) and frame F (3 columns: local x y z in
 // planet axes), packed for uOct
+// With drift (an age past), the coarse rows are turned onto the plate under the camera, and after them come each
+// plate's own coarse rows, its centres as it carried them, its claim's edge near the camera and its height there.
+function octRow(G, T, o, k, p, F, full) {
+  const cl = k >= K, s = cl ? CL_S[k - K] : sOf(k), [ca, sa, cb, sb] = rotK(k), R = [[ca, -sa, 0], [cb * sa, cb * ca, -sb], [sb * sa, sb * ca, cb]];
+  const M = R.map((row) => [0, 1, 2].map((c) => row[0] * F[c][0] + row[1] * F[c][1] + row[2] * F[c][2]));   // lattice from local
+  if (cl) { const u = rot(k, p).map((v) => m256(v / s)); T.set([u[0], u[1], u[2], 0], o); T.set([0, 0, 1 / s, 0], o + 12); }
+  else if (full) { const t = taylor(G, k, p); T.set([...t.u, t.f0], o); T.set([...t.g, G.amp[k]], o + 4); T.set([t.h[0], t.h[1], t.h[2], t.h[3]], o + 8); T.set([t.h[4], t.h[5], 1 / s, ridged(k) ? 1 : 0], o + 12); }
+  else { const u = latK(k, p); T.set([...u, shape(k, vn3(u[0], u[1], u[2], k + G.kseed))], o); T.set([0, 0, 0, G.amp[k]], o + 4); T.set([0, 0, 1 / s, ridged(k) ? 1 : 0], o + 12); }
+  T.set([M[0][0], M[0][1], M[0][2], M[1][0]], o + 16); T.set([M[1][1], M[1][2], M[2][0], M[2][1]], o + 20); T.set([M[2][2], masked(k) ? 1 : 0, 0, 0], o + 24);
+}
+const beltAt = (G, q) => belt(octN(G, MASKK, q), G);
 export function octTable(G, p, F) {
-  const rows = K + CLIM, T = new Float32Array(rows * 7 * 4);
-  for (let k = 0; k < rows; k++) {
-    const cl = k >= K, s = cl ? CL_S[k - K] : sOf(k), [ca, sa, cb, sb] = rotK(k), R = [[ca, -sa, 0], [cb * sa, cb * ca, -sb], [sb * sa, sb * ca, cb]];
-    const M = R.map((row) => [0, 1, 2].map((c) => row[0] * F[c][0] + row[1] * F[c][1] + row[2] * F[c][2]));   // lattice from local
-    const o = k * 28;
-    if (cl) { const u = rot(k, p).map((v) => m256(v / s)); T.set([u[0], u[1], u[2], 0], o); T.set([0, 0, 1 / s, 0], o + 12); }
-    else { const t = taylor(G, k, p); T.set([...t.u, t.f0], o); T.set([...t.g, G.amp[k]], o + 4); T.set([t.h[0], t.h[1], t.h[2], t.h[3]], o + 8); T.set([t.h[4], t.h[5], 1 / s, ridged(k) ? 1 : 0], o + 12); }
-    T.set([M[0][0], M[0][1], M[0][2], M[1][0]], o + 16); T.set([M[1][1], M[1][2], M[2][0], M[2][1]], o + 20); T.set([M[2][2], masked(k) ? 1 : 0, 0, 0], o + 24);
+  const rows = K + CLIM + (G.pl ? NPL * PROWS : 0), T = new Float32Array(rows * 7 * 4);
+  if (!G.pl) { for (let k = 0; k < K + CLIM; k++) octRow(G, T, k * 28, k, p, F, true); T.m0 = beltAt(G, p); return T; }
+  const P = G.pl, mg = margins(G, p); let cam = 0; for (let i = 1; i < NPL; i++) if (mg[i] > mg[cam]) cam = i;
+  const turn = (i) => ({ q: mv(P.Ri[i], p), F: F.map((v) => mv(P.Ri[i], v)) }), C = turn(cam), Cf = coarseH(G, C.q, K);
+  for (let k = 0; k < K + CLIM; k++) { const t = k < KD ? C : { q: p, F }; octRow(G, T, k * 28, k, t.q, t.F, true); }
+  const e = 10, ga = margins(G, p.map((v, i) => v + F[0][i] * e)), gb = margins(G, p.map((v, i) => v + F[2][i] * e));
+  for (let i = 0; i < NPL; i++) {
+    const t = turn(i), r = PB + i * PROWS, near = mg[i] > -BAND - 8000;   // the near field is only wanted where the plate reaches the camera
+    for (let k = 0; k < KD; k++) octRow(G, T, (r + k) * 28, k, t.q, t.F, near);
+    P.mc[i].forEach((c, j) => T.set([c[0], c[1], c[2], 0], (r + KD) * 28 + j * 4));
+    T.set([(ga[i] - mg[i]) / e, 0, (gb[i] - mg[i]) / e, mg[i]], (r + KD + 1) * 28 + 5 * 4);
+    T.set([beltAt(G, t.q), coarseH(G, t.q, K) - Cf, 0, 0], (r + KD + 1) * 28 + 6 * 4);
   }
+  const D = drift(G, p, K, mg); T.m0 = beltAt(G, C.q); T.cam = cam; T.K0 = D.h - Cf; T.Oc = OCEAN - Cf;
   return T;
 }
 // the ground below the camera-local point q, relative to the ground at the foot; the mountain belt mask is octave
@@ -269,7 +331,43 @@ export const GLSL_GROUND = `
 uniform float uMaskR, uM0;   // the belt strength, and the mask's value at the foot
 float beltM(float n) { float b = 1. - abs(2. * n - 1.), t = clamp((b - .55) / .35, 0., 1.); return .25 + 1.6 * uMaskR * t * t * (3. - 2. * t); }
 // dh: height above the foot's ground; g: its gradient; kc: finest octave cell to include (metres); returns the mask
+uniform int uNpl, uPlC; uniform float uK0, uOc; uniform vec3 uFootD; uniform mat3 uFrmD;   // drift: plates (0: none), the camera's, the ground at the foot and the ocean floor (both less the camera plate's own)
+float pMargin(int i, vec3 p, vec3 q) {
+  int r = ${PB} + i * ${PROWS}; vec4 L = OT(r + ${KD + 1}, 5);
+  if (dot(q, q) < 2.5e7) return L.w + dot(L.xyz, q);                     // near the camera: its edge, linearised (exact enough, and steady)
+  vec3 o = OT(r + ${KD} + i / 7, i - i / 7 * 7).xyz; float dO = length(p - o), m = 1e12;
+  float w = ${EDGE}. * ((OT(r + 3, 0).w + octR(r + 3, 3, q).x) * .65 + (OT(r + 4, 0).w + octR(r + 4, 4, q).x) * .35 - .5);
+  for (int j = 0; j < ${NPL}; j++) { if (j >= uNpl) break; if (j == i) continue; m = min(m, (length(p - OT(r + ${KD} + j / 7, j - j / 7 * 7).xyz) - dO) * .5 + (i < j ? w : -w)); }
+  return m;
+}
+float coarseRel(int r0, vec3 q, float cmin, float m0, out float dh, out vec3 g) {
+  dh = 0.; g = vec3(0.); float m = m0;
+  for (int k = 0; k < ${KD}; k++) {
+    float s = sOf(k), w = clamp(s / cmin - 1.5, 0., 1.); if (w <= 0.) break;
+    vec4 o = octR(r0 + k, k, q); float a = OT(r0 + k, 1).w;
+    if (k == ${MASKK}) m = beltM(OT(r0 + k, 0).w + o.x);
+    if (OT(r0 + k, 6).y > .5) { dh += a * w * (m * o.x + (m - m0) * (OT(r0 + k, 0).w - .5)); g += a * w * m * o.yzw; }
+    else { dh += a * w * o.x; g += a * w * o.yzw; }
+  }
+  return m;
+}
 float ground(vec3 q, float cmin, out float dh, out vec3 g) {
+  if (uNpl > 0) {
+    float dF = 0.; vec3 gF = vec3(0.);
+    for (int k = ${KD}; k < ${K}; k++) { float s = sOf(k), w = clamp(s / cmin - 1.5, 0., 1.); if (w <= 0.) break; vec4 o = oct(k, q); float a = OT(k, 1).w; dF += a * w * o.x; gF += a * w * o.yzw; }
+    vec3 p = uFootD + uFrmD * q; float T = 0., S = 0., W = 0., tmax = 0., tsec = 0., msec = 0., mb = 0., mr = uM0; vec3 Gs = vec3(0.);
+    for (int i = 0; i < ${NPL}; i++) { if (i >= uNpl) break;
+      float mg = pMargin(i, p, q), t = smoothstep(-${BAND}., ${BAND}., mg); if (t <= 0.) continue;
+      float c, mm; vec3 gc;
+      if (i == uPlC) mm = coarseRel(0, q, cmin, uM0, c, gc);
+      else { int r = ${PB} + i * ${PROWS}; vec4 X = OT(r + ${KD + 1}, 6); mm = coarseRel(r, q, cmin, X.x, c, gc); c += X.y; }
+      float wt = t * exp(clamp(mg / 1.5e5, -30., 30.)); T += t; S += wt * c; W += wt; Gs += wt * gc;
+      if (t > tmax) { tsec = tmax; msec = mb; tmax = t; mb = mg; mr = mm; } else if (t > tsec) { tsec = t; msec = mg; }
+    }
+    float hl = W > 0. ? S / W : uOc, oc = smoothstep(.25, .85, 1. - T), up = 2600. * clamp(T - 1., 0., 1.) * exp(-max(msec, 0.) / 4e5);
+    dh = mix(hl, uOc, oc) + up - uK0 + dF; g = (W > 0. ? Gs / W : vec3(0.)) * (1. - oc) + gF;
+    return mr;
+  }
   dh = 0.; g = vec3(0.); float m = uM0;
   for (int k = 0; k < ${K}; k++) {
     float s = sOf(k), w = clamp(s / cmin - 1.5, 0., 1.); if (w <= 0.) break;
@@ -314,8 +412,7 @@ float forestF(vec3 q, float h, float T, float W, float fp) {
 }
 `;
 
-// ---- deep time: the same planet, an age ago. The ground is the same (no drift of continents: that is beyond this),
-// but the sea stands higher or lower, the climate is warmer or colder, and the plants are other plants: each family
+// ---- deep time: the same planet, an age ago. The continents stand elsewhere (drift, above), the sea stands higher or lower, the climate is warmer or colder, and the plants are other plants: each family
 // has the age it arose and the age it died out, and those alive have drifted (taller, paler, broader-leaved) with
 // every species a different one, its own name. On Sylva the families and their dates are Earth's.
 export const AGES = [0, 0.02, 3, 50, 150, 310, 385, 450];
@@ -341,7 +438,7 @@ export function ageWorld(G0, E) {
   const r = rng(G0.n * 6151 + Math.round(E * 100)), lerp = (a, b) => a + (b - a) * r(), syl = G0.n === 0;
   const G = { ...G0, E, id: key, ageName: ageName(E), cities: false, spc: new Map() };
   const [dT, dS, dG, dW] = syl ? SYLVA_PAST[E] : [E < 0.1 ? -lerp(3, 9) : lerp(-6, 12), E < 0.1 ? -lerp(40, 150) : lerp(-80, 200), lerp(-12, 8), lerp(-0.1, 0.15)];
-  G.Teq += dT; G.Tgrad = Math.max(15, G.Tgrad + dG); G.wet += dW; G.base = G0.base - dS;
+  G.Teq += dT; G.Tgrad = Math.max(15, G.Tgrad + dG); G.wet += dW; G.base = G0.base - dS; G.pl = plates(G0, E);
   // who was alive: on Sylva the dated families; elsewhere each family gets an age of origin, and there are families
   // long gone, invented the same way as the living ones
   let fam;

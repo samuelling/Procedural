@@ -8,7 +8,7 @@ import { mkMarine } from './marine.js';
 import { mkCave } from './cave.js';
 import { mkFire, FIRE_GLSL } from './fire.js';
 import { mkBeavers, POND_GLSL } from './beaver.js';
-import { nSpecies, sunAt, season, vn3, AGES, ageWorld } from './planet.js';
+import { nSpecies, sunAt, season, vn3, AGES, ageWorld, carry } from './planet.js';
 import { mkTrees } from './trees.js';
 import { mkCover } from './cover.js';
 import { mkSky } from './sky.js';
@@ -234,7 +234,7 @@ const S = {};                                                              // th
 function octaves(F) {
   const u = F[1], foot = u.map((v) => v * G.R), T = octTable(G, foot, F);
   gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, octTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 7, T.length / 28, 0, gl.RGBA, gl.FLOAT, T); gl.activeTexture(gl.TEXTURE0);
-  S.foot = foot; S.F = F; S.m0 = (() => { const n = octN(G, MASKK, foot), b = 1 - abs(2 * n - 1), t = min(1, max(0, (b - 0.55) / 0.35)); return 0.25 + 1.6 * G.ridge * t * t * (3 - 2 * t); })();
+  S.foot = foot; S.F = F; S.m0 = T.m0; S.pl = G.pl ? { cam: T.cam, K0: T.K0, Oc: T.Oc } : null;
   S.axis = toLocal(F, G.axis); S.sun = toLocal(F, sunAt(G, G.t || 0)); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
   S.tb = foot.map((v) => floor(v / TREE)); S.tf = foot.map((v, i) => v / TREE - S.tb[i]); S.lb = foot.map((v) => floor(v / LOT)); S.lf = foot.map((v, i) => v / LOT - S.lb[i]);
   S.night = min(1, max(0, (0.06 - S.sun[1]) / 0.16));
@@ -244,6 +244,7 @@ const setNoise = (P) => {
   fire.set(P, G, S); beavers.set(P);
   gl.uniform1i(P.uOct, 7); gl.uniform1i(P.uKs, G.kseed); gl.uniform1f(P.uR, G.R); gl.uniform1f(P.uMaskR, G.ridge); gl.uniform1f(P.uM0, S.m0);
   if (P.uRivC) gl.uniform1f(P.uRivC, S.rivC);
+  if (P.uNpl) { gl.uniform1i(P.uNpl, S.pl ? 12 : 0); if (S.pl) { gl.uniform1i(P.uPlC, S.pl.cam); gl.uniform1f(P.uK0, S.pl.K0); gl.uniform1f(P.uOc, S.pl.Oc); gl.uniform3fv(P.uFootD, S.foot); gl.uniformMatrix3fv(P.uFrmD, false, S.F.flat()); } }
   if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? 1 : 0); }
   if (P.uAxis) { gl.uniform3fv(P.uAxis, S.axis); gl.uniform1f(P.uTeq, G.Teq); gl.uniform1f(P.uTgrad, G.Tgrad); gl.uniform1f(P.uWet, G.wet); gl.uniform1f(P.uGrav, G.g); }
   if (P.uSpN) { const a = new Float32Array(64), c = new Float32Array(64); G.species.forEach((s, i) => { if (i < 16) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, s.decid || 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, min(16, G.species.length)); }
@@ -345,7 +346,7 @@ function strike() {
 document.getElementById('bolt').addEventListener('click', strike);
 // deep time: the same planet an age ago (planet.js ageWorld); the clock and where you stand carry over
 const ageSel = $('age'); ageSel.innerHTML = AGES.map((E) => `<option value="${E}">${E === 0 ? 'today' : E < 0.1 ? '20,000 years ago' : E + ' million years ago'}</option>`).join('');
-function setAge(E) { const t = G.t, up = alt() - max(ground(cam.P), 0); G = ageWorld(world(G.n), E); G.t = t; const u = nrm(cam.P); cam.P = u.map((v) => v * (G.R + max(ground(cam.P), 0) + up)); /* the same height above the ground */ ageSel.value = E; setLight(); hint(); life.redraw(G); }
+function setAge(E) { const t = G.t, up = alt() - max(ground(cam.P), 0), G1 = ageWorld(world(G.n), E), c = carry(G, G1, nrm(cam.P).map((v) => v * G.R)); cam.ref = c.M(cam.ref); G = G1; G.t = t; G.here = c.today; const u = nrm(c.p); cam.P = u.map((v) => v * (G.R + max(ground(u.map((x) => x * G.R)), 0) + up)); /* the same rock, carried on its plate, the same height above it */ ageSel.value = E; setLight(); hint(); life.redraw(G); }
 ageSel.addEventListener('change', () => { setAge(+ageSel.value); ageSel.blur(); });
 addEventListener('keydown', (e) => { const i = AGES.indexOf(G.E || 0); if (e.code === 'Comma' && i < AGES.length - 1) setAge(AGES[i + 1]); if (e.code === 'Period' && i > 0) setAge(AGES[i - 1]); }); addEventListener('keydown', (e) => { if (e.code === 'KeyL' && !e.repeat) strike(); });
 function setLight() {
@@ -539,13 +540,15 @@ function hud() {
   const c = pick(canvas.clientWidth / 2, canvas.clientHeight / 2), d = c ?? S.hc * 3, w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = BANDS.find((b) => w >= b[0])[1];
   $('alt').textContent = cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
+  if (G.E && !cave.C.in) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
   const sp = life.look(G, pick.code); $('sp').textContent = sp ? sp.name : ''; $('sp').hidden = !sp;
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
   $('bar').style.width = min(100, max(2, (log2(w) + 20) / 44 * 100)) + '%';
 }
 function hint() {
-  $('name').textContent = G.name + (G.E ? ', ' + G.ageName : ''); const ty = G.starK < 4500 ? 'red' : G.starK < 5500 ? 'orange' : G.starK < 6200 ? 'yellow' : 'white';
+  const lat = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; };
+  $('name').textContent = G.name + (G.E ? ', ' + G.ageName : ''); $('name').title = G.E && G.here ? `this ground stood at ${lat(cam.P)} then; today it is at ${lat(G.here)}` : ''; const ty = G.starK < 4500 ? 'red' : G.starK < 5500 ? 'orange' : G.starK < 6200 ? 'yellow' : 'white';
   $('phys').textContent = `${(G.R / 1000).toFixed(0)} km radius · ${G.g.toFixed(2)} g · ${G.air < 0.6 ? 'thin' : G.air > 1.5 ? 'thick' : ''} air · ${ty} star · ${nSpecies(G).toLocaleString()} tree species`.replace(' ·  air', ' · air');
 }
 arrive(0);
