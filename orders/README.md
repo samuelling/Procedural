@@ -1,7 +1,7 @@
 # Orders of Magnitude: a forest
 
 The same subject at five sizes. Each rung is one HTML page that must fit its allowance whole: program, numbers and
-unpacker. No stored images, models or sound files.
+unpacker. No stored images, models or sound files: every sound is synthesised.
 
 | Rung | Allowance | What it is |
 |---|---|---|
@@ -9,7 +9,7 @@ unpacker. No stored images, models or sound files.
 | [`2kb/`](2kb/) | 2,000 bytes | One fragment shader: ten rows of trees computed per pixel |
 | [`20kb/`](20kb/) | 20,000 bytes | Sylva: a genome and a grammar growing a 3D plot |
 | [`200kb/`](200kb/) | 200,000 bytes | The measured-Earth world of plots and windows, with the Earth seen coarser: climate in 3° blocks, heights and tree ranges in 1.5° |
-| [`2mb/`](2mb/) | 2,000,000 bytes | The real Earth without a cut: measured ground (finer round the Go-to places), sea floor, lakes, climate, real tree genera, the real stars and the night side's lights, the Sun and Moon where they are now, the Moon, Mercury, Venus and Mars from their own maps, the giants to their cloud tops, a zoom from quarks to the cosmic web (down into whatever is under the pointer: leaf, bark, water, snow, sand, rock, soil, lunar dust), and a wormhole at the Earth's L4 point to six invented worlds |
+| [`2mb/`](2mb/) | 2,000,000 bytes | The real Earth without a cut: measured ground (finer round the Go-to places), sea floor, lakes, climate, real tree genera, the real stars and the night side's lights, the Sun and Moon where they are now, the Moon, Mercury, Venus and Mars from their own maps, the giants to their cloud tops, a zoom from quarks to the cosmic web (down into whatever is under the pointer: leaf, bark, water, snow, sand, rock, soil, lunar dust), synthesised sound on by default, and a wormhole at the Earth's L4 point to six invented worlds |
 | [`worlds/`](worlds/) | (2 MB) | The six invented worlds that held the 2 MB rung before, on their own |
 | [`2mb-earth/`](2mb-earth/) | (2 MB) | The measured Earth of plots and windows that held it before that |
 
@@ -17,7 +17,7 @@ unpacker. No stored images, models or sound files.
 2 MB rung is the continuous engine (`source/continuous/`) given the Earth's maps: about 1.5 MB of measured grids
 (`DATA.md`; packed by `tools/earthpack.py`) and the rest program. Everything finer than the maps is invented, and
 said so: the detail laid over the measured ground, the craters on the airless worlds, which species of a genus
-stands where within a region, the towns, the stars (the Sun's neighbours are not in the data), and the continents
+stands where within a region, the towns (the night side's lights from afar are the real ones), the stars fainter and further than the catalogue, and the continents
 in past ages, which stay where they are today.
 [`story/`](story/) goes through it order by order: what each rung had to cut, how the top one was filled, and the
 six rounds of the dialogue between two agents that decided what to fill the measured Earth with.

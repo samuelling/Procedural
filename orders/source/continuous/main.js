@@ -11,6 +11,7 @@ import { mkFire, FIRE_GLSL } from './fire.js';
 import { mkBeavers, POND_GLSL } from './beaver.js';
 import { mkCosmos, COS } from './cosmos.js';
 import { mkMicro, MICRO, ENT, lampK } from './micro.js';
+import { mkSound } from './sound.js';
 import { nSpecies, sunAt, season, vn3, AGES, ageWorld, carry, sibling } from './planet.js';
 import { mkTrees } from './trees.js';
 import { mkCover } from './cover.js';
@@ -78,6 +79,7 @@ const PLANETS = 6, worlds = [];
 let holes = null;
 const RN = Object.fromEntries(Object.entries(REAL).map(([k, v]) => [v, k]));   // the real worlds, by number
 const world = (n) => worlds[n] || (worlds[n] = n >= 100 ? realWorld(RN[n]) : genome(n));
+let snd = null;                                                            // the sound (made at the first click or key: see below)
 let realT = dayOf(Date.now());                                              // the real worlds share one clock: days from J2000, starting now
 let G = world(100); G.t = realT;
 holes = mkHoles(gl, prog, null, world, PLANETS);
@@ -393,7 +395,7 @@ function clock(dt, far) {
   S.rain = min(1, max(0, (w - 0.6) / 0.14)) * min(1, max(0, (c.W - 0.25) / 0.2)); S.snow = c.T + S.seasT < 0;
   // aurora: near the poles, in the dark
   S.aur = min(1, max(0, (abs(lat) - 0.95) / 0.2)) * min(1, max(0, (-0.08 - (S.sun ? S.sun[1] : 1)) / 0.15));
-  if (S.rain > 0.75 && !S.snow && S.cy < G.cloudBase && Math.random() < dt * 0.12 * S.rain) { flash = 0.55; flashC = [0.85, 0.88, 1]; }   // lightning
+  if (S.rain > 0.75 && !S.snow && S.cy < G.cloudBase && Math.random() < dt * 0.12 * S.rain) { flash = 0.55; flashC = [0.85, 0.88, 1]; if (snd) snd.boom(true); }   // lightning
   const day = ((G.t % 1) + 1) % 1; void day;
   if ((clock.n = (clock.n || 0) + 1) % 10 === 0) {
     const s2 = sunAt(G, G.t), pu = [u[0], u[1]], ps = [s2[0], s2[1]], ha = Math.atan2(pu[0] * ps[1] - pu[1] * ps[0], pu[0] * ps[0] + pu[1] * ps[1]), hr = ((12 - ha / (2 * PI) * G.dayH) % G.dayH + G.dayH) % G.dayH;
@@ -416,7 +418,7 @@ document.getElementById('faster').addEventListener('click', () => { speed = (spe
 // lightning, called down where you are looking (or a little ahead): a flash, and if the ground is dry enough, a fire
 function strike() {
   const F = axes(), d = pick(canvas.clientWidth / 2, canvas.clientHeight / 2); let v = dir(), dd = d && d < 5000 ? d : 0; if (!dd) { v = dir(cam.yaw, 0); dd = 300; }
-  fire.strike(G, madd(cam.P, toPlanet(F, v), dd)); flash = 0.9; flashC = [0.88, 0.9, 1]; if (!speed) speed = 1;
+  fire.strike(G, madd(cam.P, toPlanet(F, v), dd)); flash = 0.9; flashC = [0.88, 0.9, 1]; if (snd) snd.boom(false); if (!speed) speed = 1;
 }
 document.getElementById('bolt').addEventListener('click', strike);
 // deep time: the same planet an age ago (planet.js ageWorld); the clock and where you stand carry over
@@ -658,6 +660,20 @@ canvas.addEventListener('pointermove', (e) => {
 const upE = (e) => { pts.delete(e.pointerId); if (pts.size < 2 && drag) drag.d0 = null; };
 canvas.addEventListener('pointerup', upE); canvas.addEventListener('pointercancel', upE);
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); setMode('fly'); const [x, y] = locked() ? [canvas.clientWidth / 2, canvas.clientHeight / 2] : [e.clientX, e.clientY]; zoomAt(x, y, exp(e.deltaY * (e.deltaMode ? 0.05 : 0.0015))); }, { passive: false });
+// sound: on unless turned off (and remembered); a browser lets it start only once you click, tap or press a key
+let sndOn = (() => { try { return localStorage.getItem('sylva-sound') !== '0'; } catch (e) { return true; } })();
+function sndStart() { if (!sndOn) return; try { snd = snd || mkSound(); if (snd.ac.state !== 'running') snd.ac.resume(); } catch (e) { snd = null; } }
+function sndToggle() { sndOn = !sndOn; try { localStorage.setItem('sylva-sound', sndOn ? '1' : '0'); } catch (e) { /* (not kept) */ } if (sndOn) sndStart(); else if (snd) snd.ac.suspend(); $('snd').textContent = sndOn ? '🔊' : '🔇'; }
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, sndStart, { capture: true, passive: true });
+$('snd').onclick = (e) => { e.stopPropagation(); sndToggle(); }; $('snd').textContent = sndOn ? '🔊' : '🔇';
+function sndSet() {                                                       // what the place sounds like, from where the camera is
+  if (!snd || snd.ac.state !== 'running') return; const s = S.sun || [0, 1, 0], el = Math.asin(max(-1, min(1, s[1]))) * 180 / PI, cl = (x) => min(1, max(0, x)), hc = micro.M.on ? 0 : S.hc || 0;
+  const u = nrm(cam.P), lat = abs(Math.asin(u[2]) * 180 / PI), alive = !G.real || G.real === 'earth', wet = (S.rain || 0) * (!S.snow && S.cy < (G.cloudTop || 1e4) ? 1 : 0);
+  snd.set({ vol: cl(G.air || 0) * cl(1 - ((S.cy || 0) - 3e4) / 7e4), wind: min(1, 0.3 + 0.5 * wet + Math.log10(1 + hc) / 5) * (cave.C.in ? 0.15 : 1), day: cl((el + 4) / 20), night: 1 - cl((el + 8) / 10), rain: cave.C.in ? 0 : wet,
+    fire: S.fireD ? cl(1 - S.fireD / 300) : 0, life: alive && !cave.C.in ? cl(1 - hc / 400) * (S.snow && S.bare > 0.5 ? 0.3 : 1) : 0, birds: G.real === 'earth' ? (lat < 23 ? 'tropic' : lat > 52 ? 'boreal' : 'mixed') : 'mixed', spring: S.spr > 0.5, muffle: micro.M.on || ctl.dive > 0.05 });
+}
+setInterval(sndSet, 250);
+addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) sndToggle(); });
 addEventListener('keydown', (e) => { if (e.code === 'KeyU') surface(); }); $('up').onclick = surface;
 addEventListener('keydown', (e) => {
   if (e.repeat) return; keys[e.code] = 1;
@@ -698,10 +714,12 @@ function fly(dt) {
   const u = nrm(cam.P), graw = stand(u.map((x) => x * G.R)), gnd = max(graw, 0), above = hypot(...cam.P) - G.R - gnd;
   if (graw < -1.2 && ctl.land <= 0) {                                       // swimming: float at the surface; hold Space to dive, let go to come up
     ctl.dive = min(-graw - 0.6, max(0, (ctl.dive || 0) + (k.Space ? 1.6 : -0.9) * dt)); ctl.ground = false; ctl.vy = 0;
+    if (snd && hypot(flyV[0], flyV[2]) > 0.3 && Math.random() < dt * 1.3) snd.step(4, 0.6);   // a stroke through the water
     flyV = flyV.map((q) => q * 0.5); cam.P = u.map((x) => x * (G.R + (ctl.dive > 0.05 ? -ctl.dive : 0.25 + Math.sin(performance.now() / 700) * 0.05))); return;
   }
   ctl.dive = 0;
   ctl.bob += hypot(flyV[0], flyV[2]) * dt * (ctl.ground ? 1 : 0);
+  { const ph = floor(ctl.bob * 3.6 / PI); if (ph !== ctl.ph && snd && ctl.ground) snd.step(S.snow ? 3 : S.aut > 0.5 || S.bare > 0.5 ? 1 : Math.random() < 0.5 ? 0 : 2, k.ShiftLeft || k.ShiftRight ? 1 : 0.7, Math.random() < 0.04); ctl.ph = ph; }   // a footstep each half stride, by what is underfoot
   let a;
   if (ctl.land > 0 && above > EYE + 0.5) a = EYE + (above - EYE) * exp(-dt * 2.2);            // down from the air: a glide, then gravity
   else { ctl.land = 0; ctl.vy -= 9.81 * G.g * dt; a = above + ctl.vy * dt; if (a <= EYE) { a = EYE; ctl.vy = 0; ctl.ground = true; } else ctl.ground = false; }
@@ -763,4 +781,4 @@ goSel.addEventListener('change', () => { if (goSel.value !== '') goPlace(+goSel.
 // first: on the Earth, wherever among these places the Sun now stands highest short of noon's glare
 { let best = 0, bs = -9; const E = world(100), s = sunAt(E, realT); PLACES.forEach((p, i) => { if (p[1] !== 100) return; const el = Math.asin(dot(unitLL(p[2], p[3]), s)) * 180 / PI, sc = -abs(el - 32); if (sc > bs) { bs = sc; best = i; } }); goPlace(best); }
 requestAnimationFrame(frame);
-window.sylva = { sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
+window.sylva = { get snd() { return snd; }, sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
