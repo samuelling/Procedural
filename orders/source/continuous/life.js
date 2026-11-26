@@ -3,6 +3,7 @@
 // under your eye is marked. Thousands of tips: the point is to see how much of the planet you have not yet met.
 import { species, nSpecies } from './planet.js';
 
+const max1 = (n) => Math.max(1, n);
 export function mkLife(world) {
   const $ = (id) => document.getElementById(id), seen = new Map();   // per planet: species codes met
   const panel = $('life'), cv = $('lifecv'), ctx = cv.getContext('2d');
@@ -10,7 +11,7 @@ export function mkLife(world) {
   const css = (c) => `rgb(${c.map((v) => Math.round(255 * Math.min(1, Math.pow(v * 1.8, 1 / 2.2)))).join(',')})`;
   function draw(G) {
     const W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = cv.clientHeight * devicePixelRatio, cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.46;
-    ctx.clearRect(0, 0, W, H); const total = nSpecies(G), S = seen.get(G.id) || new Set();
+    ctx.clearRect(0, 0, W, H); const total = max1(nSpecies(G)), S = seen.get(G.id) || new Set();
     let k = 0; ctx.lineCap = 'round';
     G.species.forEach((F, f) => {
       const a0 = k / total * Math.PI * 2, a1 = (k + F.nSp) / total * Math.PI * 2, am = (a0 + a1) / 2, r1 = R * 0.28, r2 = R * 0.62;

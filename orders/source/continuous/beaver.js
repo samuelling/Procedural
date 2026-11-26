@@ -41,7 +41,7 @@ export function mkBeavers(gl, prog, PRE) {
   const memo = new Map();
   function near(G, S) {
     const foot = S.foot, ab = foot.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], sg = foot[a] >= 0 ? 1 : -1, fk = a * 2 + (sg > 0 ? 1 : 0), out = [];
-    if (G.fauna && G.fauna.none || G.E >= 40) return out;                // beavers (or what stands for them) are a late thing
+    if (G.fauna && G.fauna.none || G.E >= 40 || G.lifeless) return out;                // beavers (or what stands for them) are a late thing
     const i0 = floor(foot[b] / CELL), j0 = floor(foot[c] / CELL);
     for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) {
       const key = `${G.id}:${fk}:${i}:${j}`; let f = memo.get(key); if (f === undefined) { f = find(G, a, sg, fk, i, j); memo.set(key, f); }

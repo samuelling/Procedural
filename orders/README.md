@@ -8,15 +8,19 @@ unpacker. No stored images, models or sound files.
 | [`0.2kb/`](0.2kb/) | 200 bytes | One formula: firs in mist on a 2D canvas |
 | [`2kb/`](2kb/) | 2,000 bytes | One fragment shader: ten rows of trees computed per pixel |
 | [`20kb/`](20kb/) | 20,000 bytes | Sylva: a genome and a grammar growing a 3D plot |
-| [`200kb/`](200kb/) | 200,000 bytes | The whole 2 MB world with the Earth seen coarser: climate in 3° blocks, heights and tree ranges in 1.5° |
-| [`2mb/`](2mb/) | 2,000,000 bytes | A forest that keeps time: animals are born, hunt, age and die; trees grow, die, fall and are replaced; plus night, seasons, flowers, insects, storms, and four more forests |
+| [`200kb/`](200kb/) | 200,000 bytes | The measured-Earth world of plots and windows, with the Earth seen coarser: climate in 3° blocks, heights and tree ranges in 1.5° |
+| [`2mb/`](2mb/) | 2,000,000 bytes | The real Earth without a cut: measured ground, sea floor, lakes, climate and real tree genera, the Sun and Moon where they are now, the Moon, Mercury, Venus and Mars from their own maps, the giants to their cloud tops, a zoom from quarks to the cosmic web, and a wormhole at the Earth's L4 point to six invented worlds |
+| [`worlds/`](worlds/) | (2 MB) | The six invented worlds that held the 2 MB rung before, on their own |
+| [`2mb-earth/`](2mb-earth/) | (2 MB) | The measured Earth of plots and windows that held it before that |
 
 `index.html` reports the real byte count of every rung against its allowance. The three small rungs are full. The
-200 kB rung uses about 192 kB: about 90 kB of program, 14 kB of climate classes in half degrees, and about 88 kB of
-the same measurements in bigger blocks. The 2 MB rung uses 1.74 MB: about 89 kB of
-program, 36 kB of climate classes, and about 1.6 MB of measured heights, climate and tree ranges (see `DATA.md`).
+2 MB rung is the continuous engine (`source/continuous/`) given the Earth's maps: about 1.5 MB of measured grids
+(`DATA.md`; packed by `tools/earthpack.py`) and the rest program. Everything finer than the maps is invented, and
+said so: the detail laid over the measured ground, the craters on the airless worlds, which species of a genus
+stands where within a region, the towns, the stars (the Sun's neighbours are not in the data), and the continents
+in past ages, which stay where they are today.
 [`story/`](story/) goes through it order by order: what each rung had to cut, how the top one was filled, and the
-six rounds of the dialogue between two agents that decided what to fill it with.
+six rounds of the dialogue between two agents that decided what to fill the measured Earth with.
 
 [`ROADMAP.md`](ROADMAP.md) is the plan for filling the 2 MB rung, track by track, and the state of each.
 

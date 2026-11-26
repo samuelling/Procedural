@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Worlds, continuous</title>
+<title>The Earth, from quarks to the cosmic web</title>
 <style>
 :root { --ink: #eef0e2; --amber: #e8b25a; --lichen: #a8c99a; --glass: rgba(14, 20, 13, .62); --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
@@ -27,7 +27,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 #lifex { justify-self: center; padding: 6px 16px; border-radius: 999px; border: 1px solid rgba(238,240,226,.3); background: none; color: var(--ink); font: italic 400 14px var(--serif); cursor: pointer; }
 #time { position: fixed; right: 14px; bottom: 14px; display: flex; gap: 8px; align-items: center; padding: 6px 8px 6px 14px; border-radius: 999px; background: var(--glass); color: var(--ink); font: 400 12px/1.2 system-ui, sans-serif; backdrop-filter: blur(8px); }
 #age { border: 0; border-radius: 999px; padding: 4px 8px; background: rgba(238,240,226,.12); color: var(--ink); font: 400 12px system-ui, sans-serif; }
-#age option { color: #111; }
+#age option, #go option { color: #111; } #go { border: 0; border-radius: 999px; padding: 4px 8px; background: rgba(238,240,226,.12); color: var(--amber); font: italic 400 12px var(--serif); max-width: 150px; }
 #bolt, #faster { border: 0; border-radius: 999px; padding: 4px 10px; background: rgba(238,240,226,.12); color: var(--amber); font: italic 400 12px var(--serif); cursor: pointer; }
 @media (max-width: 760px) { #time { bottom: auto; top: 86px; } }
 #err[hidden] { display: none; } #err { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink); font: 16px system-ui; background: #111; }
@@ -36,9 +36,9 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <canvas id="c"></canvas>
 <div id="hud"><h1 id="name">Sylva</h1><div id="phys"></div><div id="scale">—</div><div id="what"></div><div id="track"><div id="bar"></div></div><div id="ends"><span>1 am</span><span>30 billion light-years</span></div><div id="alt"></div><div id="sp" hidden></div><div id="met"></div></div>
 <button id="lifeb">Tree of life</button>
-<div id="time"><span id="clk"></span><select id="age" title="deep time: older ( , ) younger ( . )"></select><button id="bolt" title="call down lightning where you look ( L )">⚡</button><button id="faster" title="faster ( ] ), slower ( [ ), stop ( T )"><span id="spd"></span> ⏩</button></div>
+<div id="time"><select id="go" title="go to a real place, another world, or the wormhole"></select><span id="clk"></span><select id="age" title="deep time: older ( , ) younger ( . )"></select><button id="bolt" title="call down lightning where you look ( L )">⚡</button><button id="faster" title="faster ( ] ), slower ( [ ), stop ( T )"><span id="spd"></span> ⏩</button></div>
 <div id="life" hidden><p id="lifeh"></p><canvas id="lifecv"></canvas><button id="lifex">Close</button></div>
-<p id="hint">WASD walk · Shift run · Space jump · F fly (Space / C up and down) · scroll from quarks to the cosmic web · fly into a glowing sphere to cross worlds</p>
+<p id="hint">WASD walk · Shift run · Space jump · F fly (Space / C up and down) · scroll from quarks to the cosmic web · Go to… real places, the Moon and planets, and a wormhole</p>
 <button id="lock" hidden>Click to look around · Esc lets go</button>
 <div id="mode" data-m="walk">walking</div>
 <div id="stick"><div id="knob"></div></div><button id="bjump" class="tb">Jump</button><button id="bfly" class="tb">Fly</button>

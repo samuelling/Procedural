@@ -6,6 +6,12 @@
 // The galaxy is a density (disc, spiral arms, bulge, dust lanes) the view is marched through; seen from inside it is
 // the band across the night sky behind the air, seen from outside a spiral.
 import { rng, sunAt, H, climate, forestF } from './planet.js';
+import { helio, moonGeo, frame, toBody, fromBody, NGP, GC, unit } from './ephem.js';
+// the real system: radius (m) and colour from afar of each body, and which world each is (REAL numbers in real.js)
+const RB = { mercury: [2.4397e6, [0.55, 0.52, 0.5], 102], venus: [6.0518e6, [0.95, 0.88, 0.7], 103], earth: [6.371e6, [0.35, 0.5, 0.8], 100], moon: [1.7374e6, [0.6, 0.58, 0.55], 101], mars: [3.3895e6, [0.8, 0.47, 0.32], 104],
+  jupiter: [6.9911e7, [0.85, 0.75, 0.6], 105], saturn: [5.8232e7, [0.86, 0.78, 0.58], 106], uranus: [2.5362e7, [0.62, 0.83, 0.86], 107], neptune: [2.4622e7, [0.36, 0.5, 0.9], 108] };
+const ALB = { mercury: 0.14, venus: 0.69, earth: 0.37, moon: 0.12, mars: 0.17, jupiter: 0.54, saturn: 0.5, uranus: 0.49, neptune: 0.44 };
+const ECLN = [0, -0.39777716, 0.91748206];                                    // the ecliptic's pole
 
 const { sin, cos, sqrt, hypot, floor, PI, min, max, abs, exp, atan2, asin } = Math;
 export const PC = 3.086e16, KPC = PC * 1e3, MPC = PC * 1e6, AU = 1.496e11;
@@ -30,7 +36,7 @@ float stars3(vec3 g) { float r = length(g.xy); return exp(-(r - 8.) / 3.2) * exp
 // the cosmic web: walls and filaments of a slow noise, sharpened (megaparsecs)
 float web(vec3 x) { float a = 1. - abs(2. * vn(x / 40.) - 1.), b = 1. - abs(2. * vn(x / 11. + 5.3) - 1.), c = 1. - abs(2. * vn(x / 130. + 9.1) - 1.); return pow(a * .55 + b * .3 + c * .15, 7.) * 9.; }`;
 
-export function mkCosmos(gl, prog, PRE) {
+export function mkCosmos(gl, prog, PRE, world, sib) {
   const QV = `#version 300 es
 out vec2 v; void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); v = p; gl_Position = vec4(p * 2. - 1., 0., 1.); }`;
   // ---- the background: the galaxy, marched; and (from far off) the planet, its star, its moons and the other planets
@@ -38,7 +44,7 @@ out vec2 v; void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_
 in vec2 v; uniform vec3 uR, uU, uF; uniform vec2 uTan; uniform mat3 uLP;
 uniform vec3 uGc, uGe1, uGe2, uGn; uniform float uGg, uCmb;
 uniform int uMode; uniform vec3 uSd, uSp, uSc, uPp, uAx; uniform float uSr, uSb, uPr, uRing0, uRing1; uniform sampler2D uMap; uniform vec3 uAirC, uRingN;
-uniform vec4 uB[12], uBc[12]; uniform int uNb; uniform vec3 uOn; uniform vec4 uO[9]; uniform int uNo; uniform float uOrbA;
+uniform vec4 uB[12], uBc[12]; uniform float uBq[12]; uniform int uNb; uniform vec3 uOn; uniform vec4 uO[9]; uniform int uNo; uniform float uOrbA;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 vec2 sph(vec3 ro, vec3 rd, float r) { float b = dot(ro, rd), c = dot(ro, ro) - r * r, d = b * b - c; if (d < 0.) return vec2(1e30, -1e30); d = sqrt(d); return vec2(-b - d, -b + d); }
 void main() {
@@ -53,6 +59,7 @@ void main() {
     for (int i = 0; i < 48; i++) { vec4 g = galaxy(ro + rg * (t0 + (float(i) + j) * dt)); col += g.rgb * tr * dt * .05 * uGg; tr *= exp(-g.a * dt * .5); if (tr < .02) break; } }
   col += vec3(.035, .02, .015) * (.75 + .5 * vn(rd * 6.)) * uCmb;      // the oldest light, from every side
   if (uMode >= 1) { float th = acos(clamp(dot(rd, uSd), -1., 1.)); col += uSc / 2.6 * uSb * exp(-th * th / (pix * pix) * 1.5); }   // the star, as a point
+  if (uMode == 0) for (int i = 0; i < 12; i++) { if (i >= uNb) break; if (uBq[i] <= 0.) continue; float th = acos(clamp(dot(rd, normalize(uB[i].xyz)), -1., 1.)); col += uBc[i].rgb * uBq[i] * exp(-th * th / (pix * pix) * 1.3); }   // the planets, as points in the night sky
   if (uMode == 1) {
     // the star: a disc, and the glare of a point
     vec2 ts = sph(-uSp, rd, uSr); float cs = dot(rd, normalize(uSp)), ang = uSr / length(uSp), th = acos(clamp(cs, -1., 1.));
@@ -136,8 +143,9 @@ void main() {
     const r = rng(G.n * 4111 + 7), a = AU * (G.starK / 5800) ** 2, planets = [];
     const radii = [0.39, 0.72, 1, 1.52, 2.8, 5.2, 9.5, 19.2, 30].map((k) => k * (0.85 + 0.3 * r()));
     const home = 2 + (G.n % 2);                                            // which orbit is ours
-    radii.slice(0, 5 + floor(r() * 4)).forEach((k, i) => { if (i === home) return; const giant = k > 2.5;
-      planets.push({ k, R: (giant ? 2.5e7 + r() * 5e7 : 2.5e6 + r() * 5e6), ph: r() * 6.283, col: giant ? [0.8 + 0.2 * r(), 0.65 + 0.2 * r(), 0.45 + 0.4 * r()] : [0.45 + 0.4 * r(), 0.35 + 0.3 * r(), 0.3 + 0.3 * r()], giant }); });
+    radii.slice(0, 5 + floor(r() * 4)).forEach((k, i) => { if (i === home) { planets.push({ k, i, R: G.R, ph: 0, home: true, giant: false }); return; } const giant = k > 2.5;
+      planets.push({ k, i, R: (giant ? 2.5e7 + r() * 5e7 : 2.5e6 + r() * 5e6), ph: r() * 6.283, col: giant ? [0.8 + 0.2 * r(), 0.65 + 0.2 * r(), 0.45 + 0.4 * r()] : [0.45 + 0.4 * r(), 0.35 + 0.3 * r(), 0.3 + 0.3 * r()], giant }); });
+    planets.forEach((p) => { p.ra = p.k / radii[home]; });                // its distance, as a fraction of the home planet's
     const n = nrm([r() - 0.5, r() - 0.5, r() - 0.5]), e1 = nrm(cross(n, [0.3, 0.9, 0.2])), e2 = cross(n, e1), ga = r() * 6.283;
     const S = { a, Rs: a * G.sunSize, planets, home, radii, gal: { n, e1, e2, toC: add(e1.map((x) => x * cos(ga)), e2, sin(ga)), arms: r() < 0.5 ? 2 : 4, tw: 4 + r() * 3 } };
     systems.set(G.n, S); return S;
@@ -161,16 +169,36 @@ void main() {
     return m.tex;
   }
   // the inertial frame turns once a day against the planet's
-  const spin = (G, v) => { const a = -2 * PI * (G.t || 0), c = cos(a), s = sin(a); return [c * v[0] - s * v[1], s * v[0] + c * v[1], v[2]]; };   // inertial -> planet
-  const unspin = (G, v) => { const a = 2 * PI * (G.t || 0), c = cos(a), s = sin(a); return [c * v[0] - s * v[1], s * v[0] + c * v[1], v[2]]; };
+  // (for the real worlds the inertial frame is the true one, the ICRF's equator and equinox, and each body turns in it as it really does)
+  const spin = (G, v) => { if (G.real) return toBody(frame(G.real, G.t || 0), v); const a = -2 * PI * (G.t || 0), c = cos(a), s = sin(a); return [c * v[0] - s * v[1], s * v[0] + c * v[1], v[2]]; };   // inertial -> planet
+  const unspin = (G, v) => { if (G.real) return fromBody(frame(G.real, G.t || 0), v); const a = 2 * PI * (G.t || 0), c = cos(a), s = sin(a); return [c * v[0] - s * v[1], s * v[0] + c * v[1], v[2]]; };
+  // the real system as seen from whichever real body you are on: the Sun, the planets and the Moon where they are now,
+  // their orbits drawn as circles in the ecliptic, the galaxy in its true orientation with its centre 8.2 kpc off
+  const realGal = (() => { const n = NGP, e1 = unit(add(GC, n, -dot(GC, n))), e2 = cross(n, e1); return { n, e1, e2, toC: e1, arms: 4, tw: 5 }; })();
+  function layoutReal(G, cam) {
+    const d = G.t || 0, P0 = helio(G.real, d), rel = (nm) => add(helio(nm, d), P0, -1), star = P0.map((v) => -v);
+    const bodies = Object.keys(RB).filter((nm) => nm !== G.real).map((nm) => { const [R, col, wn] = RB[nm], c = rel(nm), hs = hypot(...helio(nm, d)), dc = hypot(...c);
+      return { c, R, col, giant: false, ra: hs / AU, k: nm, w: world(wn), moon: nm === 'moon', q: Math.min(40, 3 * ALB[nm] * R * R / (hs * hs * dc * dc) / 1.15e-33) }; });
+    const orbits = Object.keys(RB).filter((nm) => nm !== 'moon').map((nm) => ({ c: star, r: hypot(...helio(nm, d)) }));
+    const camI = unspin(G, cam.P), gc = add(star, realGal.toC, 8.2 * KPC);
+    const Y = { a: AU, Rs: 6.957e8, planets: [], gal: realGal };
+    return { Y, star, on: ECLN, bodies, orbits, camI, gc, cur: { ra: hypot(...P0) / AU } };
+  }
+  // the system as seen from whichever of its planets you are on (the home planet, or one of its siblings)
+  const homeOf = (G) => (G.home !== undefined ? world(G.home) : world(G.n));
+  const colOf = (G) => G.lifeless ? G.soil.map((v, i) => sqrt(v * 0.6 + G.rock[i] * 0.4)) : G.grass.map((v, i) => sqrt(v * (1 - G.seaFrac) + G.liquid[i] * 6 * G.seaFrac));
+  const sysYears = (G) => (G.t || 0) / G.yearD * (G.home !== undefined ? G.sysYr : 1);   // time in the home planet's years
   function layout(G, cam) {
-    const Y = system(G), sd = unspin(G, sunAt(G, G.t || 0)), star = sd.map((v) => v * Y.a);   // inertial, from the planet
-    const on = nrm(add([0, 0, 1], sd, -sd[2])), e1 = sd.map((v) => -v), e2 = cross(on, e1), yr = (G.t || 0) / G.yearD;
-    const bodies = Y.planets.map((p) => { const ra = Y.a * p.k / Y.radii[Y.home], ph = p.ph + 2 * PI * yr / (p.k / Y.radii[Y.home]) ** 1.5; return { c: add(star, add(e1.map((v) => v * cos(ph) * ra), e2, sin(ph) * ra), -1), R: p.R, col: p.col, giant: p.giant, ra }; });
+    if (G.real) return layoutReal(G, cam);
+    const Gh = homeOf(G), Y = system(Gh), kc = G.k ?? Y.home, cur = Y.planets.find((p) => p.i === kc), yr = sysYears(G);
+    const sd = unspin(G, sunAt(G, G.t || 0)), star = sd.map((v) => v * Y.a * cur.ra);   // inertial, from the planet you are on
+    const on = [0, 0, 1], e1 = nrm([-sd[0], -sd[1], 0]), e2 = cross(on, e1), psi = (p) => p.ph + 2 * PI * yr / p.ra ** 1.5;
+    const bodies = Y.planets.filter((p) => p.i !== kc).map((p) => { const ra = Y.a * p.ra, d = psi(p) - psi(cur), w = p.giant ? null : p.home ? Gh : sib(Gh, p.i, p);
+      return { c: add(star, add(e1.map((v) => v * cos(d) * ra), e2, sin(d) * ra)), R: p.R, col: w ? colOf(w) : p.col, giant: p.giant, ra, k: p.i, w }; });
     G.moons.forEach((q) => { const d = [cos(q[1]) * cos(q[2]), sin(q[1]) * cos(q[2]), sin(q[2])], dist = 60 * G.R; bodies.push({ c: unspin(G, d).map((v) => v * dist), R: q[0] * dist, col: [0.6, 0.58, 0.55], giant: false }); });
-    const orbits = [{ c: star, r: Y.a }, ...bodies.filter((b) => b.ra).map((b) => ({ c: star, r: b.ra }))];
+    const orbits = Y.planets.map((p) => ({ c: star, r: Y.a * p.ra }));
     const camI = unspin(G, cam.P), gc = add(star, Y.gal.toC, -8.2 * KPC);   // the galaxy's centre: 8 kpc in from the star, which sits near the mid-plane
-    return { Y, star, on, bodies, orbits, camI, gc };
+    return { Y, star, on, bodies, orbits, camI, gc, cur };
   }
   const basis = (cam, W, H) => { const d = [cos(cam.pitch) * sin(cam.yaw), sin(cam.pitch), cos(cam.pitch) * cos(cam.yaw)], l = hypot(d[0], d[2]) || 1, r = [-d[2] / l, 0, d[0] / l], u = cross(r, d), t = Math.tan(cam.fov / 2); return { d, r, u, tan: [t * W / H, t] }; };
   const toLoc = (S, v) => [0, 1, 2].map((i) => S.F[i][0] * v[0] + S.F[i][1] * v[1] + S.F[i][2] * v[2]);
@@ -194,7 +222,8 @@ void main() {
         const dS = dS0; gl.uniform1f(bg.uOrbA, min(1, max(0, (S.cy - 3e8) / 1e9)) * min(1, max(0, (Y.a * 300 - dS) / (Y.a * 200))));
         const tl = G.ringTilt; gl.uniform3fv(bg.uRingN, [sin(tl), 0, cos(tl)]); gl.uniform1f(bg.uRing0, G.rings ? 1.25 : 0); gl.uniform1f(bg.uRing1, G.rings);
         gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, map(G)); gl.uniform1i(bg.uMap, 5); gl.activeTexture(gl.TEXTURE0);
-      } else { gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, map(G)); gl.uniform1i(bg.uMap, 5); gl.activeTexture(gl.TEXTURE0); }
+      } else { gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, map(G)); gl.uniform1i(bg.uMap, 5); gl.activeTexture(gl.TEXTURE0);
+        if (mode === 0) { const B = new Float32Array(48), C = new Float32Array(48), Q = new Float32Array(12); const L = Lo.bodies.filter((o) => !o.moon).slice(0, 12); L.forEach((o, i) => { B.set([...rel(o.c), o.R], i * 4); C.set([...o.col, 0], i * 4); Q[i] = o.q || 0; }); gl.uniform4fv(bg.uB, B); gl.uniform4fv(bg.uBc, C); gl.uniform1fv(bg.uBq, Q); gl.uniform1i(bg.uNb, L.length); } }
       gl.drawBuffers([gl.COLOR_ATTACHMENT0, mode === 1 ? gl.COLOR_ATTACHMENT1 : gl.NONE]); gl.bindVertexArray(vq); gl.drawArrays(gl.TRIANGLES, 0, 3);
       // the stars and galaxies, added on top
       gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE]); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.bindVertexArray(quad);
@@ -213,6 +242,9 @@ void main() {
       gl.disable(gl.BLEND); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]); gl.bindVertexArray(null);
     },
     // what is near: for the readout
+    // the planets you could go to: where each is (from the planet you are on, its axes), and how far the camera is
+    near(G, cam) { const Lo = layout(G, cam); return Lo.bodies.filter((b) => b.k !== undefined).map((b) => ({ ...b, cP: spin(G, b.c), d: hypot(...add(Lo.camI, b.c, -1)), relI: add(Lo.camI, b.c, -1), starI: add(Lo.star, b.c, -1) })); },
+    spin, unspin,
     where(G, cam) { const Lo = layout(G, cam), dS = hypot(...add(Lo.camI, Lo.star, -1)), dG = hypot(...add(Lo.camI, Lo.gc, -1)); return { dS, dG, a: Lo.Y.a, toG: spin(G, add(Lo.gc, Lo.camI, -1)), toS: spin(G, add(Lo.star, Lo.camI, -1)) }; },
   };
 }

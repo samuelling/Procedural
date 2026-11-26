@@ -4,6 +4,10 @@
 // the world it leads to (that world's own air, star and plants). From orbit each is a pinprick of its far star's light.
 // Go into one (scroll toward it, or fly in) and you come out of its twin, on the other planet, still moving.
 import { H, rng, climate } from './planet.js';
+import { helio, frame, toBody } from './ephem.js';
+// one more mouth, in space: at the Earth's L4 point (sixty degrees ahead of it in its orbit, as far from the Sun),
+// joined to a mouth on Sylva, the first of the invented worlds. It is 1,000 km across.
+export const RL4 = 5e5, L4E = 'L4';
 
 const { hypot, min, max, floor, cos, sin, sqrt, tan, acos, abs } = Math;
 const nrm = (v) => { const l = hypot(...v) || 1; return v.map((q) => q / l); };
@@ -12,8 +16,14 @@ export const RW = 90;                                                      // a 
 export function mkHoles(gl, prog, PRE, world, NP) {
   // the links: planet n to n+1 (a ring), and n to n+3 for the first half (chords)
   const links = []; for (let n = 0; n < NP; n++) links.push([n, (n + 1) % NP]); for (let n = 0; n < NP / 2; n++) links.push([n, n + NP / 2]);
+  links.push([0, 100]);                                                    // Sylva to the real Earth's L4
+  const L4 = (Gc) => { const E = helio('earth', Gc.t || 0), c = Math.cos(Math.PI / 3), s = Math.sin(Math.PI / 3), n = [0, -0.39777716, 0.91748206];   // Earth's place turned 60 degrees about the ecliptic's pole
+    const k = n, v = E, kv = [k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0]], kd = k[0] * v[0] + k[1] * v[1] + k[2] * v[2], p = v.map((x, i) => x * c + kv[i] * s + k[i] * kd * (1 - c));
+    const me = helio(Gc.real, Gc.t || 0); return toBody(frame(Gc.real, Gc.t || 0), p.map((x, i) => x - me[i])); };
   const mouths = (n) => {                                                  // planet n's mouths: where, and where each leads
-    const G = world(n); if (G.mouths) return G.mouths;
+    const G = world(n);
+    if (G.real) { const C = L4(G); return [{ to: 0, e: links.length - 1, C, u: nrm(C), R: RL4, space: true }]; }   // (where it is from whichever real body you are on, now)
+    if (G.mouths) return G.mouths;
     G.mouths = links.map(([a, b], e) => (a === n || b === n) ? { to: a === n ? b : a, e } : null).filter(Boolean).map((m) => {
       const r = rng(n * 131 + m.e * 17 + 7), sd = G.sunDir, z = sd[2] * 0.7 + (r() - 0.5) * 0.6, a = Math.atan2(sd[1], sd[0]) + (r() - 0.5) * 2.2, s = sqrt(max(0, 1 - z * z)), u = [s * cos(a), s * sin(a), z];
       // pull it toward a landing-like spot: on land, the star up; a few tries
@@ -29,17 +39,17 @@ export function mkHoles(gl, prog, PRE, world, NP) {
     links, mouths,
     // has the camera gone in? then out of the twin
     step(cam, G, S, dt, jump) {
-      for (const m of mouths(G.n)) { const d = hypot(cam.P[0] - m.C[0], cam.P[1] - m.C[1], cam.P[2] - m.C[2]); if (d < RW * 0.9) { const t = twin(G.n, m.to, m.e); jump(m.to, t.u, RW * 2.6); return true; } }
+      for (const m of mouths(G.n)) { const d = hypot(cam.P[0] - m.C[0], cam.P[1] - m.C[1], cam.P[2] - m.C[2]); if (d < (m.R || RW) * 0.9) { const t = twin(G.n, m.to, m.e); jump(m.to, t, (t.R || RW) * 2.6); return true; } }
       return false;
     },
     // a ray (camera-local) against the mouths: the distance to the nearest one it meets, for zooming toward it
     hit(cam, G, S, r) {
-      let best = null; for (const m of mouths(G.n)) { const v = [0, 1, 2].map((i) => S.F[i][0] * (m.C[0] - cam.P[0]) + S.F[i][1] * (m.C[1] - cam.P[1]) + S.F[i][2] * (m.C[2] - cam.P[2])), b = v[0] * r[0] + v[1] * r[1] + v[2] * r[2], c = v[0] * v[0] + v[1] * v[1] + v[2] * v[2] - RW * RW, d = b * b - c; if (d > 0 && b > 0) { const t = b - sqrt(d); if (t > 0 && (best === null || t < best)) best = t * 0.999 + RW * 0.3; } }
+      let best = null; for (const m of mouths(G.n)) { const v = [0, 1, 2].map((i) => S.F[i][0] * (m.C[0] - cam.P[0]) + S.F[i][1] * (m.C[1] - cam.P[1]) + S.F[i][2] * (m.C[2] - cam.P[2])), b = v[0] * r[0] + v[1] * r[1] + v[2] * r[2], vv = v[0] * v[0] + v[1] * v[1] + v[2] * v[2], Rm = m.space ? max(m.R, sqrt(vv) * 0.02) : RW, c = vv - Rm * Rm, d = b * b - c; if (d > 0 && b > 0) { const t = b - sqrt(d); if (t > 0 && (best === null || t < best)) best = m.space ? max(0, sqrt(vv) - m.R * 1.2) : t * 0.999 + RW * 0.3; } }
       return best;
     },
     nearest(cam, G) {
       let best = null; for (const m of mouths(G.n)) { const d = hypot(cam.P[0] - m.C[0], cam.P[1] - m.C[1], cam.P[2] - m.C[2]); if (!best || d < best.d) best = { d, to: m.to }; }
-      return best ? `wormhole to ${world(best.to).name} ${fmt(best.d)}` : '';
+      return best ? `wormhole to ${world(best.to).name} ${best.d > 1e10 ? (best.d / 1.496e11).toPrecision(2) + ' AU' : fmt(best.d)}` : '';
     },
     none() { shown = []; },
     // find the mouths on screen this frame
@@ -48,13 +58,13 @@ export function mkHoles(gl, prog, PRE, world, NP) {
       for (const m of mouths(G.n)) {
         const v = [0, 1, 2].map((i) => S.F[i][0] * (m.C[0] - cam.P[0]) + S.F[i][1] * (m.C[1] - cam.P[1]) + S.F[i][2] * (m.C[2] - cam.P[2])), d = hypot(...v);
         const c = [0, 1, 2, 3].map((r) => VP[r] * v[0] + VP[4 + r] * v[1] + VP[8 + r] * v[2] + VP[12 + r]); if (c[3] <= 0) continue;
-        const sx = (c[0] / c[3]) * 0.5 + 0.5, sy = (c[1] / c[3]) * 0.5 + 0.5, rad = RW / d / tan(cam.fov / 2) * 0.5;   // centre, and radius as a fraction of the screen's height
+        const sx = (c[0] / c[3]) * 0.5 + 0.5, sy = (c[1] / c[3]) * 0.5 + 0.5, rad = (m.R || RW) / d / tan(cam.fov / 2) * 0.5;   // centre, and radius as a fraction of the screen's height
         if (sx < -1 || sx > 2 || sy < -1 || sy > 2) continue;
         const up = [0, 1, 2].map((i) => S.F[i][0] * m.u[0] + S.F[i][1] * m.u[1] + S.F[i][2] * m.u[2]);
         // behind the planet? (from far off the ground hides it)
         const cpos = [0, S.cy + G.R, 0], cc = [v[0], v[1] + cpos[1], v[2]], dd = nrm(v), b = cpos[0] * dd[0] + cpos[1] * dd[1] + cpos[2] * dd[2], disc = b * b - (cpos[1] * cpos[1] - G.R * G.R);
-        if (disc > 0 && -b - sqrt(disc) > 0 && -b - sqrt(disc) < d - RW) continue; void cc;
-        shown.push({ sx, sy, rad, d, to: world(m.to), up });
+        if (disc > 0 && -b - sqrt(disc) > 0 && -b - sqrt(disc) < d - (m.R || RW)) continue; void cc;
+        shown.push({ sx, sy, rad, d: d - (m.R || RW) * 1.5, to: world(m.to), up });
       }
       shown.sort((a, b) => a.d - b.d); shown = shown.slice(0, 3);
     },
@@ -75,8 +85,8 @@ vec3 holes(vec2 uv, sampler2D S) {
     float rp = max(R, 2.5 / 600.);                                        // from far off, a pinprick that stays visible
     float ring = exp(-pow((r - rp) / (rp * .12 + .0015), 2.)) * (1. + 3. * exp(-R * 400.));
     vec3 sc = uHs[i] / max(max(uHs[i].x, uHs[i].y), uHs[i].z);
-    if (texture(uD, clamp(h.xy, 0., 1.)).r < h.w - ${RW}. * 1.5) continue;   // hidden behind something nearer
-    bool front = texture(uD, uv).r > h.w - ${RW}. * 1.5;
+    if (texture(uD, clamp(h.xy, 0., 1.)).r < h.w) continue;   // hidden behind something nearer
+    bool front = texture(uD, uv).r > h.w;
     add += sc * ring * .9 + sc * exp(-r / (rp * 3.)) * .25 * exp(-R * 200.);
     if (r < R * 3.5 && R > 1e-4) { float e = R * R * 1.1 / max(r, 1e-6); u2 -= (dv / max(r, 1e-6)) * min(e, r) * vec2(1. / uAsp, 1.) * smoothstep(R * 3.5, R * 1.5, r); }   // light bent round the mouth
     if (r < R && front) { float rho = r / R, a = rho * 3.1416; vec2 dn = dv / max(r, 1e-6); vec3 rd = normalize(vec3(dn.x * sin(a), dn.y * sin(a) + .15, -cos(a)));   // a fish-eye of the whole far sky

@@ -10,11 +10,14 @@ import { mkFire, FIRE_GLSL } from './fire.js';
 import { mkBeavers, POND_GLSL } from './beaver.js';
 import { mkCosmos, COS } from './cosmos.js';
 import { mkMicro, MICRO } from './micro.js';
-import { nSpecies, sunAt, season, vn3, AGES, ageWorld, carry } from './planet.js';
+import { nSpecies, sunAt, season, vn3, AGES, ageWorld, carry, sibling } from './planet.js';
 import { mkTrees } from './trees.js';
 import { mkCover } from './cover.js';
 import { mkSky } from './sky.js';
-import { mkHoles } from './wormhole.js';
+import { mkHoles, RL4 } from './wormhole.js';
+import { realWorld, REAL, region, NAMES } from './real.js';
+import { dayOf, msOf, moonGeo, helio, frame as bodyFrame, toBody, unit as unitV } from './ephem.js';
+import { dataH, reliefAt, lakeAt, speciesW, CRS } from './planet.js';
 
 const $ = (id) => document.getElementById(id), canvas = $('c');
 const gl = canvas.getContext('webgl2', { antialias: false, depth: false, alpha: false, powerPreference: 'high-performance' });
@@ -70,8 +73,10 @@ export const prog = (vs, fs) => {
 const SH = { size: 2048, VP: new Float32Array(16), on: false, cast: false, k: 0, c: 0, bias: 0 };
 const PLANETS = 6, worlds = [];
 let holes = null;
-const world = (n) => worlds[n] || (worlds[n] = genome(n));
-let G = world(0);
+const RN = Object.fromEntries(Object.entries(REAL).map(([k, v]) => [v, k]));   // the real worlds, by number
+const world = (n) => worlds[n] || (worlds[n] = n >= 100 ? realWorld(RN[n]) : genome(n));
+let realT = dayOf(Date.now());                                              // the real worlds share one clock: days from J2000, starting now
+let G = world(100); G.t = realT;
 holes = mkHoles(gl, prog, null, world, PLANETS);
 // the camera: a position in planet metres (doubles), a reference direction carried along the surface as it moves
 // (so 'ahead' stays ahead), and a turn and tilt relative to the ground under it
@@ -82,7 +87,7 @@ function axes() {                                                          // lo
 }
 const toLocal = (F, v) => [dot(v, F[0]), dot(v, F[1]), dot(v, F[2])], toPlanet = (F, v) => [F[0][0] * v[0] + F[1][0] * v[1] + F[2][0] * v[2], F[0][1] * v[0] + F[1][1] * v[1] + F[2][1] * v[2], F[0][2] * v[0] + F[1][2] * v[1] + F[2][2] * v[2]];
 const ground = (p) => H(G, p);
-const stand = (p) => { const h = H(G, p); return S.pondTop ? max(h, S.pondTop(p, h)) : h; };   // what you stand on: the ground, or a beaver pond's water or dam
+const stand = (p) => { const h = H(G, p), lk = lakeAt(G, nrm(p)); return max(S.pondTop ? max(h, S.pondTop(p, h)) : h, lk > h ? lk : -1e9); };   // what you stand on: the ground, or a beaver pond's water or dam
 const alt = () => hypot(...cam.P) - G.R;
 // a good place to stand on a planet: temperate, wooded, gentle, and with the star well up
 function landing(Gp) {
@@ -97,7 +102,7 @@ function landing(Gp) {
   return best || [0, 0, Gp.R];
 }
 function arrive(n, P, look) {                                              // stand on planet n (at P, or near its first wormhole)
-  G = world(n); let p = P; $('age').value = 0;
+  G = world(n); if (G.real) G.t = realT; let p = P; $('age').value = 0;
   if (!p) { const m = holes.mouths(n)[0], u0 = m.u, t = nrm(cross(u0, [0.31, 0.52, 0.79])); let best = null, bs = -1e9;
     for (let k = 0; k < 24; k++) { const a = k / 24 * 6.2832, dd = 1200 + (k % 3) * 400, dir = nrm(madd(t.map((v) => v * cos(a)), cross(u0, t), sin(a))), q = nrm(madd(u0, dir, dd / G.R)).map((v) => v * G.R), h = H(G, q); if (h < 5) continue; const c = climate(G, q, h), sc = -abs(c.W - 0.65) - (h > 2500 ? 2 : 0); if (sc > bs) { bs = sc; best = q; } }
     p = best || landing(G); look = madd(m.C, p, -1); }
@@ -124,14 +129,14 @@ void main() {
   vec3 q = vec3(dir.x * r * sx, -2. * s2 * s2 * uR, dir.y * r * sx);    // the point on the sphere, from the foot
   float dh; vec3 gr; vM = ground(q, ce, dh, gr);
   float h = uG0 + dh; vec3 cl = climate(q, h + ${RIVD}. * uRivC); float rd, rw, rm = riverM(q, h + ${RIVD}. * uRivC, cl.y, rd, rw);   // rivers: carve the channel,
-  h -= ${RIVD}. * (rm - uRivC); vec2 pd = pond(q, h); vPw = pd.x; vBu = pd.y; vH = h; vQ = q; vGr = gr; vCe = ce; vPl = p;
+  h -= ${RIVD}. * (rm - uRivC); vec2 pd = pond(q, h); pd.x = max(pd.x, lakeL(q)); vPw = pd.x; vBu = pd.y; vH = h; vQ = q; vGr = gr; vCe = ce; vPl = p;
   float hv = max(max(max(h, rm > .02 ? h + ${RIVD}. * rm - ${RIVD}. * .7 : -1e9), pd.x), uUnder > .5 ? -1e9 : 0.);   // and fill it; the sea is a surface of its own (seen from above)
   vP = q + vec3(0., uH0 + (hv - uG0), 0.) + q * (hv / uR);
   vec4 qq = uVP * vec4(vP, 1.); vW = qq.w; gl_Position = vec4(qq.xy, 0., qq.w);
 }`, PRE + GLSL_NOISE + GLSL_GROUND + CLIM + SPEC + `
 in vec3 vP, vQ, vGr; in vec2 vPl; in float vW, vCe, vH, vM, vPw, vBu;
 uniform float uG0, uNight; uniform vec4 uFine; uniform vec3 uFoot, uTf, uLf; uniform ivec3 uTb, uLb; uniform mat3 uF;
-uniform vec3 uGrass, uDry, uSoil, uRock, uSand, uLiq;
+uniform vec3 uGrass, uDry, uSoil, uRock, uSand, uLiq; uniform float uGiant, uSnowOff, uHmid, uHalb; uniform int uCan; uniform highp sampler2D uCanT;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 float vor(vec2 u, out float id) { vec2 i = floor(u), f = u - i; float d = 9.; id = 0.; for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 o = vec2(x, y), r = o + vec2(h1(i + o), h1(i + o + 7.3)) - f; float e = dot(r, r); if (e < d) { d = e; id = h1(i + o + 3.1); } } return sqrt(d); }
 void main() {
@@ -151,10 +156,13 @@ void main() {
   vec3 grass = mix(uDry, uGrass, smoothstep(.25, .6, W) * smoothstep(-9., -2., uSeasT)) * (.85 + .3 * NF(wp, 40.));
   vec3 alb = mix(uSand * (.9 + .2 * NF(wp, 300.)), grass, smoothstep(.12, .3, W));
   vec3 rock = uRock * (.8 + .4 * NF(wp, 9.));
+  if (uHalb > 0.) alb = mix(uRock * 1.1, uSand, smoothstep(-2500., 2500., hA - uHmid)) * (.85 + .3 * NF(wp, 2e4)) * (.9 + .2 * NF(wp, 60.));   // an airless world: dark low plains (the Moon's maria), bright high ground
   // the forest's mean colour: its species, weighted by how well each suits this place
   vec3 can = vec3(0.); float cw = 0.;
   for (int i = 0; i < 16; i++) { if (i >= uNsp) break; vec4 s = uSpN[i]; float w = exp(-pow((T - s.x) / s.y, 2.) - pow((W - s.z) / s.w, 2.)); vec3 cc = uSpC[i].rgb; if (uSpC[i].w > .5) cc = mix(mix(cc, vec3(.35, .12, .02), uAut * .8), vec3(.1, .085, .07), uBare * .8); can += cc * w; cw += w; }
-  can = cw > 1e-4 ? can / cw : uGrass; fo *= smoothstep(1e-4, .05, cw);
+  can = cw > 1e-4 ? can / cw : uGrass; if (uCan == 0) fo *= smoothstep(1e-4, .05, cw);
+  if (uCan > 0) { vec4 cc = texture(uCanT, dTC(normalize(uFootD + uFrmD * vQ))); vec3 c0 = cc.rgb; can = mix(c0, mix(mix(c0, vec3(.35, .12, .02), uAut * .8), vec3(.1, .085, .07), uBare * .8), cc.a); fo *= smoothstep(.002, .02, c0.r + c0.g + c0.b); }   // measured worlds: the forest's colour, from the families that grow here
+  if (uGiant > 0.) { float b = .5 + .5 * sin(cl.z * 22. + 2.5 * n2(wp / 9e5) + 1.3 * n2(wp / 2.3e5)); alb = mix(uSoil, uRock, b * b) * (.9 + .2 * NF(wp, 4e4)); fo = 0.; }   // a giant: bands of cloud
   float far = smoothstep(80., 420., d);                                    // under trees you see the floor; from far, their crowns
   alb = mix(alb, mix(uSoil, can * (.85 + .3 * NF(wp, 7.)), far), fo);
   alb = mix(alb, rock, smoothstep(.42, .62, sl + .1 * NF(wp, 30.)) * (1. - fo * .7));
@@ -195,7 +203,7 @@ void main() {
     em += vec3(1.6, .32, .05) * fuel * (1. - smoothstep(.03, .3, ba)) * smoothstep(.7, .85, n2(wp * 2. + vec2(uT * .3, 0.)) * .5 + .5 * ff) * .35; }
   if (vBu > .02) alb = mix(alb, vec3(.12, .08, .05) * (.5 + .9 * n2(wp * vec2(9., 1.3) + n2(wp * 3.) * 4.)), smoothstep(.02, .3, vBu));   // dam and lodge: sticks and mud
   alb = mix(alb, uSand, smoothstep(5., 1.5, hA) * (1. - fo) * step(pdep, -1.));               // beaches
-  float snow = smoothstep(-3., -9., T + uSeasT + 3. * NF(wp, 500.)) * smoothstep(.8, .5, sl);   // snow and ice where it is cold enough
+  float snow = smoothstep(-3., -9., T + (uCl > 0 ? gSeas : uSeasT) + uSnowOff + 3. * NF(wp, 500.)) * smoothstep(.8, .5, sl) * (1. - uGiant);   // snow and ice where it is cold enough
   alb = mix(alb, vec3(.8, .83, .88), snow);
   // close up: the floor's own grain, scale by scale, each fading in as it grows big enough to see
   float id, g1 = vor(wp / .03, id);
@@ -233,10 +241,40 @@ const grid = (() => {
 const octTex = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, octTex); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 const S = {};                                                              // this frame's shared state
+// measured worlds: their maps as textures (heights and lakes; climate and relief; the forest's colour), made once each
+const dtex = new Map();
+function texOf(w, h, fmt, f, data, lin) { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, fmt, w, h, 0, f, gl.FLOAT, data);
+  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, lin ? gl.LINEAR : gl.NEAREST], [gl.TEXTURE_MAG_FILTER, lin ? gl.LINEAR : gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.REPEAT], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v); return t; }
+function dataTex(Gd) {
+  if (!Gd.dat) return null; const key = Gd.real + (Gd.E || 0); if (dtex.has(key)) return dtex.get(key); const D = Gd.dat; let o;
+  if (D.cl) { const base = dtex.get(Gd.real + '0'); o = base && base.dat ? { ...base } : { dat: texOf(D.g.w, D.g.h, gl.RG16F, gl.RG, D.g.a, false), rel: texOf(D.cl.w, D.cl.h, gl.RGBA16F, gl.RGBA, D.cl.a, true) }; o.can = texOf(360 * 2, 180 * 2, gl.RGBA16F, gl.RGBA, canopy(Gd), true); }
+  else { const t = texOf(D.g.w, D.g.h, gl.RGBA16F, gl.RGBA, D.g.a, true); o = { dat: t, rel: t }; }
+  gl.activeTexture(gl.TEXTURE0); dtex.set(key, o); return o;
+}
+// the forest's colour seen from afar on the Earth: each half-degree cell, its families mixed as they suit the place
+function canopy(Gd) {
+  const W = 720, Hh = 360, out = new Float32Array(W * Hh * 4), sp = Gd.species;
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
+    const la = (0.5 - (j + 0.5) / Hh) * PI, lo = ((i + 0.5) / W * 2 - 1) * PI, u = [cos(la) * cos(lo), cos(la) * sin(lo), sin(la)], p = u.map((v) => v * Gd.R), h = dataH(Gd, u); if (h < 2) continue;
+    const c = climate(Gd, p, h), w = speciesW(Gd, c.T, c.W), pr = Gd.present(Gd, u, h, c.T, c.W); let r = 0, g = 0, b = 0, dc = 0, tw = 0;
+    for (let k = 0; k < sp.length; k++) { if (!pr.ok[k]) continue; const x = w[k]; if (x < 1e-4) continue; r += sp[k].canopy[0] * x; g += sp[k].canopy[1] * x; b += sp[k].canopy[2] * x; dc += (sp[k].decid || 0) * x; tw += x; }
+    if (tw > 1e-3) out.set([r / tw * 1.6, g / tw * 1.6, b / tw * 1.6, dc / tw], (j * W + i) * 4);
+  }
+  return out;
+}
 function octaves(F) {
   const u = F[1], foot = u.map((v) => v * G.R), T = octTable(G, foot, F);
   gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, octTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 7, T.length / 28, 0, gl.RGBA, gl.FLOAT, T); gl.activeTexture(gl.TEXTURE0);
   S.foot = foot; S.F = F; S.m0 = T.m0; S.pl = G.pl ? { cam: T.cam, K0: T.K0, Oc: T.Oc } : null;
+  S.dt = null; const DT = dataTex(G);
+  if (DT) {                                                                // the map's ground round the foot, as a Taylor series in camera-local metres
+    const f = (q) => dataH(G, nrm(madd(foot, toPlanet(F, q), 1))), e = 40, h0 = f([0, 0, 0]), ax = [[e, 0, 0], [0, 0, e]], fx = [f(ax[0]), f(ax[0].map((v) => -v))], fz = [f(ax[1]), f(ax[1].map((v) => -v))];
+    const hxx = (fx[0] - 2 * h0 + fx[1]) / (e * e), hzz = (fz[0] - 2 * h0 + fz[1]) / (e * e), hxz = (f([e, 0, e]) - f([e, 0, -e]) - f([-e, 0, e]) + f([-e, 0, -e])) / (4 * e * e);
+    if (G.crP) { const f = new Float32Array(15), b = new Int32Array(15); CRS.forEach((Sc, s) => foot.forEach((v, i) => { const x = v / Sc, fl = floor(x); f[s * 3 + i] = x - fl; b[s * 3 + i] = ((fl % 1048576) + 1048576) % 1048576; })); S.cr = { f, b }; }
+    S.dt = { tex: DT, h0, g: [(fx[0] - fx[1]) / (2 * e), 0, (fz[0] - fz[1]) / (2 * e)], H: [hxx, 0, hxz, 0, 0, 0, hxz, 0, hzz], m0: reliefAt(G, u) };
+    gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, DT.dat); gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, DT.rel);
+    if (DT.can) { gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, DT.can); } gl.activeTexture(gl.TEXTURE0);
+  }
   S.axis = toLocal(F, G.axis); S.sun = toLocal(F, sunAt(G, G.t || 0)); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
   S.tb = foot.map((v) => floor(v / TREE)); S.tf = foot.map((v, i) => v / TREE - S.tb[i]); S.lb = foot.map((v) => floor(v / LOT)); S.lf = foot.map((v, i) => v / LOT - S.lb[i]);
   S.night = min(1, max(0, (0.06 - S.sun[1]) / 0.16));
@@ -246,10 +284,15 @@ const setNoise = (P) => {
   fire.set(P, G, S); beavers.set(P);
   gl.uniform1i(P.uOct, 7); gl.uniform1i(P.uKs, G.kseed); gl.uniform1f(P.uR, G.R); gl.uniform1f(P.uMaskR, G.ridge); gl.uniform1f(P.uM0, S.m0);
   if (P.uRivC) gl.uniform1f(P.uRivC, S.rivC);
-  if (P.uNpl) { gl.uniform1i(P.uNpl, S.pl ? 12 : 0); if (S.pl) { gl.uniform1i(P.uPlC, S.pl.cam); gl.uniform1f(P.uK0, S.pl.K0); gl.uniform1f(P.uOc, S.pl.Oc); gl.uniform3fv(P.uFootD, S.foot); gl.uniformMatrix3fv(P.uFrmD, false, S.F.flat()); } }
+  if (P.uNpl) { gl.uniform1i(P.uNpl, S.pl ? 12 : 0); if (S.pl) { gl.uniform1i(P.uPlC, S.pl.cam); gl.uniform1f(P.uK0, S.pl.K0); gl.uniform1f(P.uOc, S.pl.Oc); } }
+  if (P.uFootD) { gl.uniform3fv(P.uFootD, S.foot); gl.uniformMatrix3fv(P.uFrmD, false, S.F.flat()); }
+  if (P.uDw) { const d = S.dt; gl.uniform1i(P.uDw, d ? 1 : 0); if (d) { gl.uniform1i(P.uKd, G.kdat); gl.uniform1f(P.uDh0, d.h0); gl.uniform1f(P.uDm0, d.m0); gl.uniform3fv(P.uDg, d.g); gl.uniformMatrix3fv(P.uDH, false, d.H); gl.uniform2f(P.uDsz, G.dat.g.w, G.dat.g.h); gl.uniform1f(P.uDcell, G.dat.cell); gl.uniform1f(P.uDbase, G.base || 0); gl.uniform1i(P.uDat, 8); gl.uniform1i(P.uRel, 9); } }
+  if (P.uCrP) { gl.uniform1f(P.uCrP, S.dt && G.crP || 0); if (S.cr) { gl.uniform3fv(P.uCf, S.cr.f); gl.uniform3iv(P.uCb, S.cr.b); } }
+  if (P.uCl) { gl.uniform1i(P.uCl, G.dat && G.dat.cl ? 1 : 0); gl.uniform1i(P.uClim, 9); gl.uniform1f(P.uSph, S.sph || 0); }
+  if (P.uLapse) gl.uniform1f(P.uLapse, G.lapse ?? 6.5);
   if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? 1 : 0); }
   if (P.uAxis) { gl.uniform3fv(P.uAxis, S.axis); gl.uniform1f(P.uTeq, G.Teq); gl.uniform1f(P.uTgrad, G.Tgrad); gl.uniform1f(P.uWet, G.wet); gl.uniform1f(P.uGrav, G.g); }
-  if (P.uSpN) { const a = new Float32Array(64), c = new Float32Array(64); G.species.forEach((s, i) => { if (i < 16) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, s.decid || 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, min(16, G.species.length)); }
+  if (P.uSpN) { const a = new Float32Array(64), c = new Float32Array(64); G.species.forEach((s, i) => { if (i < 16) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, s.decid || 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, G.present ? 0 : min(16, G.species.length)); }
 };
 
 // ---- targets: the scene in high range, and the distance to whatever each pixel shows (for picking) ----------------
@@ -309,7 +352,8 @@ const marine = mkMarine(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const cave = mkCave(gl, prog, PRE);
 const fire = mkFire(gl, prog, PRE);
 const beavers = mkBeavers(gl, prog, PRE);
-const cosmos = mkCosmos(gl, prog, PRE);
+const sib = (Gh, k, p) => { const n = 1000 + Gh.n * 16 + k; return worlds[n] || (worlds[n] = sibling(Gh, k, p)); };   // a planet of the same system, made the first time it is needed
+const cosmos = mkCosmos(gl, prog, PRE, world, sib);
 const micro = mkMicro(gl, prog, PRE);
 
 
@@ -318,11 +362,14 @@ const L = { sun: [0, 1, 0], sunC: [0, 0, 0], sky: [0, 0, 0] };
 // ---- time: each planet keeps its own clock (in its own days); the season and the weather where you are ----------
 const SPEEDS = [0, 1 / 1200, 1 / 60, 1 / 6, 2], SPN = ['stopped', 'a day in 20 minutes', 'a day a minute', 'a day in 6 seconds', 'two days a second'];
 let speed = 1;
-function clock(dt) {
-  G.t = (G.t || 0) + SPEEDS[speed] * dt;
+const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
+function clock(dt, far) {
+  if (G.real) { realT += (far ? min(SPEEDS[speed] * G.dayH / 24, 1 / 86400) : SPEEDS[speed] * G.dayH / 24) * dt;   // (in space near the real worlds time runs at its own pace, so what moves can be caught)
+ G.t = realT; world(G.n).t = realT; realSky(); } else G.t = (G.t || 0) + SPEEDS[speed] * dt;
   const u = nrm(cam.P), lat = Math.asin(max(-1, min(1, dot(u, G.axis)))), se = season(G, G.t, lat);
   S.lat = lat; S.seasonS = se.s; S.spring = se.spring;
   S.seasT = 11 * se.s * min(1, G.tilt / 0.41);                            // warmer in summer, colder in winter
+  if (G.dat && G.dat.cl) { S.sph = Math.sin(Math.asin(sunAt(G, G.t)[2])) / Math.sin(G.tilt); S.seasT = G.dat.cl.lin(u, 1) * S.sph; }   // measured: this place's own swing, as far through the year as the Sun is
   S.aut = se.spring ? 0 : min(1, max(0, (0.35 - se.s) / 0.45)); S.bare = min(1, max(0, (-0.15 - se.s) / 0.4)) * (se.spring ? 1 : min(1, S.aut * 1.2));
   S.spr = se.spring ? min(1, max(0, 1 - abs(se.s + 0.1) / 0.35)) : 0;
   // rain: weather systems a few hundred km across, drifting; where it is wet enough to rain, and cold enough, snow
@@ -336,9 +383,18 @@ function clock(dt) {
   if ((clock.n = (clock.n || 0) + 1) % 10 === 0) {
     const s2 = sunAt(G, G.t), pu = [u[0], u[1]], ps = [s2[0], s2[1]], ha = Math.atan2(pu[0] * ps[1] - pu[1] * ps[0], pu[0] * ps[0] + pu[1] * ps[1]), hr = ((12 - ha / (2 * PI) * G.dayH) % G.dayH + G.dayH) % G.dayH;
     const sn = abs(lat) < 0.2 || G.tilt < 0.08 ? 'no seasons here' : se.s > 0.6 ? 'summer' : se.s < -0.6 ? 'winter' : se.spring ? 'spring' : 'autumn';
-    $('clk').textContent = `day ${floor(G.t) + 1} · ${floor(hr)}:${String(floor(hr % 1 * 60)).padStart(2, '0')} of a ${G.dayH} h day · ${sn}${S.rain > 0.3 ? (S.snow ? ' · snowing' : ' · raining') : ''}`;
+    const hm = `${floor(hr)}:${String(floor(hr % 1 * 60)).padStart(2, '0')}`, dd = new Date(msOf(realT)), date = `${dd.getUTCDate()} ${MONTHS[dd.getUTCMonth()]} ${dd.getUTCFullYear()}`;
+    $('clk').textContent = G.real ? (G.real === 'earth' ? `${date} · ${hm} sun time here` : `${hm} sun time of a ${G.dayH < 48 ? G.dayH.toFixed(1) + ' h' : (G.dayH / 24).toFixed(0) + '-day'} day · ${date} on Earth`) + (G.real === 'earth' ? ` · ${sn}` : '') + (S.rain > 0.3 && G.real === 'earth' ? (S.snow ? ' · snowing' : ' · raining') : '')
+      : `day ${floor(G.t) + 1} · ${hm} of a ${G.dayH} h day · ${sn}${S.rain > 0.3 ? (S.snow ? ' · snowing' : ' · raining') : ''}`;
     $('spd').textContent = SPN[speed];
   }
+}
+// the real sky: the Moon over the Earth, the Earth over the Moon, each where it is now (lit by the Sun as it is)
+function realSky() {
+  const fr = bodyFrame(G.real, realT);
+  if (G.real === 'earth') { const m = moonGeo(realT), d = toBody(fr, unitV(m)); G.moons = [[1.7374e6 / hypot(...m), Math.atan2(d[1], d[0]), Math.asin(d[2]), 0, [0.6, 0.58, 0.55]]]; }
+  else if (G.real === 'moon') { const m = moonGeo(realT).map((v) => -v), d = toBody(fr, unitV(m)); G.moons = [[6.371e6 / hypot(...m), Math.atan2(d[1], d[0]), Math.asin(d[2]), 0, [0.45, 0.6, 0.95]]]; }
+  else G.moons = [];
 }
 addEventListener('keydown', (e) => { if (e.code === 'BracketRight') speed = min(SPEEDS.length - 1, speed + 1); if (e.code === 'BracketLeft') speed = max(0, speed - 1); if (e.code === 'KeyT') speed = speed ? 0 : 1; });
 document.getElementById('faster').addEventListener('click', () => { speed = (speed + 1) % SPEEDS.length; });
@@ -393,14 +449,19 @@ function frame(now) {
   }
   let F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.under = S.cy < -0.02 && S.g0 < S.cy; S.hc = max(S.cy - (S.under ? S.g0 : max(S.g0, 0)), 1e-7);
   if (holes.step(cam, G, S, dt, jump)) { F = axes(); octaves(F); S.cy = alt(); S.g0 = ground(S.foot); S.hc = max(S.cy - max(S.g0, 0), 1e-7); }
-  clock(dt); setLight(); S.sunC = L.sunC; S.skyC = L.sky; fire.update(G, S); beavers.update(G, S);
+  { const far = S.cy > COS, ci = far ? cosmos.unspin(G, cam.P) : null, cr = far ? cosmos.unspin(G, cam.ref) : null; clock(dt, far); if (far) { cam.P = cosmos.spin(G, ci); cam.ref = cosmos.spin(G, cr); } }   // far off, the camera holds still among the stars while the planet turns under it
+  setLight(); S.sunC = L.sunC; S.skyC = L.sky; fire.update(G, S); beavers.update(G, S);
   if (!cave.C.in && cave.enter(cam, G, S)) { cam.yaw = 0; }
   if (!cave.C.in && !S.under && ctl.mode === 'fly' && S.hc < MICRO && S.g0 > -1e9) { micro.enter(nrm(cam.P).map((v) => v * (G.R + S.cy - S.hc)), S.F.map((v) => v.slice()), S.hc); requestAnimationFrame(frame); return; }
   targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.meet = (Gp, c) => life.meet(Gp, c); S.cast = () => SH.cast; S.shR = () => SH.r;
   if (cave.C.in) { gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]); gl.disable(gl.DEPTH_TEST); cave.render(common, cam, G, S, W, Hp); holes.none(); finish(dt); return; }
   if (S.cy > COS) {                                                        // far off: the planet as a world in space, its star, the stars, the galaxies
+    for (const b of cosmos.near(G, cam)) {
+      if (b.giant && b.d < b.R * 1.03) cam.P = madd(b.cP, nrm(madd(cam.P, b.cP, -1)), b.R * 1.03);   // a giant's cloud tops are as far down as you go
+      if (b.w && b.d < max(COS * 1.6, b.R * 30) && b.d < S.cy * 0.6) { visit(b); break; }        // close to another planet of the system (closer than this one): it becomes the world you are on
+    }
     gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.clearBufferfv(gl.COLOR, 1, [1e12, 0, 0, 1]); gl.disable(gl.DEPTH_TEST);
-    cosmos.draw(common, cam, G, S, 1, W, Hp); holes.none(); finish(dt); return;
+    cosmos.draw(common, cam, G, S, 1, W, Hp); holes.draw(common, cam, G, S, FB, VP, W, Hp); finish(dt); return;
   }
   shadowPass();
   gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp);
@@ -413,6 +474,7 @@ function frame(now) {
   gl.uniform1f(tprog.uH0, S.g0 - S.cy); gl.uniform1f(tprog.uG0, S.g0); gl.uniformMatrix3fv(tprog.uF, false, S.F.flat()); gl.uniform3fv(tprog.uFoot, S.foot);
   gl.uniform3fv(tprog.uTf, S.tf); gl.uniform3i(tprog.uTb, ...S.tb); gl.uniform3fv(tprog.uLf, S.lf); gl.uniform3i(tprog.uLb, ...S.lb); gl.uniform1f(tprog.uNight, S.night);
   for (const [n, v] of [['uGrass', G.grass], ['uDry', G.grassDry], ['uSoil', G.soil], ['uRock', G.rock], ['uSand', G.sand], ['uLiq', G.liquid]]) gl.uniform3fv(tprog[n], v);
+  gl.uniform1f(tprog.uGiant, G.giant ? 1 : 0); gl.uniform1f(tprog.uHalb, G.hMid ? 1 : 0); gl.uniform1f(tprog.uHmid, G.hMid || 0); gl.uniform1f(tprog.uSnowOff, G.snowOff || 0); gl.uniform1i(tprog.uCan, S.dt && S.dt.tex.can ? 1 : 0); gl.uniform1i(tprog.uCanT, 10);
   gl.bindVertexArray(grid.vao);
   const c0 = max(min(S.hc / 40, G.R / 150), 1e-6), Rr = G.R + max(S.cy, 0), horizon = G.R * acos(min(1, G.R / Rr)) + 2 * max(S.hc, 0), reach = min(PI * G.R * 0.98, max(8000, horizon * 1.15, S.hc * 40));
   let fine = [1, 1, -1, -1];
@@ -446,8 +508,14 @@ function finish(dt) {
   requestAnimationFrame(frame);
 }
 // through a wormhole: out of the paired mouth on planet n, the same distance from it, looking away from it
-function jump(n, mouth, dist) {
-  G = world(n); const u = nrm(mouth), g = max(H(G, u.map((x) => x * G.R)), 0), tang = nrm(cross(u, cross([0.3, 0.8, 0.5], u)));
+function jump(n, m, dist) {
+  G = world(n); if (G.real) { G.t = realT; m = holes.mouths(n)[0]; }
+  $('age').value = 0;
+  if (m.space) {                                                           // out of the mouth in space: beside it, looking back toward the Earth
+    const toE = nrm(m.C.map((v) => -v)); cam.P = madd(m.C, toE, dist); cam.ref = nrm(cross(nrm(cam.P), cross(toE, nrm(cam.P)))); cam.yaw = 0; cam.pitch = 0;
+    flash = 1; flashC = [0.9, 0.92, 1]; hint(); setMode('fly'); return;
+  }
+  const u = nrm(m.u), g = max(H(G, u.map((x) => x * G.R)), 0), tang = nrm(cross(u, cross([0.3, 0.8, 0.5], u)));
   cam.P = madd(u.map((v) => v * (G.R + g + dist * 0.35)), tang, dist); cam.ref = tang; cam.yaw = 0; cam.pitch = -0.1;
   flash = 1; flashC = G.sunCol.map((v) => min(1, v / 2.6)); hint(); setMode('walk');
 }
@@ -460,6 +528,15 @@ function pick(px, py) {
 function rayAt(px, py) {
   const d = dir(), f = Math.tan(cam.fov / 2), a = canvas.clientWidth / canvas.clientHeight, sx = (px / canvas.clientWidth * 2 - 1) * f * a, sy = (1 - py / canvas.clientHeight * 2) * f;
   const r = nrm([-d[2], 0, d[0]]), u = cross(r, d); return nrm([d[0] + r[0] * sx + u[0] * sy, d[1] + r[1] * sx + u[1] * sy, d[2] + r[2] * sx + u[2] * sy]);
+}
+// to another planet of this system: the camera keeps its place and heading in space; that planet's clock, star and
+// sky take over, and from here on everything (ground, air, plants or none) is that planet's
+function visit(b) {
+  const G2 = b.w, F = axes(), dI = cosmos.unspin(G, toPlanet(F, dir())), yr = (G.t || 0) / G.yearD * (G.sysYr || 1);
+  if (G2.real) G2.t = realT; else { G2.t = yr / (G2.sysYr || 1) * G2.yearD; if (G2.home !== undefined) G2.sunA = Math.atan2(b.starI[1], b.starI[0]) + PI * 0; G2.sunDir = sunAt(G2, 0); }
+  cam.P = cosmos.spin(G2, b.relI); const v = cosmos.spin(G2, dI), u = nrm(cam.P), t = madd(v, u, -dot(v, u));
+  cam.ref = hypot(...t) > 1e-6 ? nrm(t) : nrm(cross(u, [0.3, 0.8, 0.5])); cam.yaw = 0; cam.pitch = Math.asin(max(-1, min(1, dot(v, u))));
+  G = G2; $('age').value = 0; hint(); flash = 0.35; flashC = G.sunCol.map((x) => min(1, x / 2.6));
 }
 function leaveMicro() { const M = micro.M, p = micro.exitTo(), F = M.F0; cam.P = [0, 1, 2].map((i) => M.anchor[i] + F[0][i] * p[0] + F[1][i] * p[1] + F[2][i] * p[2]); }
 function moveLocal(v) {                                                    // move by a camera-local vector, keep off the ground
@@ -569,6 +646,7 @@ function hud() {
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = BANDS.find((b) => w >= b[0])[1];
   $('alt').textContent = micro.M.on ? `${fmt(max(micro.M.P[1], 0))} above the ground` + (w < 2e-10 ? ' · colours here are a convention: light is far too coarse to see this' : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
   if (G.E && !cave.C.in && !micro.M.on && S.cy < 1e8) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
+  if (G.real && !cave.C.in && !micro.M.on && S.cy < 1e8) { const u = nrm(cam.P), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI; $('alt').textContent += ` · ${abs(la).toFixed(2)}°${la < 0 ? 'S' : 'N'} ${abs(lo).toFixed(2)}°${lo < 0 ? 'W' : 'E'}`; }
   const sp = life.look(G, pick.code); $('sp').textContent = sp ? sp.name : ''; $('sp').hidden = !sp;
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
@@ -577,8 +655,26 @@ function hud() {
 function hint() {
   const lat = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; };
   $('name').textContent = G.name + (G.E ? ', ' + G.ageName : ''); $('name').title = G.E && G.here ? `this ground stood at ${lat(cam.P)} then; today it is at ${lat(G.here)}` : ''; const ty = G.starK < 4500 ? 'red' : G.starK < 5500 ? 'orange' : G.starK < 6200 ? 'yellow' : 'white';
-  $('phys').textContent = `${(G.R / 1000).toFixed(0)} km radius · ${G.g.toFixed(2)} g · ${G.air < 0.6 ? 'thin' : G.air > 1.5 ? 'thick' : ''} air · ${ty} star · ${nSpecies(G).toLocaleString()} tree species`.replace(' ·  air', ' · air');
+  if (G.real) { const R = G.R + (G.dat && !G.dat.cl ? G.dat.base : 0), air = { earth: 'air', moon: 'no air', mercury: 'no air', venus: 'air 92 times as thick as ours, too hot for life', mars: 'thin cold air', jupiter: 'deep hydrogen air', saturn: 'deep hydrogen air', uranus: 'deep hydrogen air', neptune: 'deep hydrogen air' }[G.real];
+    $('phys').textContent = `${(R / 1000).toLocaleString(undefined, { maximumFractionDigits: 0 })} km radius · ${G.g.toFixed(2)} g · ${air} · ` + (G.real === 'earth' ? `${nSpecies(G).toLocaleString()} named tree species in ${G.species.length} genera` : G.giant ? 'the tops of its clouds' : 'the ground from its measured map'); return; }
+  $('phys').textContent = `${(G.R / 1000).toFixed(0)} km radius · ${G.g.toFixed(2)} g · ${G.air < 0.15 ? 'almost no' : G.air < 0.6 ? 'thin' : G.air > 1.5 ? 'thick' : ''} air · ${ty} star · ${G.lifeless ? `lifeless, ${G.Teq > 90 ? 'scorched' : G.Teq < -45 ? 'frozen' : 'barren'}` : nSpecies(G).toLocaleString() + ' tree species'}${G.home !== undefined ? ` · a sibling of ${world(G.home).name}` : ''}`.replace(' ·  air', ' · air');
 }
-arrive(0);
+// ---- where to go: real places, the other bodies, and the way through to the invented worlds ---------------------------
+const PLACES = [['Great Smoky Mountains', 100, 35.61, -83.45], ['Yosemite Valley', 100, 37.73, -119.6], ['Grand Canyon', 100, 36.06, -112.14], ['Redwood coast, California', 100, 41.3, -124.0], ['Sonoran Desert, saguaros', 100, 32.25, -111.1],
+  ['Boreal forest, Quebec', 100, 49.6, -73.4], ['Alaska, the Brooks Range', 100, 67.5, -151], ['Amazon rainforest', 100, -3.1, -60.1], ['Patagonian beech forest', 100, -41.1, -71.5], ['Atacama Desert', 100, -23.8, -68.2],
+  ['The Alps, Grindelwald', 100, 46.62, 8.04], ['The Black Forest', 100, 48.0, 8.2], ['Tuscany', 100, 43.3, 11.3], ['Iceland', 100, 64.2, -19.5], ['The Sahara', 100, 23.5, 12.5], ['The Serengeti', 100, -2.33, 34.83], ['Avenue of the baobabs, Madagascar', 100, -20.25, 44.42],
+  ['Himalaya, below Everest', 100, 27.9, 86.85], ['Siberian taiga, Lake Baikal', 100, 52.2, 105.5], ['Hills above Kyoto', 100, 35.03, 135.75], ['Borneo rainforest', 100, 1.0, 114.0], ['Blue Mountains, Australia', 100, -33.7, 150.3], ['Fiordland, New Zealand', 100, -45.4, 167.7], ['Greenland ice sheet', 100, 72, -40],
+  ['The Moon, Mare Tranquillitatis', 101, 0.67, 23.47], ['The Moon, Tycho', 101, -43.3, -11.2], ['Mercury, Caloris basin', 102, 31.5, 162.7], ['Venus, Maxwell Montes', 103, 65.2, 3.3], ['Mars, Valles Marineris', 104, -8.5, -72], ['Mars, Olympus Mons', 104, 18.65, -133.8], ['Mars, the north polar cap', 104, 84, 0],
+  ['Jupiter, at the cloud tops', 105, 0, 0], ['Saturn, at the cloud tops', 106, 10, 0], ['Uranus, at the cloud tops', 107, 0, 0], ['Neptune, at the cloud tops', 108, 0, 0], ['The wormhole at the Earth\'s L4 point', -1, 0, 0]];
+const goSel = $('go'); goSel.innerHTML = '<option value="">Go to…</option>' + PLACES.map((p, i) => `<option value="${i}">${p[0]}</option>`).join('');
+const unitLL = (la, lo) => { la *= PI / 180; lo *= PI / 180; return [cos(la) * cos(lo), cos(la) * sin(lo), sin(la)]; };
+function goPlace(i) {
+  const [, n, la, lo] = PLACES[i];
+  if (n < 0) { G = world(100); G.t = realT; const m = holes.mouths(100)[0], u = nrm(m.C), side = nrm(cross(u, [0.2, 0.3, 0.9])); cam.P = madd(m.C, nrm(madd(u.map((v) => -v), side, 0.35)), RL4 * 14); const F = axes(), toM = toLocal(F, nrm(madd(m.C, cam.P, -1))); cam.yaw = Math.atan2(toM[0], toM[2]); cam.pitch = Math.asin(max(-1, min(1, toM[1]))); $('age').value = 0; hint(); setMode('fly'); return; }
+  const Gn = world(n), u = unitLL(la, lo); arrive(n, u.map((v) => v * Gn.R));
+}
+goSel.addEventListener('change', () => { if (goSel.value !== '') goPlace(+goSel.value); goSel.value = ''; goSel.blur(); });
+// first: on the Earth, wherever among these places the Sun now stands highest short of noon's glare
+{ let best = 0, bs = -9; const E = world(100), s = sunAt(E, realT); PLACES.forEach((p, i) => { if (p[1] !== 100) return; const el = Math.asin(dot(unitLL(p[2], p[3]), s)) * 180 / PI, sc = -abs(el - 32); if (sc > bs) { bs = sc; best = i; } }); goPlace(best); }
 requestAnimationFrame(frame);
-window.sylva = { cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
+window.sylva = { sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };

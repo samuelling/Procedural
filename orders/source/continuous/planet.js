@@ -9,6 +9,9 @@
 // in double precision (for the camera, picking and placing) and in GLSL (for drawing). They agree to the bit in the
 // lattice hash and to float precision elsewhere.
 
+import { earth, body, genAt } from './earth.js';
+import { sunReal } from './ephem.js';
+export { earth, body, genAt };
 export const K = 40, LS = 22, GOLD = 2.39996323, PLA = 1.32471795724;
 export const sOf = (k) => 2 ** (LS - k);
 export const RIDGE0 = 4, RIDGE1 = 14;                                      // octaves 262 km to 512 m are ridged: mountains
@@ -74,9 +77,11 @@ export function genome(n) {
 
 // the plants: 5 to 8 species, each a body plan and the climate it needs. On Sylva they are Earth's own forms.
 // where the star is (planet axes) at time t, in the planet's own days from the start; day 0 is midsummer in the north
-export function sunAt(G, t) { const dl = G.tilt * Math.cos(2 * Math.PI * t / G.yearD), a = G.sunA - 2 * Math.PI * t; return [Math.cos(dl) * Math.cos(a), Math.cos(dl) * Math.sin(a), Math.sin(dl)]; }
+export function sunAt(G, t) { if (G.real) return sunReal(G.real, t); const dl = G.tilt * Math.cos(2 * Math.PI * t / G.yearD), a = G.sunA - 2 * Math.PI * t; return [Math.cos(dl) * Math.cos(a), Math.cos(dl) * Math.sin(a), Math.sin(dl)]; }
 // the season at a latitude: +1 midsummer, -1 midwinter; and whether it is warming (spring) or cooling (autumn)
-export function season(G, t, lat) { const ph = 2 * Math.PI * t / G.yearD, k = Math.min(1, Math.abs(lat) / 0.35) * Math.min(1, G.tilt / 0.3) * Math.sign(lat || 1); return { s: Math.cos(ph) * k, spring: -Math.sin(ph) * k > 0 }; }
+export function season(G, t, lat) {
+  if (G.real) { const d0 = Math.asin(sunReal(G.real, t)[2]), d1 = Math.asin(sunReal(G.real, t + 1)[2]), k = Math.min(1, Math.abs(lat) / 0.35) * Math.min(1, G.tilt / 0.3) * Math.sign(lat || 1); return { s: Math.sin(d0) / Math.max(0.05, Math.sin(G.tilt)) * k, spring: (d1 - d0) * k > 0 }; }
+  const ph = 2 * Math.PI * t / G.yearD, k = Math.min(1, Math.abs(lat) / 0.35) * Math.min(1, G.tilt / 0.3) * Math.sign(lat || 1); return { s: Math.cos(ph) * k, spring: -Math.sin(ph) * k > 0 }; }
 const FORMS = ['broad', 'cone', 'palm', 'column', 'umbrella', 'weep', 'orb', 'spire'];
 // The plants: families, each a body plan and the climate it suits, and inside each family hundreds of species, every
 // one a small mutation of its family's genes (taller or squatter, paler or redder, broader or finer leaves, its own
@@ -115,26 +120,26 @@ function flora(G, r) {
 export function species(G, f, i) {
   const key = f * 100000 + i; G.spc = G.spc || new Map(); let s = G.spc.get(key); if (s) return s;
   const F = G.species[f], r = rng(G.n * 7919 + f * 104729 + i * 31 + 3 + Math.round((G.E || 0) * 1000) * 7), nrm = () => (r() + r() + r() - 1.5) * 1.15;
-  const hM = Math.exp(nrm() * 0.28), wM = Math.exp(nrm() * 0.2), lL = Math.exp(nrm() * 0.3), lW = Math.exp(nrm() * 0.3), dh = nrm() * (G.n === 0 ? 0.025 : 0.06), ds = nrm() * 0.12, dl = nrm() * 0.035;
+  const hM = Math.exp(nrm() * 0.28), wM = Math.exp(nrm() * 0.2), lL = Math.exp(nrm() * 0.3), lW = Math.exp(nrm() * 0.3), dh = nrm() * (G.n === 0 || G.real ? 0.025 : 0.06), ds = nrm() * 0.12, dl = nrm() * 0.035;
   const lobes = F.leaf[2] > 0 ? Math.max(0, Math.round(F.leaf[2] + nrm() * 1.5)) : r() < 0.06 ? 3 : 0;
   const canopy = lin(hsl((F.hue + dh + 1) % 1, Math.min(0.95, Math.max(0.05, F.sat + ds)), Math.min(0.5, Math.max(0.05, F.lit + dl))));
   const bark = F.bark.map((v) => Math.min(1, v * Math.exp(nrm() * 0.25)));
   const ep = [hM > 1.3 ? 'gigantea' : hM < 0.75 ? 'nana' : '', lW > 1.35 ? 'latifolia' : lW < 0.72 ? 'angustifolia' : '', dh > 0.04 ? 'aurea' : dh < -0.04 ? 'caerulea' : '', canopy[0] > canopy[1] * 0.9 ? 'rubra' : '', bark[0] > 0.5 ? 'alba' : '', wM > 1.25 ? 'patula' : ''].filter(Boolean);
   const epithet = ep.length && r() < 0.6 ? ep[Math.floor(r() * ep.length)] : word(r, 2) + ['ensis', 'ifolia', 'a', 'ii', 'oides', 'iana', 'um'][Math.floor(r() * 7)];
-  s = { f, i, name: F.genus + ' ' + epithet, hM, wM, leaf: [F.leaf[0] * lL, Math.min(0.95, F.leaf[1] * lW), lobes], canopy, bark, rough: F.barkRough, decid: F.decid || 0, fall: ((F.fall ?? 0.1) + nrm() * 0.04 + 1) % 1, code: f * 10000 + i + 1 };
+  s = { f, i, name: F.names ? F.names[i % F.names.length] : F.genus + ' ' + epithet, hM, wM, leaf: [F.leaf[0] * lL, Math.min(0.95, F.leaf[1] * lW), lobes], canopy, bark, rough: F.barkRough, decid: F.decid || 0, fall: ((F.fall ?? 0.1) + nrm() * 0.04 + 1) % 1, code: f * 10000 + i + 1 };
   G.spc.set(key, s); return s;
 }
 export const nSpecies = (G) => G.species.reduce((a, f) => a + f.nSp, 0);
 // how rough the ground is at each scale, as a fraction of the scale (by log2 of the scale in metres)
 const RT = [[22, 0.00042], [21, 0.00055], [20, 0.0008], [19, 0.0013], [18, 0.004], [17, 0.01], [15, 0.03], [13, 0.06], [12, 0.07], [11, 0.06], [9, 0.045], [7, 0.035], [5, 0.03], [2, 0.028], [-1, 0.03], [-4, 0.048], [-7, 0.058], [-10, 0.04], [-18, 0.03]];
 const frac = (l) => { for (let i = 1; i < RT.length; i++) if (l >= RT[i][0]) { const [l0, a0] = RT[i - 1], [l1, a1] = RT[i]; return a1 + (a0 - a1) * (l - l1) / (l0 - l1); } return 0.03; };
-function amps(G) { return Array.from({ length: K }, (_, k) => { const l = LS - k, a = 2 ** l * frac(l); return l > 13 ? a * G.relief : a * Math.min(1.4, G.relief); }); }
+export function amps(G) { return Array.from({ length: K }, (_, k) => { const l = LS - k, a = 2 ** l * frac(l); return G.dat && k < G.kdat ? 0 : l > 13 ? a * G.relief : a * Math.min(1.4, G.relief); }); }
 const ridged = (k) => k >= RIDGE0 && k < RIDGE1;
 const shape = (k, n) => (ridged(k) ? 1 - Math.abs(2 * n - 1) : n);
 // mountain belts follow the ridges of octave 2: mountains crowd along long arcs, plains between
 export const MASKK = 2;
 const belt = (n, G) => { const b = 1 - Math.abs(2 * n - 1); const t = Math.min(1, Math.max(0, (b - 0.55) / 0.35)); return 0.25 + 1.6 * G.ridge * t * t * (3 - 2 * t); };
-const masked = (k) => k >= RIDGE0 && k < 18;
+const masked = (k, G) => G && G.dat ? k >= G.kdat && k < KD : k >= RIDGE0 && k < 18;
 
 // ---- octave k at a point (planet-centred metres): its lattice coordinate, folded into 0..256 ----------------------
 export function rotK(k) { const a = k * GOLD, b = k * PLA * 2.1 + 0.3; return [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)]; }
@@ -145,12 +150,38 @@ export const octN = (G, k, p) => { const u = latK(k, p); return shape(k, vn3(u[0
 export function H(G, p, kmax = K) { const h = H0(G, p, kmax); if (kmax < 20 || h < 0.5 || h > 2200) return h; const l = Math.hypot(...p), q = p.map((v) => v / l * G.R); return h - RIVD * river(G, q, h, climate(G, q, h).W); }
 export function H0(G, p, kmax = K) {
   const l = Math.hypot(...p), q = p.map((v) => v / l * G.R);
+  if (G.dat) return dataGround(G, q, kmax);
   return (G.pl ? drift(G, q, kmax).h : coarseH(G, q, kmax)) + fineH(G, q, kmax);
 }
+// ---- measured worlds: the ground is the map (bicubic between its cells, never dipping below the lowest of the four
+// cells round it on land, nor rising above the highest at sea, so a valley floor stays a floor), with the invented
+// octaves finer than the map's cells laid over it, as rough as the map is rough there; near the shore the invented
+// part is held back, so the coast stays where the map has it
+export const dataH = (G, u) => G.dat.g.cubicC(u) + (G.base || 0);
+export const reliefAt = (G, u) => G.dat.r.lin(u, 3);
+export const damp = (hd, d) => (hd > 0) === (d < 0) ? d * (0.04 + 0.96 * ss(0, 80, Math.abs(hd))) : d;
+function dataGround(G, q, kmax) {
+  const l = Math.hypot(...q), u = q.map((v) => v / l), hd = dataH(G, u), m = reliefAt(G, u);
+  let c = 0; for (let k = G.kdat; k < Math.min(kmax, KD); k++) c += G.amp[k] * (octN(G, k, q) - 0.5);
+  return hd + damp(hd, m * c) + fineH(G, q, kmax) + (G.crP && kmax > 12 ? craters(G, q) : 0);
+}
+// craters, on the airless worlds: invented, finer than their maps (24 km cells down to 95 m), each a bowl with a raised
+// rim, on the same cube-face lattice the trees use (so the shaders can find each from the camera's foot exactly)
+export const CRS = [24000, 6000, 1500, 375, 93.75];
+export function craters(G, p) {
+  const ab = p.map(Math.abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], fk = a * 2 + (p[a] > 0 ? 1 : 0); let h = 0;
+  for (let s = 0; s < CRS.length; s++) { const S = CRS[s], u = p[b] / S, v = p[c] / S, iu = Math.floor(u), iv = Math.floor(v), k = 200 + s * 8 + fk;
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const ci = iu + i, cj = iv + j; if (hs2(ci, cj, k) > G.crP) continue;
+      const cx = ci + 0.2 + 0.6 * hs2(ci, cj, k + 1), cy = cj + 0.2 + 0.6 * hs2(ci, cj, k + 2), r = 0.1 + 0.38 * hs2(ci, cj, k + 3) ** 2, dd = Math.hypot(u - cx, v - cy) / r; if (dd > 2.2) continue;
+      const dep = 0.34 * r * S * (0.3 + 0.7 * hs2(ci, cj, k + 4)), rim = 0.25 * dep; h += dd < 1 ? dep * (dd * dd - 1) + rim : rim * Math.exp(-(dd - 1) * 3.2); } }
+  return h;
+}
+// the lake surface over a point, if there is one (else -1e4)
+export const lakeAt = (G, u) => G.dat ? G.dat.g.near(u, 1) : -1e4;
 // the ground is two parts: the coarse octaves (4,000 km down to 32 m: continents, ranges, hills, all the mountain belts)
 // ride on the plates; the fine ones (16 m down) are the same everywhere, so they need not move
 export const KD = 18;
-function coarseH(G, q, kmax) { let h = G.base, m = 1; for (let k = 0; k < Math.min(kmax, KD); k++) { const n = octN(G, k, q); if (k === MASKK) m = belt(n, G); h += G.amp[k] * (masked(k) ? m : 1) * (n - 0.5); } return h; }
+function coarseH(G, q, kmax) { let h = G.base, m = 1; for (let k = 0; k < Math.min(kmax, KD); k++) { const n = octN(G, k, q); if (k === MASKK) m = belt(n, G); h += G.amp[k] * (masked(k, G) ? m : 1) * (n - 0.5); } return h; }
 function fineH(G, q, kmax) { let h = 0; for (let k = KD; k < kmax; k++) h += G.amp[k] * (octN(G, k, q) - 0.5); return h; }
 
 // ---- continental drift. Today's surface is cut into NPL plates (the cells round NPL centres); in an age past each
@@ -221,15 +252,23 @@ export function taylor(G, k, p) {
 export const CL_S = [1.2e6, 4.5e5, 900, 260, 30000];
 export const clim = (G, i, p) => { const s = CL_S[i], q = rot(K + i, p).map((v) => m256(v / s)), k = K + i + G.kseed, f = (a, o) => vn3(q[0] * a + o, q[1] * a + o, q[2] * a + o, k); return f(1, 0) * 0.5 + f(2, 17.3) * 0.3 + f(4, 41.7) * 0.2; };
 export function climate(G, p, h) {
+  if (G.dat && G.dat.cl) {                                                // measured: the year's mean (brought to this height), its rain, the summer's warmth
+    const l = Math.hypot(...p), u = p.map((v) => v / l), c = G.dat.cl, T0 = c.lin(u, 0), A = c.lin(u, 1), P = c.lin(u, 2), sl = u[2];
+    const T = T0 + (G.Teq - 28) - (G.Tgrad - 45) * sl * sl - 6.5 * Math.max(h, 0) / 1000;
+    const W = Math.min(1, Math.max(0, 0.42 + 0.22 * Math.log2(Math.max(P, 1) / Math.max(20 * (T + 7), 40)) + G.wet));
+    return { T, W, lat: Math.asin(sl), Ts: T + Math.abs(A), A, P };
+  }
   const l = Math.hypot(...p), sl = (p[0] * G.axis[0] + p[1] * G.axis[1] + p[2] * G.axis[2]) / l, lat = Math.asin(sl);
-  const T = G.Teq - G.Tgrad * sl * sl - 6.5 * Math.max(h, 0) / 1000 * G.g + 8 * (clim(G, 0, p) - 0.5);
+  const T = G.Teq - G.Tgrad * sl * sl - (G.lapse ?? 6.5) * Math.max(h, 0) / 1000 * G.g + 8 * (clim(G, 0, p) - 0.5);
   const W = Math.min(1, Math.max(0, 0.5 + 0.3 * Math.cos(lat * 6.3) + 0.9 * (clim(G, 1, p) - 0.5) + G.wet));
   return { T, W, lat };
 }
 const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 export function forestF(G, p, h, T, W) {                                   // how much of the ground the forest takes here (0..1)
   if (h < 2) return 0; const n = clim(G, 2, p) * 0.6 + clim(G, 3, p) * 0.4;
-  return ss(0.3, 0.55, W) * ss(-9, -5, T) * Math.min(1, Math.max(0, (n - 0.3 + 0.25 * (W - 0.5)) * 4));
+  if (G.dat && G.dat.cl) { const tg = ss(7, 11, climate(G, p, h).Ts);   // measured: the forest thins out from the wet to the dry (savanna, maquis, prairie), with scattered trees and cacti even in dry lands
+    return Math.max(ss(0.38, 0.66, W) * tg * Math.min(1, Math.max(0, (n - 0.3 + 0.25 * (W - 0.5)) * 4)), 0.03 * ss(0.05, 0.18, W) * (1 - ss(0.35, 0.5, W)) * tg); }
+  return ss(0.3, 0.55, W) * (G.dat && G.dat.cl ? ss(7, 11, climate(G, p, h).Ts) : ss(-9, -5, T)) * Math.min(1, Math.max(0, (n - 0.3 + 0.25 * (W - 0.5)) * 4));
 }
 export function speciesW(G, T, W) { return G.species.map((s) => Math.exp(-(((T - s.T[0]) / s.T[1]) ** 2) - (((W - s.W[0]) / s.W[1]) ** 2))); }
 
@@ -242,10 +281,11 @@ export function site(G, a, sg, i, j) {
   if (d <= 0) return null; const xa = sg * Math.sqrt(d); if (Math.abs(xa) < Math.max(Math.abs(xb), Math.abs(xc))) return null;
   const p = [0, 0, 0]; p[a] = xa; p[b] = xb; p[c] = xc;
   const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)); if (hs2(i, j, 60 + fk) > F || river(G, p, h, W) > 0.25) return null;
-  const w = speciesW(G, T, W), tot = w.reduce((x, y) => x + y, 0); if (tot < 1e-3) return null;
+  let w = speciesW(G, T, W), pr = null; if (G.present) { pr = G.present(G, p.map((v) => v / G.R), h, T, W); w = w.map((x, n) => pr.ok[n] ? x : 0); }   // measured worlds: only the families that grow here
+  const tot = w.reduce((x, y) => x + y, 0); if (tot < 1e-3) return null;
   let x = hs2(i, j, 70 + fk) * tot, s = 0; while (s < w.length - 1 && x > w[s]) x -= w[s++];
-  const nS = G.species[s].nSp, ri = Math.floor(i * TREE / 25000), rj = Math.floor(j * TREE / 25000), base = Math.floor(hs2(ri, rj, 90 + s + fk * 20) * nS), k = Math.floor(hs2(i, j, 75 + fk) ** 2 * 9);   // this region's few, commonest first
-  return { p, h, sp: s, spc: species(G, s, (base + k * 61) % nS), seed: hs2(i, j, 80 + fk) };
+  const Fm = G.species[s], ix = pr && Fm.idx && Fm.idx[pr.r] || [0, Fm.nSp], nS = ix[1], ri = Math.floor(i * TREE / 25000), rj = Math.floor(j * TREE / 25000), base = Math.floor(hs2(ri, rj, 90 + s + fk * 20) * nS), k = Math.floor(hs2(i, j, 75 + fk) ** 2 * 9);   // this region's few, commonest first
+  return { p, h, sp: s, spc: species(G, s, ix[0] + (base + k * 61) % nS), seed: hs2(i, j, 80 + fk) };
 }
 
 // ---- cities: on inhabited planets, a few towns and cities in each 60 km cell of the cube faces, where the land
@@ -305,12 +345,12 @@ function octRow(G, T, o, k, p, F, full) {
   if (cl) { const u = rot(k, p).map((v) => m256(v / s)); T.set([u[0], u[1], u[2], 0], o); T.set([0, 0, 1 / s, 0], o + 12); }
   else if (full) { const t = taylor(G, k, p); T.set([...t.u, t.f0], o); T.set([...t.g, G.amp[k]], o + 4); T.set([t.h[0], t.h[1], t.h[2], t.h[3]], o + 8); T.set([t.h[4], t.h[5], 1 / s, ridged(k) ? 1 : 0], o + 12); }
   else { const u = latK(k, p); T.set([...u, shape(k, vn3(u[0], u[1], u[2], k + G.kseed))], o); T.set([0, 0, 0, G.amp[k]], o + 4); T.set([0, 0, 1 / s, ridged(k) ? 1 : 0], o + 12); }
-  T.set([M[0][0], M[0][1], M[0][2], M[1][0]], o + 16); T.set([M[1][1], M[1][2], M[2][0], M[2][1]], o + 20); T.set([M[2][2], masked(k) ? 1 : 0, 0, 0], o + 24);
+  T.set([M[0][0], M[0][1], M[0][2], M[1][0]], o + 16); T.set([M[1][1], M[1][2], M[2][0], M[2][1]], o + 20); T.set([M[2][2], masked(k, G) ? 1 : 0, 0, 0], o + 24);
 }
 const beltAt = (G, q) => belt(octN(G, MASKK, q), G);
 export function octTable(G, p, F) {
   const rows = K + CLIM + (G.pl ? NPL * PROWS : 0), T = new Float32Array(rows * 7 * 4);
-  if (!G.pl) { for (let k = 0; k < K + CLIM; k++) octRow(G, T, k * 28, k, p, F, true); T.m0 = beltAt(G, p); return T; }
+  if (!G.pl) { for (let k = 0; k < K + CLIM; k++) octRow(G, T, k * 28, k, p, F, true); T.m0 = G.dat ? reliefAt(G, p.map((v) => v / G.R)) : beltAt(G, p); return T; }
   const P = G.pl, mg = margins(G, p); let cam = 0; for (let i = 1; i < NPL; i++) if (mg[i] > mg[cam]) cam = i;
   const turn = (i) => ({ q: mv(P.Ri[i], p), F: F.map((v) => mv(P.Ri[i], v)) }), C = turn(cam), Cf = coarseH(G, C.q, K);
   for (let k = 0; k < K + CLIM; k++) { const t = k < KD ? C : { q: p, F }; octRow(G, T, k * 28, k, t.q, t.F, true); }
@@ -351,7 +391,49 @@ float coarseRel(int r0, vec3 q, float cmin, float m0, out float dh, out vec3 g) 
   }
   return m;
 }
+// measured worlds (uDw 1): the map's ground under the camera as its Taylor series, from the map farther off; the map's
+// relief scales the invented octaves finer than its cells; near the shore the invented part is held back (see dataGround)
+uniform int uDw, uKd; uniform highp sampler2D uDat, uRel; uniform float uDh0, uDm0, uDbase, uDcell; uniform vec3 uDg; uniform mat3 uDH; uniform vec2 uDsz;
+vec4 cubW(float t) { return vec4(((-t + 2.) * t - 1.) * t, (3. * t - 5.) * t * t + 2., ((-3. * t + 4.) * t + 1.) * t, (t - 1.) * t * t) * .5; }
+vec2 dTC(vec3 u) { return vec2(atan(u.y, u.x) / 6.28318531 + .5, .5 - asin(clamp(u.z, -1., 1.)) / 3.14159265); }
+float dTex(vec3 u) {
+  vec2 x = dTC(u) * uDsz - .5, i = floor(x), f = x - i; vec4 wx = cubW(f.x), wy = cubW(f.y); float s = 0., lo = 1e9, hi = -1e9; int W = int(uDsz.x), Hh = int(uDsz.y);
+  for (int b = 0; b < 4; b++) { float r = 0.; int jj = clamp(int(i.y) - 1 + b, 0, Hh - 1);
+    for (int a = 0; a < 4; a++) { int ii = int(i.x) - 1 + a; ii = ii < 0 ? ii + W : ii >= W ? ii - W : ii; float v = texelFetch(uDat, ivec2(ii, jj), 0).x; r += wx[a] * v; if ((a == 1 || a == 2) && (b == 1 || b == 2)) { lo = min(lo, v); hi = max(hi, v); } }
+    s += wy[b] * r; }
+  return lo > 0. ? max(s, lo) : hi < 0. ? min(s, hi) : s;
+}
+float lakeL(vec3 q) { if (uDw == 0) return -1e4; vec2 x = dTC(normalize(uFootD + uFrmD * q)) * uDsz; return texelFetch(uDat, ivec2(clamp(x, vec2(0.), uDsz - 1.)), 0).y; }
+uniform float uCrP; uniform vec3 uCf[5]; uniform ivec3 uCb[5];
+float craterG(vec3 q, float cmin, out vec3 gq) {   // the craters at q (see craters() in planet.js), and their gradient
+  vec3 D = uFrmD * q, P = uFootD + D, ab = abs(P); int a = ab.x >= ab.y && ab.x >= ab.z ? 0 : ab.y >= ab.z ? 1 : 2, b = a == 0 ? 1 : a == 1 ? 2 : 0, c = a == 0 ? 2 : a == 1 ? 0 : 1, fk = a * 2 + (P[a] > 0. ? 1 : 0);
+  float h = 0.; vec3 gP = vec3(0.);
+  for (int s = 0; s < 5; s++) { float S = ${CRS[0]}. / pow(4., float(s)), w = clamp(S / (cmin * 3.) - 1., 0., 1.); if (w <= 0.) break; int k = 200 + s * 8 + fk;
+    vec2 tc = vec2(uCf[s][b] + D[b] / S, uCf[s][c] + D[c] / S), fl = floor(tc), fr = tc - fl; ivec2 c0 = ivec2(fl) + ivec2(uCb[s][b], uCb[s][c]);
+    for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) { ivec2 cc = c0 + ivec2(i, j); if (hs2(cc, k) > uCrP) continue;
+      vec2 ce = vec2(i, j) + .2 + .6 * vec2(hs2(cc, k + 1), hs2(cc, k + 2)), dv = fr - ce; float r = .1 + .38 * pow(hs2(cc, k + 3), 2.), dl = length(dv), dd = dl / r; if (dd > 2.2) continue;
+      float dep = .34 * r * S * (.3 + .7 * hs2(cc, k + 4)), rim = .25 * dep, hh, hd;
+      if (dd < 1.) { hh = dep * (dd * dd - 1.) + rim; hd = 2. * dep * dd; } else { float e = exp(-(dd - 1.) * 3.2); hh = rim * e; hd = -3.2 * rim * e; }
+      h += w * hh; vec2 gd = w * hd * dv / (max(dl, 1e-6) * r * S); gP[b] += gd.x; gP[c] += gd.y; } }
+  gq = transpose(uFrmD) * gP; return h;
+}
+float dDamp(float hd, float d) { return (hd > 0.) == (d < 0.) ? d * (.04 + .96 * smoothstep(0., 80., abs(hd))) : d; }
+float groundD(vec3 q, float cmin, out float dh, out vec3 g) {
+  float r = length(q), tw = smoothstep(3000., 6000., r), hd = uDh0, m = uDm0; vec3 gd = uDg;
+  if (tw < 1.) { vec3 Hq = uDH * q; hd = uDh0 + dot(uDg, q) + .5 * dot(q, Hq); gd = uDg + Hq; }
+  if (tw > 0.) { vec3 p = uFootD + uFrmD * q, u = normalize(p); float e = uDcell * .3, h0 = dTex(u) + uDbase, hx = dTex(normalize(p + uFrmD[0] * e)) + uDbase, hz = dTex(normalize(p + uFrmD[2] * e)) + uDbase;
+    hd = mix(hd, h0, tw); gd = mix(gd, vec3((hx - h0) / e, 0., (hz - h0) / e), tw); m = mix(m, texture(uRel, dTC(u)).w, tw); }
+  float c = 0., c0 = 0., f = 0.; vec3 gc = vec3(0.), gF = vec3(0.);
+  for (int k = 0; k < ${K}; k++) { if (k < uKd) continue; float s = sOf(k), w = clamp(s / cmin - 1.5, 0., 1.); if (w <= 0.) break;
+    vec4 o = oct(k, q); float a = OT(k, 1).w * w, n0 = OT(k, 0).w - .5;
+    if (k < ${KD}) { c += a * (n0 + o.x); c0 += a * n0; gc += a * o.yzw; } else { f += a * o.x; gF += a * o.yzw; } }
+  float d = m * c, dd = dDamp(hd, d);
+  dh = (hd + dd) - (uDh0 + dDamp(uDh0, uDm0 * c0)) + f; g = gd + m * gc * (abs(d) > 1e-6 ? dd / d : 1.) + gF;
+  if (uCrP > 0.) { vec3 g1, g0; dh += craterG(q, cmin, g1) - craterG(vec3(0.), cmin, g0); g += g1; }
+  return m;
+}
 float ground(vec3 q, float cmin, out float dh, out vec3 g) {
+  if (uDw > 0) return groundD(q, cmin, dh, g);
   if (uNpl > 0) {
     float dF = 0.; vec3 gF = vec3(0.);
     for (int k = ${KD}; k < ${K}; k++) { float s = sOf(k), w = clamp(s / cmin - 1.5, 0., 1.); if (w <= 0.) break; vec4 o = oct(k, q); float a = OT(k, 1).w; dF += a * w * o.x; gF += a * w * o.yzw; }
@@ -381,10 +463,14 @@ float ground(vec3 q, float cmin, out float dh, out vec3 g) {
 `;
 // the GLSL climate, mirroring climate() and forestF(); uAxis is the planet's axis in camera-local axes
 export const GLSL_CLIMATE = () => `
-uniform vec3 uAxis; uniform float uTeq, uTgrad, uWet, uGrav;
+uniform vec3 uAxis; uniform float uTeq, uTgrad, uWet, uGrav, uLapse, uSph; uniform int uCl; uniform highp sampler2D uClim;
+float gTs = 99., gSeas = 0.;                                               // (set by climate: on measured worlds, the summer's warmth and this moment's seasonal swing)
 vec3 climate(vec3 q, float h) {   // warmth (°C), wetness (0..1), latitude (radians)
+  if (uCl > 0) { vec3 u = normalize(uFootD + uFrmD * q); vec4 c = texture(uClim, dTC(u)); float sl = u.z;
+    float T = c.x + uTeq - 28. - (uTgrad - 45.) * sl * sl - 6.5 * max(h, 0.) / 1000., W = clamp(.42 + .22 * log2(max(c.z, 1.) / max(20. * (T + 7.), 40.)) + uWet, 0., 1.);
+    gTs = T + abs(c.y); gSeas = c.y * uSph; return vec3(T, W, asin(clamp(sl, -1., 1.))); }
   vec3 rad = normalize(q + vec3(0., uR, 0.)); float sl = dot(rad, uAxis), lat = asin(clamp(sl, -1., 1.));
-  float T = uTeq - uTgrad * sl * sl - 6.5 * max(h, 0.) / 1000. * uGrav + 8. * (clim(0, q) - .5);
+  float T = uTeq - uTgrad * sl * sl - uLapse * max(h, 0.) / 1000. * uGrav + 8. * (clim(0, q) - .5);
   float W = clamp(.5 + .3 * cos(lat * 6.3) + .9 * (clim(1, q) - .5) + uWet, 0., 1.);
   return vec3(T, W, lat);
 }
@@ -408,7 +494,7 @@ float riverM(vec3 q, float h, float W, out float dist, out float wd) {
 float citySuit(float h, float T, float W, float sl) { return smoothstep(3., 12., h) * smoothstep(900., 500., h) * smoothstep(-4., 2., T) * smoothstep(.15, .3, W) * smoothstep(.25, .1, sl); }
 float forestF(vec3 q, float h, float T, float W, float fp) {
   if (h < 2.) return 0.; float n = mix(clim(2, q), .5, smoothstep(200., 700., fp)) * .6 + mix(clim(3, q), .5, smoothstep(60., 200., fp)) * .4;
-  return smoothstep(.3, .55, W) * smoothstep(-9., -5., T) * clamp((n - .3 + .25 * (W - .5)) * 4., 0., 1.) * (1. - min(1., cityRho(q) * citySuit(h, T, W, 0.) * 2.5));
+  return (uCl > 0 ? smoothstep(.38, .66, W) * smoothstep(7., 11., gTs) : smoothstep(.3, .55, W) * smoothstep(-9., -5., T)) * clamp((n - .3 + .25 * (W - .5)) * 4., 0., 1.) * (1. - min(1., cityRho(q) * citySuit(h, T, W, 0.) * 2.5));
 }
 `;
 
@@ -435,30 +521,51 @@ const SYLVA_OLD = [
 const ages = new Map();
 export function ageWorld(G0, E) {
   if (!E) return G0; const key = `${G0.n}@${E}`; if (ages.has(key)) return ages.get(key);
-  const r = rng(G0.n * 6151 + Math.round(E * 100)), lerp = (a, b) => a + (b - a) * r(), syl = G0.n === 0;
+  const r = rng(G0.n * 6151 + Math.round(E * 100)), lerp = (a, b) => a + (b - a) * r(), syl = G0.n === 0 || G0.real === 'earth';
   const G = { ...G0, E, id: key, ageName: ageName(E), cities: false, spc: new Map() };
   const [dT, dS, dG, dW] = syl ? SYLVA_PAST[E] : [E < 0.1 ? -lerp(3, 9) : lerp(-6, 12), E < 0.1 ? -lerp(40, 150) : lerp(-80, 200), lerp(-12, 8), lerp(-0.1, 0.15)];
-  G.Teq += dT; G.Tgrad = Math.max(15, G.Tgrad + dG); G.wet += dW; G.base = G0.base - dS; G.pl = plates(G0, E);
+  G.Teq += dT; G.Tgrad = Math.max(15, G.Tgrad + dG); G.wet += dW; G.base = G0.base - dS; G.pl = G0.real ? undefined : plates(G0, E); G.maskless = E >= 40;
   // who was alive: on Sylva the dated families; elsewhere each family gets an age of origin, and there are families
   // long gone, invented the same way as the living ones
   let fam;
-  if (syl) fam = [...G0.species.map((f) => ({ ...f, o: SYLVA_SPAN[f.genus], x: 0 })), ...SYLVA_OLD.map((f) => ({ ...f }))];
+  if (syl) fam = [...G0.species.map((f) => ({ ...f, o: f.o ?? SYLVA_SPAN[f.genus], x: 0 })), ...SYLVA_OLD.filter((f) => !G0.species.some((g) => g.genus === f.genus)).map((f) => ({ ...f }))];
   else { const q = rng(G0.n * 991 + 4), first = 380 + q() * 300;   // when this planet's land first went green
     fam = G0.species.map((f) => ({ ...f, o: 5 + q() ** 1.6 * (first - 5), x: 0 }));
-    for (let i = 0; i < 9; i++) { const o = 60 + q() * (first - 60), base = G0.species[Math.floor(q() * G0.species.length)], gen = base.genus.slice(0, 3) + ['opsis', 'odon', 'ites', 'axylon', 'aria', 'ella'][Math.floor(q() * 6)];
+    for (let i = 0; i < (G0.species.length ? 9 : 0); i++) { const o = 60 + q() * (first - 60), base = G0.species[Math.floor(q() * G0.species.length)], gen = base.genus.slice(0, 3) + ['opsis', 'odon', 'ites', 'axylon', 'aria', 'ella'][Math.floor(q() * 6)];
       fam.push({ ...base, name: gen.toLowerCase() + ' family', genus: cap(gen), form: FORMS[Math.floor(q() * FORMS.length)], h: base.h * (0.6 + q() * 1.2), hue: (base.hue + (q() - 0.5) * 0.15 + 1) % 1, leaf: [base.leaf[0] * (0.5 + q() * 2), base.leaf[1], base.leaf[2]], T: [base.T[0] + (q() - 0.5) * 12, base.T[1]], o, x: Math.max(0.5, o - 40 - q() * 200), nSp: 120 + Math.floor(q() * 400) }); } }
-  G.species = fam.filter((f) => f.o >= E && f.x < E).slice(0, 16).map((f) => {   // drifted, a little, by how long ago
+  G.species = fam.filter((f) => f.o >= E && f.x < E).slice(0, G0.real ? 90 : 16).map((f) => {   // drifted, a little, by how long ago
     const k = Math.min(1, E / 100), d = (a) => (r() - 0.5) * 2 * a * k;
     const s = { ...f, h: f.h * Math.exp(d(0.25)), hue: (f.hue + d(0.03) + 1) % 1, lit: Math.max(0.06, f.lit + d(0.03)), leaf: [f.leaf[0] * Math.exp(d(0.3)), f.leaf[1], f.leaf[2]], nSp: f.nSp || 150 + Math.floor(r() * 500) };
     s.canopy = lin(hsl(s.hue, s.sat, s.lit)); return s; });
   // what covers the open ground: grass came late; before land plants, bare rock and crusts
-  G.ground = E >= 430 ? 'bare' : E >= 40 ? 'ferns' : 'grass';
-  if (G.ground === 'ferns') G.grass = lin(hsl(syl ? 0.3 : G0.leafHue, 0.45, 0.22));
-  if (G.ground === 'bare') { G.grass = G0.soil.map((v, i) => v * 0.7 + G0.rock[i] * 0.3); G.grassDry = G0.rock; }
+  G.ground = G0.lifeless ? 'bare' : E >= 430 ? 'bare' : E >= 40 ? 'ferns' : 'grass';
+  if (G.ground === 'ferns' && !G0.lifeless) G.grass = lin(hsl(syl ? 0.3 : G0.leafHue, 0.45, 0.22));
+  if (G.ground === 'bare' && !G0.lifeless) { G.grass = G0.soil.map((v, i) => v * 0.7 + G0.rock[i] * 0.3); G.grassDry = G0.rock; }
   // the animals of the age
   G.fauna = syl ? ({ 0.02: { scale: 1.5, neck: 0.4, col: [0.22, 0.12, 0.06] }, 3: {}, 50: { scale: 0.55 }, 150: { scale: 3.2, neck: 2.6, len: 1.6, hscale: 2.2 }, 310: { legs: 6, neck: 0.01, len: 2.4, L: 0.3, scale: 1, col: [0.18, 0.07, 0.04], noHunt: 1, span: 0.35 }, 385: { none: 1 }, 450: { none: 1 } })[E]
-    : E > 300 ? { none: 1 } : { scale: lerp(0.5, 3), neck: lerp(0.3, 2.5) };
-  G.birds = syl ? E < 160 && E !== 385 || E === 310 : E < 200;
+    : E > 300 || G0.lifeless ? { none: 1 } : { scale: lerp(0.5, 3), neck: lerp(0.3, 2.5) };
+  G.birds = syl ? E < 160 && E !== 385 || E === 310 : E < 200 && !G0.lifeless;
   G.whales = E < 40;
   ages.set(key, G); return G;
+}
+
+// ---- the other planets of a planet's own system: each a genome of its own, held to what its place says. Its size is
+// what it looks like from afar; its warmth, its star's size in its sky and the length of its year follow from how far
+// out it is; small worlds keep little air, hot ones lose their seas, cold ones freeze them; life only where it could be.
+export function sibling(Gh, k, p) {
+  const n = 1000 + Gh.n * 16 + k, G = genome(n), r = rng(n * 53 + 1), x = p.ra;   // x: its distance over its home's
+  G.id = n; G.k = k; G.home = Gh.n; G.sysYr = x ** 1.5; G.name = cap(word(r, 2 + Math.floor(r() * 2)));
+  G.R = p.R; G.g = +Math.max(0.15, Math.min(2.2, (p.R / 6.371e6) * (0.75 + 0.4 * r()))).toFixed(2); G.relief = (0.6 + 1.1 * r()) * G.g ** -0.7;
+  G.starK = Gh.starK; G.sunCol = Gh.sunCol; G.sunSize = Gh.sunSize / x; G.yearD = Math.round(Gh.yearD * x ** 1.5 * (Gh.dayH / G.dayH));
+  const T = (Gh.Teq + 273) / Math.sqrt(x) - 273, air0 = G.air; G.Teq = T; G.Tgrad = 20 + 30 * r();
+  G.air = p.R < 3.2e6 ? 0.05 + 0.25 * r() : T > 150 ? 2.2 : G.air; G.beta = G.beta.map((v) => v / air0 * G.air); G.Hs = 8000 / G.g * (0.7 + 0.7 * r());
+  G.cloud = G.air < 0.4 ? 0.02 : T > 150 ? 0.85 : G.cloud; G.cloudBase = 1500 / G.g; G.cloudTop = 4000 / G.g;
+  if (T > 90) { G.seaFrac = 0.04; G.liquid = [0.06, 0.012, 0.002]; G.wet = -0.45; }   // too hot for seas: dry rock, a little lava
+  else if (T < -45) { G.seaFrac = 0.3; G.liquid = [0.55, 0.6, 0.66]; G.wet = -0.2; } // too cold: frozen seas
+  { const m = Math.max(...G.liquid); G.liqA = G.liquid.map((v) => 0.015 + 0.15 * (1 - v / m) ** 1.5); G.liqC = G.liquid.map((v) => v / m * 0.06); }
+  G.lifeless = !(T > -25 && T < 50 && G.air >= 0.5);
+  if (G.lifeless) { G.species = []; G.ground = 'bare'; G.grass = G.soil.map((v, i) => v * 0.6 + G.rock[i] * 0.4); G.grassDry = G.rock; G.fauna = { none: 1 }; G.birds = false; G.whales = false; }
+  G.cities = false; G.moons = []; G.rings = 0; G.mouths = [];
+  G.amp = amps(G); G.base = 0; G.base = seaLevel(G);
+  return G;
 }

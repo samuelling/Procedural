@@ -6,8 +6,8 @@ import os, re, html, markdown
 
 S = 'site/story'; os.makedirs(S, exist_ok=True)
 size = lambda f: os.path.getsize(f)
-B = {k: size(f) for k, f in [('0.2kb', 'a/index.html'), ('2kb', 'b/index.html'), ('20kb', 'c/index.html'), ('200kb', 'd/index.html'), ('2mb', 'w/index.html'), ('earth', 'e/index.html')]}
-LIM = {'0.2kb': 200, '2kb': 2000, '20kb': 20000, '200kb': 200000, '2mb': 2000000, 'earth': 2000000}
+B = {k: size(f) for k, f in [('0.2kb', 'a/index.html'), ('2kb', 'b/index.html'), ('20kb', 'c/index.html'), ('200kb', 'd/index.html'), ('2mb', 'w/index.html'), ('earth', 'e/index.html'), ('worlds', 'site/worlds/index.html')]}
+LIM = {'0.2kb': 200, '2kb': 2000, '20kb': 20000, '200kb': 200000, '2mb': 2000000, 'earth': 2000000, 'worlds': 2000000}
 ROUNDS = [  # file, title, what it settled, 2 MB rung's bytes after it was built
   ('round-01', 'Binding the scales', 'The plot waits while you dive; you dive at a real log of its own species; the range is the plot’s surroundings; worlds open from the spot.', 114327),
   ('round-02', 'Measured ground and months', 'ETOPO 2022 heights and CRU CL 2.0 months under every Earth place; the range becomes the real 640 km; treeline from the warmest month.', 919258),
@@ -87,6 +87,10 @@ def page(title, body):
 def bar(k): return f'<div class="bytes">{B[k]:,} of {LIM[k]:,} bytes · {pct(k):.1f}% of the allowance</div><div class="bar"><i style="width:{max(pct(k), .4):.2f}%"></i></div>'
 
 # ---- the overview -----------------------------------------------------------------------------------------------
+import base64 as _b, zlib as _z, json as _j, re as _re
+_raw = _b.b64decode(_re.search(r"EARTH = '([^']*)'", open('cont/earthdata.js').read()).group(1)); _inf = _z.decompress(_raw, -15); _n = int.from_bytes(_inf[:4], 'little'); _h = _j.loads(_inf[4:4 + _n])
+_sz = {x['name']: len(_z.compress(_inf[4 + _n + x['off']:4 + _n + x['off'] + x['len']], 9)) for x in _h}; _g = (_sz['land'] + _sz['sea']) / sum(_sz.values())
+ek = {'ground': len(_raw) * _g / 1000, 'rest': len(_raw) * (1 - _g) / 1000}; ek['prog'] = B['2mb'] / 1000 - ek['ground'] - ek['rest']   # the maps' share measured by deflating each section on its own, scaled to the packed whole
 code_kb, kg_kb = 89, 36                                       # measured: the 2 MB page's script with the grids removed, compressed (see the note below)
 data_kb = B['earth'] / 1000 - code_kb - kg_kb
 rows = ''.join(f'<li><a href="{f}.html"><b>Round {i + 1}</b><span>{html.escape(t)}</span><em>→ {n / 1e6:.2f} MB</em><small>{html.escape(w)}</small></a></li>' for i, (f, t, w, n) in enumerate(ROUNDS))
@@ -145,8 +149,21 @@ body = f'''
 <dt>What it costs</dt><dd>A place is its block. Innsbruck’s valley is 608 m up at 2 MB, and 796 m here, because its block takes in the mountains on either side. Its year comes to much the same: 8.4 °C and 979 mm above, 8.3 °C and 1,023 mm here. That is because temperatures are stored reduced to sea level and lapsed back to the ground they stand on. The horizon, which looks 120 km out, mostly falls inside one block, so the ranges around a plot are softer than at 2 MB.</dd>
 </dl></section>
 
-<section class="rung"><header><b>2 MB</b><span>Worlds without a cut</span><a href="../2mb/">Open ↗</a></header>
+<section class="rung"><header><b>2 MB</b><span>The Earth, without a cut</span><a href="../2mb/">Open ↗</a></header>
 {bar('2mb')}
+<div class="bar split" title="program, Earth's heights, the rest of the maps"><i style="width:{ek['prog'] / 20:.2f}%;background:#f1f3ea"></i><i style="width:{ek['ground'] / 20:.2f}%;background:#8fb8e0"></i><i style="width:{ek['rest'] / 20:.2f}%;background:var(--sun)"></i></div>
+<div class="legend"><span><i style="background:#f1f3ea"></i>program, about {ek['prog']:.0f} kB</span><span><i style="background:#8fb8e0"></i>the Earth’s ground and sea floor, about {ek['ground']:.0f} kB</span><span><i style="background:var(--sun)"></i>climate, lakes, tree ranges and the four rocky bodies, about {ek['rest']:.0f} kB</span></div>
+<p class="is">Here a forest is <b>a real place on the real Earth</b>, at the real hour, in a world you can cross at any size: the same engine as the invented worlds below, given the Earth’s own maps.</p>
+<dl>
+<dt>Why</dt><dd>The invented worlds were asked to be less like science fiction: the Earth and the solar system instead, which means maps. The engine stayed; its invented continents were replaced by measured ones. Its rules (seasons, fire, beavers, herds, seas, caves, deep time, the zoom from quarks to the cosmic web) all run on the real ground now, and the six invented worlds are kept, on their own page and through a wormhole.</dd>
+<dt>How a map becomes ground at every scale</dt><dd>The Earth’s heights are a 6 arc-minute grid (11 km), read bicubically, never dipping below the lowest of the four cells around a point on land, so a valley floor stays a floor and does not sink under the sea. Finer than the map, the old invented octaves are laid over it, scaled by how rough the map is there (the spread of heights round each half-degree cell), so the Himalaya is craggy and the Great Plains stay plain, and held back near sea level so the coast stays on the map’s line. Near the camera the map is its own Taylor series, worked out in double precision every frame, so walking on a grid 11 km wide is as steady as on the invented ground.</dd>
+<dt>Real trees</dt><dd>Sixty-four genera, each a body plan from the invented worlds’ families (dome, cone, spire, palm, column, umbrella), with 671 species names. Nine genera come from range maps in North America and Europe, as in the measured Earth before; the rest by region and climate, and a few by place (redwoods only on the California coast, giant sequoias only on the Sierra’s west slope, saguaros only in the Sonoran Desert). Within a genus, which species stands where is drawn from its region’s list; that much is invented, and the page says so.</dd>
+<dt>The real sky and the rest of the system</dt><dd>Positions of the planets from their Keplerian elements (JPL’s approximate table), the Moon from the largest terms of its theory, and every body’s turning from the IAU’s rotation models, all at the real date and time. Mercury, Venus, the Moon and Mars are worlds you can stand on: the Moon (LOLA) and Mars (MOLA) from half-degree maps, Venus (Magellan) and Mercury (MESSENGER) from one-degree maps, with invented craters finer than that.</dd>
+<dt>What it costs</dt><dd>{B['2mb']:,} bytes packed, {pct('2mb'):.1f}% of the allowance. The rest of the room is left: the maps were sized to what they change on screen, not to fill it.</dd>
+</dl></section>
+
+<section class="rung"><header><b>2 MB, before</b><span>Worlds without a cut</span><a href="../worlds/">Open ↗</a></header>
+{bar('worlds')}
 <p class="is">Here a forest is <b>one place on a whole planet, and the planet is one of six</b>. Nothing swaps as you change scale: from a globe in space to the cells of a leaf it is one height field, one set of trees, one sky, and you can walk, fly or fall through it at any size.</p>
 <dl>
 <dt>Why it replaced the measured Earth</dt><dd>The rung below this, at its best, was a set of separate worlds (a mountain range, a plot, a log, the moss, a leaf), each drawn its own way, joined by windows. Zooming meant cuts: a cloud became a flat sheet, a range became a different picture. The brief was asked again: what is 2 MB best spent on? The answer chosen was a world with no cuts at all, at every scale, then many of them.</dd>
@@ -155,10 +172,10 @@ body = f'''
 <dt>From the measured Earth</dt><dd>Most of what the rung below grew on real data comes back here as rules: seasons and leaf fall, snow that follows the cold, storms, aurora, herds and the packs that hunt them, a tree of life, a sea to dive in, caves, fire that runs before the wind and the forest that grows back, beaver ponds that fill and drain, and past ages, eight of them, back 450 million years, with the continents carried on drifting plates: ocean where they had not yet split apart, mountains where they collided.</dd>
 <dt>Down to quarks, out to the cosmic web</dt><dd>The scale no longer stops at a micrometre or at the planet. Below, the camera keeps its own position in doubles from a point on the ground, and every shader measures from the camera (nucleons and quarks in femtometres, since metres squared would underflow a float), so the descent runs through clay platelets, terraces of atoms, one atom’s electron cloud, its nucleus and a proton’s quarks down to a few attometres. Above, the star, its planets and their orbits, then stars on lattices of cells, each class twice as wide and four times as bright as the last, the galaxy as a density marched through, and galaxies and their web on the same kind of lattice by the megaparsec. Forty-four powers of ten in all, from 10⁻¹⁸ m to about 10²⁶ m. Below a tenth of a micrometre the colours are conventions, said so on screen.</dd>
 <dt>How the continents drift</dt><dd>Each planet is cut into twelve plates, each turning about its own pole at a steady rate. A point in a past age is asked which plate, turned back to today, would cover it. None: ocean floor. One: that plate’s own ground. Two: the one further inside its own plate rides over, and the ground rises in a belt along the front. Only the coarse ground moves (continents down to hills 32 m across); the finer octaves are the same everywhere, so they need not. The plate under the camera keeps the usual near-field precision, so a grain is still exact 300 million years ago.</dd>
-<dt>What it costs</dt><dd>Nothing measured: these are invented planets, so the page is all program, {B['2mb']:,} bytes packed, {pct('2mb'):.1f}% of the allowance. More rules will be added, but the rest of the room will not be filled for its own sake.</dd>
+<dt>What it cost</dt><dd>Nothing measured: these are invented planets, so the page is all program, {B['worlds']:,} bytes packed, {pct('worlds'):.1f}% of the allowance.</dd>
 </dl></section>
 
-<section class="rung"><header><b>2 MB, before</b><span>The measured Earth</span><a href="../2mb-earth/">Open ↗</a></header>
+<section class="rung"><header><b>2 MB, before that</b><span>The measured Earth</span><a href="../2mb-earth/">Open ↗</a></header>
 {bar('earth')}
 <div class="bar split" title="program, climate classes, measured grids"><i style="width:{code_kb / 20:.2f}%;background:#f1f3ea"></i><i style="width:{kg_kb / 20:.2f}%;background:#8fb8e0"></i><i style="width:{data_kb / 20:.2f}%;background:var(--sun)"></i></div>
 <div class="legend"><span><i style="background:#f1f3ea"></i>program, about {code_kb} kB</span><span><i style="background:#8fb8e0"></i>Köppen climate classes, about {kg_kb} kB</span><span><i style="background:var(--sun)"></i>measured grids, about {data_kb / 1000:.2f} MB</span></div>
@@ -179,7 +196,7 @@ It stopped at 87% on purpose. The last candidates either needed a ruling (is a m
 </dl></section>
 
 <h2>What the world is, at every order</h2>
-<p>Read upward, the rungs show how much has to be written down before a forest is anywhere at all. At 200 bytes a tree is its index. At 2 kB it is a distance worked out per pixel. At 20 kB it is a genome grown into a body. At 200 kB it has every rule the project has written, and an address seen from 300 km off. At 2 MB the address dissolves into a whole planet: there are no more rungs inside the rung, just one world you can cross at any size, and five more beside it through the wormholes. (Before that, the 2 MB room held the measured Earth, which is still open.)</p>
+<p>Read upward, the rungs show how much has to be written down before a forest is anywhere at all. At 200 bytes a tree is its index. At 2 kB it is a distance worked out per pixel. At 20 kB it is a genome grown into a body. At 200 kB it has every rule the project has written, and an address seen from 300 km off. At 2 MB the address dissolves into a whole planet, and the planet is the real one: there are no more rungs inside the rung, just one world you can cross at any size, its sky and neighbours where they really are, and six invented worlds through a wormhole. (Before that, the 2 MB room held those invented worlds on their own, and before them the measured Earth; both are still open.)</p>
 <p>The rule all five share is the one in the brief: no pictures of a forest, only ways of making one. The lower rungs prove how little that takes. The top one tests whether, given room, the making can be made true.</p>
 
 <h2>The overnight dialogue</h2>

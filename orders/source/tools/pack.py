@@ -4,7 +4,7 @@ import sys, zlib
 src = open(sys.argv[1], 'rb').read()
 try:
     import zopfli.zlib as zz
-    raw = zz.compress(src, numiterations=60)[2:-4]          # strip the zlib header and checksum: raw deflate
+    raw = zz.compress(src, numiterations=int(__import__("os").environ.get("PACKIT", 60)))[2:-4]          # strip the zlib header and checksum: raw deflate
 except Exception:
     co = zlib.compressobj(9, zlib.DEFLATED, -15); raw = co.compress(src) + co.flush()
 assert zlib.decompress(raw, -15) == src

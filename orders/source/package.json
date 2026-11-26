@@ -3,6 +3,14 @@
   "private": true,
   "description": "A forest genome: a few kilobytes of rules that grow a plot of forest, in one HTML file",
   "type": "module",
-  "scripts": { "build": "node build.mjs", "test": "node test/grow.mjs" },
-  "devDependencies": { "esbuild": "^0.28.2" }
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/grow.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  }
 }

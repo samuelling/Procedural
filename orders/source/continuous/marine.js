@@ -126,6 +126,7 @@ void main() { vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; vec3 alb, col
   const place = (G, S, p, depth, list, ...rest) => { const D = p.map((v, q) => v - S.foot[q]), F = S.F, qq = [0, 1, 2].map((r) => D[0] * F[r][0] + D[1] * F[r][1] + D[2] * F[r][2]); list.push(qq[0], qq[1] - depth - S.cy, qq[2], ...rest); };
   return {
     draw(common, setNoise, cam, G, S) {
+      if (G.lifeless) return;
       if (!S.under) return;
       const foot = S.foot, ab = foot.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], sg = foot[a] >= 0 ? 1 : -1, loc = (i) => [S.F[0][i], S.F[1][i], S.F[2][i]];
       const hue = G.grass.map((v) => v * 0.5 + 0.01), hue2 = [0.2, 0.13, 0.02].map((v, i) => v * 0.85 + G.grass[i] * 0.1);

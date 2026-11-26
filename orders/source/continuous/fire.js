@@ -19,6 +19,7 @@ float burnAge(vec3 q) {
 export function mkFire(gl, prog, PRE) {
   const user = new Map(), memo = new Map(), CELL = 30000;
   function natural(G, S) {
+    if (G.lifeless) return [];
     const foot = S.foot, ab = foot.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], sg = foot[a] >= 0 ? 1 : -1, fk = a * 2 + (sg > 0 ? 1 : 0), out = [], t = G.t || 0;
     const i0 = floor(foot[b] / CELL), j0 = floor(foot[c] / CELL), P = 700;   // each cell can burn every couple of years
     for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) for (let k = floor(t / P) - 26; k <= floor(t / P); k++) {

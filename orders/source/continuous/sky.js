@@ -31,7 +31,7 @@ vec3 scatter(vec3 rd, float tmax, out vec3 tr) {
   return uSunC * acc * (uBeta * pr + 2.2e-6 * pm * (uBeta.y / 1.35e-5)) * 14.;
 }`;
   const sky = prog(QV, PRE + RAY + `
-uniform vec4 uMoon[3]; uniform int uNm;
+uniform vec4 uMoon[3]; uniform vec3 uMoonC[3]; uniform int uNm;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 float hh(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 void main() {
@@ -41,7 +41,7 @@ void main() {
     al = dot(tr, vec3(.3, .5, .2));                                         // the stars and the galaxy are behind (cosmos.js): this much of them shows through
     for (int i = 0; i < 3; i++) { if (i >= uNm) break; vec4 m = uMoon[i]; vec3 md = normalize(m.xyz); float cs = dot(rd, md), sz = m.w;   // moons
       if (cs > cos(sz)) { float x = acos(clamp(cs, -1., 1.)) / sz; vec3 side = normalize(rd - md * cs + 1e-7), nn = normalize(-md * sqrt(max(0., 1. - x * x)) + side * x);
-        float lit = max(dot(nn, uSun), 0.); c = c * .1 + (uSunC * .35 * (.55 + .45 * hh(floor(rd * 900.))) * lit + vec3(.004)) * tr; al = 0.; } }
+        float lit = max(dot(nn, uSun), 0.); c = c * .1 + (uSunC * uMoonC[i] * .58 * (.55 + .45 * hh(floor(rd * 900.))) * lit + vec3(.004)) * tr; al = 0.; } }
     float sd = dot(rd, uSun), sz = uSunSz; c += uSunC * tr * (smoothstep(cos(sz * 1.2), cos(sz * .8), sd) * 40. + pow(max(sd, 0.), 1500. / (sz * 200.)) * .4);   // the star, and its glare
   }
   if (uUnder > .5) {                                                       // from under the water: the surface overhead, the sky through its window
@@ -129,6 +129,7 @@ void main() {
     draw(common, cam, G, S) {
       gl.useProgram(sky.p); common(sky); setRay(sky, cam, G, S);
       const m = new Float32Array(12); G.moons.forEach((q, i) => { if (i < 3) { const d = [Math.cos(q[1]) * Math.cos(q[2]), Math.sin(q[1]) * Math.cos(q[2]), Math.sin(q[2])]; m.set([...loc(S, d), q[0]], i * 4); } });
+      const mc = new Float32Array(9); G.moons.forEach((q, i) => { if (i < 3) mc.set(q[4] || [0.6, 0.6, 0.6], i * 3); }); gl.uniform3fv(sky.uMoonC, mc);
       gl.uniform4fv(sky.uMoon, m); gl.uniform1i(sky.uNm, Math.min(3, G.moons.length));
       gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE]); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.SRC_ALPHA);   // over the cosmos, letting through what the air lets through
       gl.bindVertexArray(vq); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.disable(gl.BLEND); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);

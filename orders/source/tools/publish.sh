@@ -15,3 +15,6 @@ rm -f "$D/source/tools/notes.pyc"; find "$D" -name __pycache__ -prune -exec rm -
 mkdir -p "$D/continuous" "$D/source/continuous"
 cp cont/out/index.html "$D/continuous/index.html"
 cp cont/*.js cont/page.html "$D/source/continuous/"
+# the six invented worlds, as they stood when the real Earth replaced them on the 2 MB rung
+mkdir -p "$D/source/worlds"
+cp worlds/*.js worlds/page.html worlds/build.mjs "$D/source/worlds/"
