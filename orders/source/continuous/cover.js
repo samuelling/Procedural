@@ -57,14 +57,14 @@ out vec3 vP, vN, vL; out float vW, vF, vSd, vT, vS;
 // slow noise over the cells (for patches), and a spare seed
 void place(out vec3 o, out float sz, out float sd, out float ang, out float fo, out float W, out float T, out float h, out float pa) { o = iA.xyz; sz = iA.w; sd = iB.x; ang = iB.y; fo = iB.z; W = iB.w; T = 10.; h = iC.y; pa = iC.z; if (iC.x > .12) W = 0.; }`;
   const mk = (body, frag) => prog(PRE + VS + body, PRE + `
-in vec3 vP, vN, vL; in float vW, vF, vSd, vT, vS; uniform float uCy;
+in vec3 vP, vN, vL; in float vW, vF, vSd, vT, vS; uniform float uCy, uMat;
 uniform vec3 uGrass, uDry, uSoil, uRock, uSand, uLitter;
 layout(location = 0) out vec4 oC; layout(location = 1) out vec4 oD;
 ` + LEAFFACE + `
 bool gone(float f) { return h1(gl_FragCoord.xy + fract(vSd * 13.7) * 91.) > f; }
 vec3 lite(vec3 alb, vec3 n) { return alb * (uSunC * max(dot(n, uSun), 0.) * .8 * shadow(vP) + uSky * (.4 + .3 * n.y)); }
 void main() { if (gone(vF)) discard; float fp = vW * uPix; vec3 col; ` + frag + `
-  col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), 0, 0, 1); gl_FragDepth = fdep(vW); }`);
+  col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), 0, uMat, pkn(normalize(vN) * (gl_FrontFacing ? 1. : -1.))); gl_FragDepth = fdep(vW); }`);
   const END = `vec4 Q = uVP * vec4(vP, 1.); vW = Q.w; gl_Position = vec4(Q.xy, 0., Q.w); }`;
   const edge = `float ed = length(o.xz) / (uBand.x * uBand.y * .5); vF = uFade * smoothstep(1., .7, ed);`;
   // fallen leaves: a flat blade on the ground, a little cupped, faced like a living leaf, in the dead leaf's colour
@@ -113,11 +113,11 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
   const blades = []; for (let bi = 0; bi < 7; bi++) for (let i = 0; i < 5; i++) { const a = bi + i / 5, b = bi + (i + 1) / 5 - 1e-4; blades.push(a, 0, -1, b, 0, -1, a, 0, 1, a, 0, 1, b, 0, -1, b, 0, 1); }
   const Gm = { leaf: geo(new Float32Array(leafQ)), blade: geo(new Float32Array(blades)), stone: geo(stone) };
   const BANDS = [
-    { s: 0.35, n: 110, P: plant, g: Gm.blade },
-    { s: 0.07, n: 90, P: litter, g: Gm.leaf },
-    { s: 0.022, n: 80, P: grains, g: Gm.stone, kind: [0.006, 0, 0] },
-    { s: 6e-4, n: 90, P: grains, g: Gm.stone, kind: [1.8e-4, 1, 0] },
-    { s: 3.5e-5, n: 80, P: grains, g: Gm.stone, kind: [1.1e-5, 2, 0] },
+    { s: 0.35, n: 110, P: plant, g: Gm.blade, mat: 6 },
+    { s: 0.07, n: 90, P: litter, g: Gm.leaf, mat: 9 },
+    { s: 0.022, n: 80, P: grains, g: Gm.stone, kind: [0.006, 0, 0], mat: 5 },
+    { s: 6e-4, n: 90, P: grains, g: Gm.stone, kind: [1.8e-4, 1, 0], mat: 4 },
+    { s: 3.5e-5, n: 80, P: grains, g: Gm.stone, kind: [1.1e-5, 2, 0], mat: 1 },
   ].map((b) => ({ ...b, va: vao(b.g, b.n) }));
   return {
     draw(common, setNoise, cam, G, S) {
@@ -138,7 +138,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
         gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null); gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null); gl.disable(gl.RASTERIZER_DISCARD);
         // and draw them
         const P = bd.P; gl.useProgram(P.p); common(P); setNoise(P);
-        gl.uniform4f(P.uBand, bd.s, bd.n, ub - ib, uc - ic); gl.uniform1f(P.uFade, fade); gl.uniform1f(P.uCy, S.cy);
+        gl.uniform4f(P.uBand, bd.s, bd.n, ub - ib, uc - ic); gl.uniform1f(P.uFade, fade); gl.uniform1f(P.uCy, S.cy); gl.uniform1f(P.uMat, bd.mat);
         for (const [n, v] of [['uGrass', G.grass], ['uDry', G.grassDry], ['uSoil', G.soil], ['uRock', G.rock], ['uSand', G.sand], ['uLitter', dead]]) if (P[n]) gl.uniform3fv(P[n], v); if (P.uGcov) gl.uniform1f(P.uGcov, G.ground === 'ferns' ? 1 : G.ground === 'bare' ? 2 : 0);
         if (bd.kind) gl.uniform3fv(P.uKind, bd.kind);
         gl.bindVertexArray(bd.va.v); gl.drawArraysInstanced(gl.TRIANGLES, 0, bd.va.n, bd.n * bd.n);

@@ -90,7 +90,7 @@ vec3 turn(vec3 n) { float c = cos(iS.y), s = sin(iS.y); return vec3(c * n.x - s 
 uniform vec4 uForm[16];
 flat in vec4 vLc, vBk, vLf; flat in float vCode, vBn;
 vec3 flame(vec2 u) { return vec3(5., 1.7, .35) * (.4 + .6 * n2(u + vec2(0., -uT * 3.))); }`;
-  const OUT = `col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), vCode, 0, 1); gl_FragDepth = fdep(vW);`;
+  const OUT = (m = '0.', nv = 'vec3(0., 1., 0.)') => `col = air(col, normalize(vP), length(vP), uAlt, uCy + vP.y); oC = vec4(col, 1.); oD = vec4(length(vP), vCode, ${m}, pkn(${nv})); gl_FragDepth = fdep(vW);`;   // (the pick: distance, species, what the microscope finds there: 6 leaf, 7 needle, 8 bark)
   const wood = prog(PRE + INST + `
 layout(location = 0) in vec3 aP; layout(location = 1) in vec3 aN; layout(location = 2) in vec2 aU;
 out vec3 vP, vN; out vec2 vU; out float vW, vF, vSd, vR; flat out int vSp;
@@ -110,7 +110,7 @@ void main() {
   vec3 n = normalize(vN); float dif = max(dot(n, uSun), 0.) * shadow(vP), am = .45 + .35 * n.y;
   vec3 col = alb * (uSunC * dif * .8 + uSky * am * .5) * (.55 + .45 * clamp(vR / 14., 0., 1.));
   if (vBn > 1.5) col += flame(u * 6.) * smoothstep(.55, .3, fur) * .5;
-  ${OUT}
+  ${OUT('8.', 'n')}
 }`);
   const leaf = prog(PRE + INST + `
 layout(location = 0) in vec3 aP; layout(location = 1) in vec3 aN; layout(location = 2) in vec2 aU; layout(location = 3) in vec2 aX;
@@ -155,7 +155,7 @@ void main() {
   float occ = .35 + .65 * clamp(vY / 20., 0., 1.);
   vec3 col = alb * (uSunC * (dif + tr * (.6 + .6 * normalize(alb + .01))) * .85 + uSky * (.35 + .25 * n.y)) * occ;
   if (vBn > 1.5) col = flame(vU * 3. + vSd * 9.);
-  ${OUT}
+  ${OUT("stem > .5 && inside < .5 ? 8. : form > 1.5 && form < 2.5 || lf.y > .12 || far > .5 ? 6. : 7.", 'n')}
 }`);
   // the mid band: each tree a camera-facing card, its crown the outline of its form, lit as a volume
   const crown = prog(PRE + `
@@ -190,7 +190,7 @@ void main() {
   if (vBn > .5) alb = vBk.rgb;
   vec3 col = alb * (uSunC * dif * .8 + uSky * .45) * (.6 + .4 * y);
   if (vBn > 1.5 && !trunk) col = flame(c * 5. + vSd * 9.);
-  ${OUT}
+  ${OUT()}
 }`);
 
   // ---- geometry: V variants of each species, grown when a planet is first visited -----------------------------------
