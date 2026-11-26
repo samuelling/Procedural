@@ -423,6 +423,22 @@ document.getElementById('bolt').addEventListener('click', strike);
 const ageSel = $('age'); ageSel.innerHTML = AGES.map((E) => `<option value="${E}">${E === 0 ? 'today' : E < 0.1 ? '20,000 years ago' : E + ' million years ago'}</option>`).join('');
 function setAge(E) { const t = G.t, up = alt() - max(ground(cam.P), 0), G1 = ageWorld(world(G.n), E), c = carry(G, G1, nrm(cam.P).map((v) => v * G.R)); cam.ref = c.M(cam.ref); G = G1; G.t = t; G.here = c.today; const u = nrm(c.p); cam.P = u.map((v) => v * (G.R + max(ground(u.map((x) => x * G.R)), 0) + up)); /* the same rock, carried on its plate, the same height above it */ ageSel.value = E; setLight(); hint(); life.redraw(G); }
 ageSel.addEventListener('change', () => { setAge(+ageSel.value); ageSel.blur(); });
+// time of day and month, chosen: the clock is moved on to the next sunrise, noon, sunset or midnight here (found from
+// the Sun itself, so the season and latitude are right, and where the Sun does not rise, it says so), or to a month
+const tGet = () => (G.real ? realT : G.t || 0), tSet = (t) => { if (G.real) { realT = t; G.t = t; world(G.n).t = t; realSky(); } else G.t = t; };
+function toTime(kind) {
+  const u = nrm(cam.P), el = (t) => dot(sunAt(G, t), u), t0 = tGet(), day = G.dayH / 24, n = 288, dt = day / n, hz = -0.0145; let best = null, bv = kind === 'midnight' ? 2 : -2;
+  for (let i = 1; i <= n + 2; i++) { const t = t0 + i * dt, a = el(t - dt), b = el(t);
+    if (kind === 'sunrise' && a < hz && b >= hz) { best = t; break; } if (kind === 'sunset' && a >= hz && b < hz) { best = t; break; }
+    if (kind === 'noon' && b > bv) { bv = b; best = t; } if (kind === 'midnight' && b < bv) { bv = b; best = t; } }
+  if (best === null) { const h = $('hint'), old = h.textContent; h.textContent = kind === 'sunrise' ? 'The Sun does not rise here today.' : 'The Sun does not set here today.'; setTimeout(() => { h.textContent = old; }, 3500); return; }
+  tSet(best);
+}
+const todSel = $('tod'), monSel = $('mon');
+monSel.innerHTML += MONTHS.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+todSel.addEventListener('change', () => { if (todSel.value) toTime(todSel.value); todSel.value = ''; todSel.blur(); });
+monSel.addEventListener('change', () => { const m = +monSel.value; monSel.value = ''; monSel.blur(); if (isNaN(m) || !G.real) return;
+  const d = new Date(msOf(realT)); let y = d.getUTCFullYear(); if (m < d.getUTCMonth()) y++; const tg = new Date(Date.UTC(y, m, 15, d.getUTCHours(), d.getUTCMinutes())); tSet(realT + Math.round(dayOf(tg.getTime()) - realT)); });   // whole days, so the time of day stays
 addEventListener('keydown', (e) => { const i = AGES.indexOf(G.E || 0); if (e.code === 'Comma' && i < AGES.length - 1) setAge(AGES[i + 1]); if (e.code === 'Period' && i > 0) setAge(AGES[i - 1]); }); addEventListener('keydown', (e) => { if (e.code === 'KeyL' && !e.repeat) strike(); });
 function setLight() {
   const s = S.sun || [0, 1, 0], el = Math.asin(max(-1, min(1, s[1])));
