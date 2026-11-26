@@ -50,7 +50,7 @@ for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
     extra = ''
     if folder == '0.2kb': extra = f'<figure class="code"><figcaption>All of it:</figcaption><code>{E(open(src).read().strip())}</code></figure>'
     if tries: extra += '<div class="try"><p>Try</p><ul>' + ''.join(f'<li>{t}</li>' for t in tries) + '</ul></div>'
-    if folder == '2mb': extra += '<p class="was">Until today this rung held six invented worlds, still open on their own: <a href="worlds/">the invented worlds ↗</a>. Before that, the measured Earth of plots and windows: <a href="2mb-earth/">still open here ↗</a></p>'
+    if folder == '2mb': extra += '<p class="was">Until today this rung held six invented worlds, still open on their own: <a href="worlds/">the invented worlds ↗</a>.</p>'
     if inside: extra += '<details><summary>Everything in it</summary><dl>' + ''.join(f'<dt>{E(a)}</dt><dd>{E(b)}</dd>' for a, b in inside) + '</dl></details>'
     step = '' if k == 0 else '<div class="step" aria-hidden="true"><span>×10 the room</span></div>'
     rows += f'''{step}<section class="rung r{k}" style="--w:{W[k]}%">
@@ -168,20 +168,12 @@ footer a { color: var(--ink); }
 </style></head><body><main>
 <header>
 <h1>Orders of Magnitude<small>one forest, five sizes</small></h1>
-<p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules. At the top there are also measurements of the real Earth. Smallest first:</p>
-<div class="how"><p>How it works</p><a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a><button class="story" id="talk-o" type="button">Listen in: two agents arguing over how to fill 2 MB</button></div>
+<p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules. At the top, the real Earth, measured, from quarks to the cosmic web. Smallest first:</p>
+<div class="how"><p>How it works</p><a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a></div>
 </header>
-''' + rows + talk + '''<footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Little’s range maps (USGS) and Caudullo et al. 2017; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
+''' + rows + '''<footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Natural Earth lakes, Little’s range maps (USGS), Caudullo et al. 2017, and the Moon, Mars, Venus and Mercury from LOLA, MOLA, Magellan and MESSENGER; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
 </main>
-<script>
-const d = document.getElementById('talk'), b = document.getElementById('talk-b'), tabs = d.querySelectorAll('nav button');
-const show = (k) => { for (const t of tabs) t.setAttribute('aria-selected', t.dataset.r == k); b.replaceChildren(document.getElementById('rd' + k).content.cloneNode(true)); b.scrollTop = 0; };
-document.getElementById('talk-o').addEventListener('click', () => { if (!b.firstChild) show(0); d.showModal(); });
-d.querySelector('.x').addEventListener('click', () => d.close());
-d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
-for (const t of tabs) t.addEventListener('click', () => show(t.dataset.r));
-if (location.hash === '#agents') { show(0); d.showModal(); }
-</script></body></html>
+</body></html>
 '''
 open('site/index.html', 'w').write(page)
 print(open('site/index.html').read().count('<section class="rung'), 'rungs listed;', sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk('site') for f in fs), 'bytes in site/')
