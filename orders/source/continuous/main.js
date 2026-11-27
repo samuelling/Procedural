@@ -516,7 +516,7 @@ function frame(now) {
   if (!cave.C.in && !S.under && ctl.mode === 'fly' && S.hc < MICRO && S.g0 > -1e9) { pick(canvas.clientWidth / 2, canvas.clientHeight * 0.75); const m = pick.mat >= 1 && pick.mat <= 5 ? pick.mat : 1;
     micro.enter(nrm(cam.P).map((v) => v * (G.R + S.cy - S.hc)), S.F.map((v) => v.slice()), [0, S.hc, 0], groundMat(m), MICRO, microLook(groundMat(m), 0)); requestAnimationFrame(frame); return; }
   S.eco = eco; eco.tick(G, S, S.F, speed ? dt : 0, speed > 0 && SPEEDS[speed] <= 1 / 60, S.hc);
-  S.graze = G.real === 'earth' || !G.real ? eco.grassAt(S.foot) : 1; S.insects = eco.insAt(S.foot);
+  S.graze = G.real === 'earth' || !G.real ? eco.grassAt(S.foot) : 1; S.insects = eco.insAt(S.foot); S.cen = G.real === 'earth' ? eco.census(S) : null;
   S.sea = S.g0 < 0 && S.hc < 3000 ? eco.sea(G, S) : null;
   targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.meet = (Gp, c) => life.meet(Gp, c); S.cast = () => SH.cast; S.shR = () => SH.r;
   if (cave.C.in) { gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]); gl.disable(gl.DEPTH_TEST); cave.render(common, cam, G, S, W, Hp); holes.none(); finish(dt); return; }
@@ -785,7 +785,7 @@ function hud() {
   if (G.real && !cave.C.in && !micro.M.on && S.cy < 1e8) { const u = nrm(cam.P), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI; $('alt').textContent += ` · ${abs(la).toFixed(2)}°${la < 0 ? 'S' : 'N'} ${abs(lo).toFixed(2)}°${lo < 0 ? 'W' : 'E'}`; }
   const code = PB.code ?? pick.code, an = code >= 2e6 ? drawn[Math.round(code - 2e6)] : null, sp = an || !(floor((Math.round(code) - 1) / 10000) < G.species.length) ? null : life.look(G, code), pc = (v) => (v >= 1 ? '+' : '−') + abs(Math.round((v - 1) * 100)) + '%';
   $('sp').textContent = an ? `${Who(an)}, ${an.age < 1 ? Math.round(an.age * 12) + ' months' : an.age.toFixed(0) + ' years'} old${an.dead >= 0 ? `, ${an.why === 'killed' ? 'killed' : 'dead'}` : ''} · a ${an.k.nm}, generation ${an.gen} · size ${pc(an.gn[0])}, speed ${pc(an.gn[1])}, wariness ${pc(an.gn[2])}` : sp ? sp.name : ''; $('sp').hidden = !an && !sp;
-  $('eco').textContent = S.sea ? eco.seaText(S.sea) : [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent;
+  $('eco').textContent = S.sea ? eco.seaText(S.sea) : [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent; $('cen').textContent = !S.sea && S.cen && S.hc < 2000 && !micro.M.on ? S.cen.text : ''; $('cen').hidden = !$('cen').textContent;
   { const e = eco.log[eco.log.length - 1]; if (e && performance.now() - e.t < 7000) { if ($('say').textContent !== e.s) $('say').textContent = e.s; $('say').classList.add('on'); } else $('say').classList.remove('on'); }
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;

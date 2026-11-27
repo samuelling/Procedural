@@ -24,7 +24,12 @@ void main() { CAST vec3 col = uCol * (uSunC * .5 * max(uSun.y, 0.) + uSky * .5) 
   const g = new Float32Array([0, 0, 0.5, -0.06, 0, -0.4, 0.06, 0, -0.4, 0, 0, 0.15, -1, 0.05, -0.05, 0, 0, -0.2, 0, 0, 0.15, 1, 0.05, -0.05, 0, 0, -0.2, -1, 0.05, -0.05, -0.55, 0, 0.12, 0, 0, 0.15, 1, 0.05, -0.05, 0, 0, 0.15, 0.55, 0, 0.12]);
   const vao = gl.createVertexArray(), ib = gl.createBuffer(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, g, gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, ib); for (const [l, o] of [[4, 0], [5, 16]]) { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 4, gl.FLOAT, false, 32, o); gl.vertexAttribDivisor(l, 1); } gl.bindVertexArray(null);
-  const memo = new Map(), imemo = new Map();
+  // a small animal on the ground (ant, salamander, lizard, mouse): body, tail and four legs, flat, one unit long
+  const gc = new Float32Array([0, 0, 0.5, -0.13, 0, 0, 0.13, 0, 0, -0.13, 0, 0, 0.13, 0, 0, 0, 0, -0.45, -0.05, 0, -0.35, 0.05, 0, -0.35, 0, 0, -0.95,
+    0.08, 0, 0.22, 0.32, 0, 0.38, 0.1, 0, 0.12, -0.08, 0, 0.22, -0.32, 0, 0.38, -0.1, 0, 0.12, 0.08, 0, -0.15, 0.3, 0, -0.32, 0.1, 0, -0.25, -0.08, 0, -0.15, -0.3, 0, -0.32, -0.1, 0, -0.25]);
+  const cvao = gl.createVertexArray(); gl.bindVertexArray(cvao); gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, gc, gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, ib); for (const [l, o] of [[4, 0], [5, 16]]) { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 4, gl.FLOAT, false, 32, o); gl.vertexAttribDivisor(l, 1); } gl.bindVertexArray(null);
+  const memo = new Map(), imemo = new Map(), gmemo = new Map();
   // ---- grazers: a body plan per planet (legs four or six, long-legged under weak pull, squat under strong), herds on a
   // 1 km lattice in open grassy country, each animal ambling and grazing round its herd's ground ------------------------
   const beast = prog(PRE + `
@@ -211,6 +216,34 @@ void main() { CAST
       for (let k = 0; k < 4; k++) { const o = out[k]; if (!o.length) continue; const fire = k === 3 && day < 0;
         gl.uniform1f(bird.uSpan, fire ? 0.008 : K[k][0]); gl.uniform1f(bird.uBeat, fire ? 40 : K[k][1]); gl.uniform3fv(bird.uCol, fire ? [0.05, 0.05, 0.03] : K[k][2]); gl.uniform3fv(bird.uEm, fire ? [2.5, 3, 0.6] : [0, 0, 0]);
         gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(o), gl.DYNAMIC_DRAW); gl.drawArraysInstanced(gl.TRIANGLES, 0, g.length / 3, o.length / 8); }
+      gl.bindVertexArray(null);
+      // on the ground round you, as many as the census says are out on the surface now: each 1 m cell gets its expected
+      // share of ants, salamanders or frogs, lizards and mice; and above, bats after dusk, one 20 m cell at a time
+      const cz = S.cen; if (!cz || S.hc > 12) return;
+      const u = cz.surf, sal = /salamander/.test(cz.N.amph), toad = /toad/.test(cz.N.amph), dry = R.W < 0.3;
+      const CL = [['ant', 0.005, [0.07, 0.035, 0.02], 0.03, 6], ['amph', sal ? 0.09 : 0.05, sal ? [0.45, 0.12, 0.05] : toad ? [0.4, 0.33, 0.22] : [0.22, 0.3, 0.1], 0.004, 1], ['rept', 0.13, dry ? [0.55, 0.45, 0.3] : [0.24, 0.21, 0.14], 0.4, 1], ['rod', 0.15, [0.36, 0.28, 0.2], 0.5, 1]];
+      const gout = CL.map(() => []), gi = floor(foot[b]), gj = floor(foot[c]);
+      for (let i = gi - 9; i <= gi + 9; i++) for (let j = gj - 9; j <= gj + 9; j++) {
+        let cell = null;
+        CL.forEach(([k, len, , spd, cap], ci) => {
+          const lam = u[k] || 0, h0 = hs2(i, j, 231 + ci * 7 + fk), nk = min(cap, floor(lam + h0)); if (!nk) return;
+          if (!cell) { const key = `${G.id}:${fk}:${i}:${j}`; cell = gmemo.get(key); if (!cell) { const p = [0, 0, 0]; p[b] = i + 0.5; p[c] = j + 0.5; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d <= 0) return; p[a] = sg * sqrt(d); cell = { p, h: H(G, p, 16) }; gmemo.set(key, cell); if (gmemo.size > 3000) gmemo.clear(); } }
+          if (cell.h < 0.3) return;
+          const D = cell.p.map((v, m) => v - foot[m]), q = [0, 1, 2].map((m) => D[0] * F[m][0] + D[1] * F[m][1] + D[2] * F[m][2]);
+          for (let m = 0; m < nk; m++) { const s0 = hs2(i * 7 + m, j, 232 + ci + fk) * 60, ph = t * 0.12 + s0, n0 = floor(ph), fr = ph - n0;
+            const w = k === 'rept' ? s0 + (n0 + min(1, max(0, (fr - 0.2) * 8))) * 1.5 : t * spd / 0.35 + s0;   // a lizard dashes, then basks
+            gout[ci].push(q[0] + 0.35 * sin(w) + 0.1 * sin(s0), q[1] + (cell.h - S.cy) + q[1] * cell.h / G.R + 0.004, q[2] + 0.35 * cos(w * 0.8) + 0.1 * cos(s0), 1, 1, Math.atan2(cos(w), -0.8 * sin(w * 0.8)), 0, 0); }
+        });
+      }
+      S.nGround = gout.map((o) => o.length / 8);
+      gl.uniform1f(bird.uBeat, 0); gl.uniform3f(bird.uEm, 0, 0, 0); gl.bindVertexArray(cvao);
+      CL.forEach(([, len, col], ci) => { const o = gout[ci]; if (!o.length) return; gl.uniform1f(bird.uSpan, len / 1.45); gl.uniform3fv(bird.uCol, col); gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(o), gl.DYNAMIC_DRAW); gl.drawArraysInstanced(gl.TRIANGLES, 0, gc.length / 3, o.length / 8); });
+      const bo = [], bi = floor(foot[b] / 20), bj = floor(foot[c] / 20);
+      if (u.bat > 0) for (let i = bi - 2; i <= bi + 2; i++) for (let j = bj - 2; j <= bj + 2; j++) { if (hs2(i, j, 241 + fk) > u.bat * 400) continue;
+        const s0 = hs2(i, j, 242 + fk) * 50, x = (i + 0.5) * 20 - foot[b], z = (j + 0.5) * 20 - foot[c], P = [0, 0, 0]; P[b] = x; P[c] = z;
+        const q = [0, 1, 2].map((m) => P[0] * F[m][0] + P[1] * F[m][1] + P[2] * F[m][2]), w = t * 1.3 + s0, jk = sin(t * 5.1 + s0) * 0.8;   // a bat's jinks after moths
+        bo.push(q[0] + 7 * sin(w) + jk, 5 + 3 * sin(w * 0.7 + s0) - S.hc, q[2] + 7 * cos(w * 1.1) + jk, 1, 1, -w, s0, 0); }
+      if (bo.length) { gl.bindVertexArray(vao); gl.uniform1f(bird.uSpan, 0.14); gl.uniform1f(bird.uBeat, 13); gl.uniform3fv(bird.uCol, [0.05, 0.04, 0.04]); gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bo), gl.DYNAMIC_DRAW); gl.drawArraysInstanced(gl.TRIANGLES, 0, g.length / 3, bo.length / 8); }
       gl.bindVertexArray(null);
     },
     draw(common, cam, G, S, eco) {

@@ -44,6 +44,7 @@ const deer = (o) => ({ form: 'deer', ...o });
 const G_ = {
   red: A('red deer', 'red deer', 'calf', ['hind', 'stag'], 15, 2, 0.65, 1, 0.55, 1.1, 1, [0.36, 0.19, 0.09], 13, deer({ dens: 10 })),   // 5–15 per km², 60–70 calves per 100 hinds (Scotland)
   wtd: A('white-tailed deer', 'white-tailed deer', 'fawn', ['doe', 'buck'], 10, 1.5, 1.6, 0.85, 0.5, 1, 1, [0.4, 0.25, 0.13], 13, deer({ dens: 10 })),
+  mule: A('mule deer', 'mule deer', 'fawn', ['doe', 'buck'], 10, 1.5, 1.6, 0.9, 0.5, 1.05, 1, [0.45, 0.38, 0.3], 13, deer({ dens: 2 })),   // the deserts' deer: 1–3 per km²
   elk: A('elk', 'elk', 'calf', ['cow', 'bull'], 15, 2, 0.6, 1.3, 0.55, 1.2, 1.05, [0.42, 0.3, 0.18], 13, deer({ dens: 5, ant: 1.6 })),   // northern Yellowstone, ~5 per km²
   bison: A('bison', 'bison', 'calf', ['cow', 'bull'], 20, 3, 0.7, 1.7, 0.25, 1.4, 0.75, [0.15, 0.09, 0.05], 15, { form: 'bison', dens: 8 }),
   cari: A('caribou', 'caribou', 'calf', ['cow', 'bull'], 15, 2, 0.7, 1.05, 0.45, 1.1, 1, [0.34, 0.3, 0.26], 15, deer({ dens: 2, both: 1, ant: 1.3 })),
@@ -124,6 +125,37 @@ function waters(G, la, lo, T) {
     heron: heron(na ? 'great blue heron' : af ? 'goliath heron' : au ? 'white-faced heron' : sa ? 'cocoi heron' : 'grey heron'),
     pred: abs(la) > 50 ? 'seals' : warm ? 'reef sharks' : 'dolphins', whale: abs(la) > 50 ? 'humpback whales' : warm ? 'humpback whales' : 'fin whales' };
 }
+// who else lives on a hectare here, class by class: a count per hectare for each, anchored to field censuses and
+// scaled by climate the way each class is known to go (see DATA.md): ants with warmth, peaking in the tropics;
+// earthworms with cool damp soil, peaking in the temperate zone; amphibians with wet, productive, shaded ground (the
+// lungless salamanders of eastern North American forests most of all); reptiles with heat and dryness; birds and small
+// mammals with what the land grows; bats sparser than any of them. Insect-eaters follow the insect pool; the age decides
+// who exists yet. The masses (fresh weight, grams) give the weights by class.
+const CM = { ant: 0.002, worm: 0.3, amph: 0.6, rept: 6, snake: 60, rod: 22, bird: 25, bat: 12 };
+function census(G, R, la, lo) {
+  if (G.real !== 'earth') return null;
+  const E = G.E || 0, T = R.T, wet = cl(R.W * 1.4), hot = cl((T + 2) / 27), bare = cl(0.1 + R.prod * 8), In = (a, b, c, d) => la >= a && la <= b && lo >= c && lo <= d;
+  const mg = In(-26, -12, 43, 51), na = In(15, 75, -170, -50), eu = In(34, 72, -12, 42), af = !mg && In(-36, 36, -20, 52), au = In(-45, -10, 112, 155), sa = In(-56, 15, -120, -30), as = !mg && !na && !eu && !af && !au && !sa;
+  const trop = abs(la) < 23 && T > 20, arid = R.W < 0.3, cold = T < 2, east = na && lo > -95 && la < 50 && la > 30 && R.W > 0.45;
+  const age = (a) => (E < a ? 1 : 0), pick = (...o) => o.find((x) => x) || null;
+  const c = {
+    ant: T < -4 ? 0 : 1e4 * (30 + 900 * cl(T / 26) ** 2 * (0.5 + 0.5 * wet)) * (0.25 + 0.75 * cl(R.prod * 2.5)) * (E < 50 ? 1 : E < 100 ? 0.1 : 0),
+    worm: 1e4 * 250 * cl((R.W - 0.25) * 2) * Math.exp(-(((T - 9) / 13) ** 2)) * cl((T + 4) / 6),   // none in frozen ground
+    amph: T < -9 ? 0 : 5000 * wet ** 2 * (0.25 + 0.75 * R.fF) * cl((T + 4) / 14) * (east ? 2.5 : 1) * age(370),
+    rept: 250 * hot ** 2 * (1.25 - 0.7 * wet) * bare * age(310), rod: (5 + 40 * R.prod * (0.6 + 0.4 * (1 - R.fF))) * age(200),
+    bird: 1.2 + 12 * R.prod * (0.7 + 0.3 * R.fF), bat: T < -3 ? 0 : (0.2 + 2.5 * cl((T + 2) / 26) ** 2 * (0.4 + 0.6 * R.fF)) * age(52) };
+  c.snake = c.rept * 0.08; if (E >= 150) c.bird = 0;
+  const N = E > 0 ? { ant: 'ants', worm: 'earthworms', amph: E > 250 ? 'early amphibians' : 'frogs and salamanders', rept: E > 66 ? 'small reptiles' : 'lizards', snake: 'snakes', rod: E > 56 ? 'small early mammals' : 'mice and shrews', bird: 'birds', bat: 'bats' } : {
+    ant: pick(mg && 'ants', sa && trop && 'leafcutter and army ants', af && trop && 'driver ants', (as || au) && trop && 'weaver ants', arid && 'harvester ants', eu && 'red wood and garden ants', 'ants'),
+    worm: 'earthworms',
+    amph: pick(mg && 'mantella and other Malagasy frogs', east && 'red-backed salamanders', na && arid && 'spadefoot toads', na && lo < -115 && 'Pacific tree frogs', na && 'wood frogs', eu && (T < 11 ? 'common frogs' : 'green toads'), af && (arid ? 'rain frogs' : 'reed frogs'), sa && (trop ? 'rain frogs' : 'four-eyed frogs'), au && (arid ? 'water-holding frogs' : 'striped marsh frogs'), as && (trop ? 'litter frogs' : cold ? 'Siberian salamanders' : 'tree frogs'), 'frogs'),
+    rept: pick(mg && 'chameleons and skinks', na && arid && 'side-blotched lizards', na && la > 45 && 'garter snakes', na && 'skinks and fence lizards', eu && (T < 12 ? 'common lizards' : 'wall lizards'), af && (arid ? 'fringe-toed lizards' : 'rainbow skinks'), sa && In(10, 27, -86, -59) && 'anoles and dwarf geckos', sa && (trop ? 'whiptail lizards' : 'tree iguanas'), au && (arid ? 'Ctenotus skinks' : 'water skinks'), as && (trop ? 'forest skinks' : cold ? 'common lizards' : 'grass lizards'), 'lizards'),
+    snake: 'snakes',
+    rod: pick(mg && 'tenrecs and tufted-tailed rats', T < -6 && R.fF < 0.3 && 'lemmings', na && arid && 'kangaroo rats and pocket mice', na && (la > 47 || R.fF < 0.4) && 'deer mice and voles', na && 'white-footed mice and shrews', eu && (R.fF > 0.4 ? 'wood mice, bank voles and shrews' : 'field voles and shrews'), af && (arid ? 'gerbils' : 'multimammate mice'), au && (arid ? 'hopping mice' : 'bush rats'), sa && (trop ? 'spiny rats' : 'grass mice'), as && (arid ? 'jirds' : trop ? 'spiny rats' : la > 50 ? 'red-backed voles' : 'field mice'), 'mice and shrews'),
+    bird: R.nm.birds || 'birds',
+    bat: pick(mg && 'Malagasy fruit bats', sa && trop && 'leaf-nosed bats', (af || as || au) && trop && 'fruit bats and free-tailed bats', na && 'little brown bats', eu && 'pipistrelles', 'bats') };
+  return { c, N };
+}
 // which pairs, from where on the Earth (degrees) and its climate, or from the age; on an invented world its own pair
 function kinds(G, u, T, W) {
   if (G.fauna && G.fauna.none) return null;
@@ -141,7 +173,7 @@ function kinds(G, u, T, W) {
   if (T < -3 || abs(la) > 60) return [lo < -30 && lo > -170 ? G_.cari : G_.rein, H_.wolf, ...sm];
   if (In(-45, -10, 112, 155)) return [G_.roo, H_.dingo, ...sm];
   if (In(30, 46, 129, 146)) return [G_.sika, null, ...sm];                 // Japan: its wolves are gone
-  if (In(15, 75, -170, -50)) return [...(lo > -108 && lo < -95 && W < 0.55 ? [G_.bison, H_.wolf] : lo < -100 ? [G_.elk, H_.puma] : [G_.wtd, H_.wolf]), ...sm];
+  if (In(15, 75, -170, -50)) return [...(lo > -108 && lo < -95 && W < 0.55 ? [G_.bison, H_.wolf] : lo < -100 ? [W < 0.35 ? G_.mule : G_.elk, H_.puma] : [G_.wtd, H_.wolf]), ...sm];
   if (In(-56, 15, -120, -30)) return [...(la < -20 ? [G_.guan, H_.puma] : [G_.brock, H_.jag]), ...sm];
   if (In(-36, 36, -20, 52)) return [G_.gnu, H_.lion, ...sm];
   if (In(34, 72, -12, 42)) return [G_.red, H_.wolf, ...sm];
@@ -201,7 +233,8 @@ export function mkEco() {
       if (h > 0.5) { const fF = forestF(G, p, h, cm.T, cm.W), ok = cityRho(G, p) * citySuit(h, cm.T, cm.W, 0) < 0.05 && river(G, p, h, cm.W) < 0.1, kk = kinds(G, u, cm.T, cm.W);
         const prod = cl(cm.W * 1.5) * cl((cm.T + 8) / 22), gK = prod * (1 - 0.7 * fF);   // how much the square grows, and how much of it is grass
         R = { key, p, h, T: cm.T, W: cm.W, fF, gK, prod, warm: cl((cm.T + 10) / 22), cold: cl((3 - cm.T) / 14), south: u[2] < 0, grass: 0.75, ins: 0.6, birds: 0.3, hawk: 0.1, spr: 2, mite: 0.3,
-          ch: [], ev: [], t: G.t, near: false, nm: waters(G, Math.asin(u[2]) * 180 / PI, atan2(u[1], u[0]) * 180 / PI, cm.T), aq: 0.6, fish: 0.5, otter: 0.2, herons: [] };
+          ch: [], ev: [], t: G.t, near: false, la: Math.asin(u[2]) * 180 / PI, lo: atan2(u[1], u[0]) * 180 / PI, aq: 0.6, fish: 0.5, otter: 0.2, herons: [] };
+        R.nm = waters(G, R.la, R.lo, cm.T); R.cz = census(G, R, R.la, R.lo);
         // how much fresh water the square holds: a few points tested for river or lake
         let wet = 0; for (let k = 0; k < 9; k++) { const q = p.map((v, m) => v + (hs2(i * 3 + k, j, 190 + m) - 0.5) * HS * 0.9), l = hypot(...q), qg = q.map((v) => v / l * G.R), hq = H(G, qg, 16); if (river(G, qg, hq, cm.W) > 0.15 || lakeAt(G, qg.map((v) => v / G.R)) > hq) wet++; }
         R.wet = wet / 9; if (!R.nm.hawk) R.hawk = 0;
@@ -489,6 +522,22 @@ export function mkEco() {
       out.push(`grass ${Math.round(R0.grass * 100)}% · insects ${R0.ins.toFixed(1)} · ${R0.nm.birds || 'birds'} ${(R0.birds / 0.3).toFixed(1)}×` + (R0.nm.hawk ? ` · ${R0.nm.hawk}s ${(R0.hawk / 0.4).toFixed(1)}×` : ''));
       if (R0.wet > 0) out.push(`in the water: insects ${R0.aq.toFixed(1)}, ${R0.nm.fish} ${R0.fish.toFixed(1)}` + (R0.nm.top ? `, ${R0.nm.top}s ${R0.otter.toFixed(1)}` : '') + (R0.herons.length ? `, ${R0.herons.length} ${R0.herons.length > 1 ? R0.nm.heron.pl : R0.nm.heron.nm}` : ''));
       return out.join(' · ');
+    },
+    // the census of a hectare here (see census()), the live parts from the pools and herds: how many of each class live
+    // here, and how many of them are out on the surface now (per m²) for fauna.js to draw. The activity is the model's:
+    // salamanders and frogs come up on wet nights, lizards bask on warm days, mice run at night, bats hunt after dusk
+    census(S) {
+      const R = this.at(S.foot); if (!R || !R.cz) return null;
+      const { c, N } = R.cz, ins = cl(R.ins / 0.6, 0.3, 2), q = sqrt(ins), Tn = S.Tnow ?? R.T, day = (S.sun || [0, 1, 0])[1], rain = S.rain || 0, snow = (S.packHere || 0) > 0.3;
+      const n = { ant: c.ant * q, worm: c.worm, amph: c.amph * q, rept: c.rept * q, snake: c.snake * q, rod: c.rod, bird: c.bird * R.birds / 0.3, bat: c.bat * q }, big = [];
+      for (const C of R.ch) for (const [k, L] of [[C.g, C.herd], [C.h, C.pack]]) { if (!k) continue; const m = alive(L).length / (C.A * 100); if (m > 0) big.push([k.pl, m, 1.2e5 * k.sz ** 3]); }
+      const night = day < -0.05, act = { ant: Tn > 8 ? 0.005 : 0, worm: night && rain > 0.3 && Tn > 3 ? 0.002 : 0, amph: Tn < 2 || snow ? 0 : night ? 0.04 + 0.25 * rain : 0.003 + 0.05 * rain,
+        rept: day > 0.05 && Tn > 12 ? 0.35 * cl((Tn - 12) / 12) : 0, snake: day > 0.05 && Tn > 15 ? 0.1 : 0, rod: snow ? 0 : night ? 0.3 : 0.02, bat: Tn > 6 && day < 0.03 ? 1 : 0 };
+      const surf = {}; for (const k in act) surf[k] = n[k] * act[k] / 1e4;
+      const f = (v) => v >= 1e6 ? (v / 1e6).toFixed(1) + ' million' : v >= 100 ? (Math.round(v / 10) * 10).toLocaleString() : v >= 10 ? Math.round(v) + '' : v >= 0.1 ? v.toFixed(1) : '1 per ' + Math.round(1 / v) + ' ha';
+      const L = Object.keys(n).filter((k) => n[k] > 0 && k !== 'snake').map((k) => [N[k], n[k], CM[k]]).concat(big), wt = L.map(([nm, v, g]) => [nm, v * g]).sort((a, b) => b[1] - a[1]);
+      const text = 'per hectare: ' + L.map(([nm, v]) => (v < 0.1 ? `${nm} ${f(v)}` : `${f(v)} ${nm}`)).join(' · ') + ` · by weight: ${wt.slice(0, 4).map(([nm, w]) => nm + (w >= 1e3 ? ` ${(w / 1e3).toFixed(w >= 1e4 ? 0 : 1)} kg` : ` ${Math.round(w)} g`)).join(' > ')}`;
+      return { text, surf, N, n };
     },
     soil(S) { const R = this.at(S.foot); return R ? `each cm² here holds about ${R.spr < 1 ? R.spr.toFixed(1) : Math.round(R.spr)} springtails and ${R.mite < 1 ? R.mite.toFixed(1) : Math.round(R.mite)} predatory mites` : ''; },
     grassAt(p) { const R = this.at(p); return R ? cl(R.grass / 0.75, 0.15, 1.2) : 1; },

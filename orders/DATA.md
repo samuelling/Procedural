@@ -90,6 +90,33 @@ Rates set from field studies, used as round numbers:
 - **Soil**: springtails 500–50,000 per m², oribatid mites up to 250,000 (Bornebusch 1930; Moldenke and Lattin 1990);
   predatory mites are a small share of the mites.
 
+- **Who lives on a hectare** (`census()`): each class's count per hectare is set by a climate rule tuned to land on
+  these field numbers, then scaled live by the insect, bird and herd pools; masses (fresh, grams) are typical ones:
+  ant 0.002, earthworm 0.3, salamander 0.6, lizard 6, snake 60, mouse 22, bird 25, bat 12.
+  - Amphibians densest on wet, productive ground, reptiles on arid, low-productivity ground with steady temperatures,
+    birds and mammals in temperate wet country of middling productivity (Santini et al. 2018, Global Ecol. Biogeogr.,
+    densities of 364 amphibian, 850 reptile, 5,667 bird and 7,651 mammal populations).
+  - Red-backed salamanders in eastern North American forests 1,950–34,300 per ha, median 9,965 (Biology Letters,
+    August 2024; the model gives about 8,000–10,000); at Hubbard Brook 2,950 per ha, 1,770 g/ha, twice the birds'
+    biomass and about that of the small mammals (Burton and Likens 1975).
+  - Ants: about 20 quadrillion, 12 Mt of carbon, more than wild birds and mammals together, concentrated in the
+    tropics and subtropics, varying sixfold between habitats (Schultheiss et al. 2022, PNAS). The model's land
+    average is a few hundred per m², most in the tropics and the warm deserts.
+  - Earthworms: abundance and biomass highest in the temperate zone, lower in the tropics (Phillips et al. 2019,
+    Science, 6,928 sites); often more weight than all the mammals of the same ground. None in frozen ground.
+  - Breeding birds per km²: tundra about 200, boreal forest 575, temperate deciduous forest 1,175, savannah 850,
+    pasture 375 (Gaston, Blackburn and Klein Goldewijk 2003, Proc. R. Soc. B); the model gives 170–1,300.
+  - Bats sparser than ground mammals (Santini et al. 2022); a pipistrelle at a minimum 0.13 per ha (via Law et al.
+    2023, Ecol. Evol.). The model gives 0.2–2.6 per ha, most in warm forest.
+  - Lizards: Mojave common lizards counted by distance sampling (Furnas et al. 2019, Ecol. Evol.); the densest
+    vertebrate known is a dwarf gecko of the Virgin Islands' leaf litter (Rodda et al. 2001, J. Trop. Ecol.). The
+    model gives 100–250 per ha in warm deserts and tropics, tens in temperate country, none in the cold.
+  - Small mammals: deer mice, voles and shrews at a few to a few tens per hectare (e.g. Storer et al. in the Sierra
+    Nevada; Krebs et al. in the Yukon). The model gives 5–45.
+  - How many of each are out on the surface at a moment (salamanders and frogs on wet nights, lizards on warm days,
+    mice at night, bats after dusk) is the model's own sketch, not measured.
+  - Names by region and climate are the common, widespread members of each class there (Madagascar has its own).
+
 Lifespans, litters and running speeds are textbook natural history. Everything else (the grass, insect, bird, hawk,
 water and sea pools and how they feed on each other) is the standard predator-prey form with coefficients chosen to
 give sensible levels, not fitted.

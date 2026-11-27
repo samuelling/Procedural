@@ -26,7 +26,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   #knob { position: absolute; left: 35px; top: 35px; width: 40px; height: 40px; border-radius: 50%; background: rgba(238,240,226,.55); }
   .tb { display: block; position: fixed; right: 22px; width: 64px; height: 64px; border-radius: 50%; border: 1px solid rgba(238,240,226,.3); background: var(--glass); color: var(--ink); font: italic 400 14px var(--serif); touch-action: none; }
   #bjump { bottom: 70px; } #bfly { bottom: 146px; } #hint { display: none; } }
-#eco { font-size: 11px; opacity: .7; margin-top: 3px; max-width: 360px; line-height: 1.35; }
+#eco, #cen { font-size: 11px; opacity: .7; margin-top: 3px; max-width: 360px; line-height: 1.35; }
 #say { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100% - 40px)); padding: 6px 14px; border-radius: 999px; background: rgba(12,14,10,.55); color: var(--amber); font: italic 400 14px var(--serif); opacity: 0; transition: opacity .6s; pointer-events: none; text-align: center; } #say.on { opacity: 1; }
 #sp { margin-top: 6px; font: italic 600 15px/1.2 var(--serif); color: var(--amber); } #met { font-size: 11px; opacity: .65; margin-top: 2px; }
 #lifeb { position: fixed; right: 14px; top: 58px; padding: 6px 12px; border-radius: 999px; border: 0; background: var(--glass); color: var(--ink); font: italic 400 14px/1.2 var(--serif); backdrop-filter: blur(8px); cursor: pointer; }
@@ -43,7 +43,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 @media (max-width: 560px) { #hud { min-width: 0; } #hint { white-space: normal; width: calc(100% - 40px); text-align: center; } }
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="hud"><h1 id="name">Sylva</h1><div id="phys"></div><div id="scale">—</div><div id="what"></div><div id="track"><div id="bar"></div></div><div id="ends"><span>1 am</span><span>30 billion light-years</span></div><div id="alt"></div><div id="sp" hidden></div><div id="met"></div><div id="eco" hidden></div></div><div id="say"></div>
+<div id="hud"><h1 id="name">Sylva</h1><div id="phys"></div><div id="scale">—</div><div id="what"></div><div id="track"><div id="bar"></div></div><div id="ends"><span>1 am</span><span>30 billion light-years</span></div><div id="alt"></div><div id="sp" hidden></div><div id="met"></div><div id="eco" hidden></div><div id="cen" hidden></div></div><div id="say"></div>
 <button id="lifeb">Tree of life</button>
 <div id="time"><select id="go" title="go to a real place, another world, or the wormhole"></select><span id="clk"></span><select id="tod" title="go to a time of day here"><option value="">time of day…</option><option>sunrise</option><option>noon</option><option>sunset</option><option>midnight</option></select><select id="mon" title="go to a month (the same time of day)"><option value="">month…</option></select><select id="age" title="deep time: older ( , ) younger ( . )"></select><button id="up" hidden title="back up to standing height ( U )">⤒ back up</button><button id="snd" title="sound on or off ( M )">🔊</button><button id="bolt" title="call down lightning where you look ( L )">⚡</button><button id="faster" title="faster ( ] ), slower ( [ ), stop ( T )"><span id="spd"></span> ⏩</button></div>
 <div id="life" hidden><p id="lifeh"></p><canvas id="lifecv"></canvas><button id="lifex">Close</button><button id="lifex2" aria-label="Close">×</button></div>
