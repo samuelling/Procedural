@@ -1,6 +1,10 @@
 # Assembles site/: each rung's page under its own folder, the thumbnails, and an index that reports real bytes
 # against each allowance. The index is a staircase: each rung's picture grows as the allowance does.
-import os, shutil, html, re, markdown
+import os, shutil, html, re, markdown, json
+BYTES = json.load(open('bytes.json'))   # where each rung's bytes go, from tools/bytes.mjs
+HUES = {'Measured data': '#7fb3c8', 'The living world': '#a8c99a', 'Ground, water, towns and weather': '#c9a46c', 'Sky, space and the very small': '#ab9bd8',
+        'The engine: drawing, moving, the readout': '#e8b25a', 'Map, compass and sound': '#d98f8a', 'The page and its unpackers': '#8f978a'}   # a group keeps its colour on every rung
+HUE = ['#7fb3c8', '#a8c99a', '#e8b25a', '#ab9bd8', '#c9a46c', '#d98f8a', '#8f978a', '#b5b08a']   # for the small rungs' own parts
 E = html.escape
 TRY = ['Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time',
        '<b>Places → Anywhere on Earth</b>, then click where you grew up',
@@ -20,7 +24,7 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
  ('200kb', 200000, 'd/index.html', 'The measured Earth, seen coarser',
   'The real-Earth forest: every animal, every age, every scale, grown on the climate of anywhere you click. The Earth is measured in 300 km squares.',
   'a novella', TRY[:2], None),
- ('2mb', 2000000, 'w/index.html', '(M)orders of Magnitude: the living Earth, from quarks to the cosmic web',
+ ('2mb', 2000000, 'w/index.html', 'The living Earth, from quarks to the cosmic web',
   'The real Earth from its measured maps: ground and sea floor, lakes, climate, and real trees where they grow, under the Sun, Moon and stars where they are right now, with its cities’ real lights on the night side. The Moon, Mercury, Venus and Mars from their own maps, the giants to their cloud tops. Herds, hares, hawks, fish and whales that are born, compete, evolve and die; trees that grow, seed and fight for light and water; weather and snow that build through the year. Zoom from the quarks in a grain of sand out past the Milky Way to the cosmic web without one cut, with synthesised sound, and through a wormhole at the Earth’s L4 point to six invented worlds.',
   'one photo from your phone', [
    'Open <b>Go to…</b> at the bottom right: a real place on Earth, the Moon, Mars, or a giant’s cloud tops. You arrive wherever the Sun now stands nicely',
@@ -49,12 +53,15 @@ R = [  # folder, allowance, built file, title, one line, as big as, things to tr
    ('Plants, insects and birds', 'Within about 250 m every tree is a living thing: it grows by the light that gets past its taller neighbours and the water it wins against every crown near it, by its kind (a beech or fir grows on in shade where a birch or pine gives up), dies when it cannot keep up, stands as a snag and falls; mature trees seed the gaps, and a seedling takes where there is light and water and the deer do not eat it (more than about five deer to a square kilometre and the woods stop regenerating). Grass is shared by both chains of grazers and the insects, and grows short and brown where it is grazed hard. Midges, butterflies and, on warm nights, fireflies fly as thick as the insect numbers say; songbirds live on the insects and flock in murmurations; hawks live on the songbirds, rising a year or two after them. Under the microscope the soil tells you its springtails and the predatory mites that eat them.'),
    ('Water', 'Streams and ponds keep their own chain: insects in the water, trout (or tilapia, catfish, piranhas) on the insects, otters (a platypus in Australia) and herons on the fish; you may see a heron standing in the shallows. In the sea, plankton blooms with light and the nutrients of cold water, small fish eat it, seals, dolphins or sharks eat them, and whales strain the plankton and krill: the schools you swim among grow and shrink with these numbers, their hunters sweep round them, and the whales come and go.'),
    ('Weather', 'Each place’s measured mean, seasonal swing and rainfall, with the warmth a month behind the Sun (as land and sea are). On top, weather systems that bring spells warmer or colder than the season, and days that warm and nights that cool, most under dry skies. Rain falls as snow when it is below freezing where you are, and snow lies: a day-by-day account of the last nine months builds the snowpack and melts it by degree-days, so Quebec is deep in snow in March and Lake Baikal into April. The temperature is in the clock line.'),
-   ('As on the invented worlds', 'Fire that runs before the wind, beaver ponds that fill and drain, kelp, reefs, fish and whales, caves with glow-worms, storms and aurora. Towns stand where the land suits a town: invented, not the real cities (from afar, the lights on the night side are the real ones).'),
+   ('As on the invented worlds', 'Fire that runs before the wind, beaver ponds that fill and drain, kelp, reefs, fish and whales, caves with glow-worms, storms and aurora. On the invented worlds, towns stand where the land suits a town; on today’s Earth they stand where its measured lights say (see Towns).'),
    ('Sound', 'All synthesised, nothing recorded, and on from the first click or key (M turns it off): wind that swells with height, rain, thunder after lightning, fire crackling, birds by day (parrots in the tropics, crossbills and kinglets in the north), crickets and owls at night, and footsteps on moss, leaves or snow. It thins out as you climb, stops above the air and on airless worlds, and is muffled under water and in the microscope.')]),
 ]
 os.makedirs('site/thumbs', exist_ok=True)
 for f in os.listdir('thumbs'): shutil.copyfile('thumbs/' + f, 'site/thumbs/' + f)
 os.makedirs('site/2mb-earth', exist_ok=True); shutil.copyfile('e/index.html', 'site/2mb-earth/index.html')
+def jar(r, size, lim):   # the fill bar, one stripe per group of parts
+    i = ''.join(f'<i style="width:{100 * g['b'] / lim:.3f}%;background:{HUES.get(g['name'], HUE[k % len(HUE)])}" title="{E(g['name'])}: {g['b']:,} bytes"></i>' for k, g in enumerate(BYTES[r]['kids']) if not g.get('free'))
+    return f'<button class="jar" data-r="{r}" aria-label="What the {size} rung’s bytes are spent on">{i}</button>'
 rows, W = '', [30, 42, 58, 78, 100]   # the picture's share of the row, rung by rung
 for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
     os.makedirs('site/' + folder, exist_ok=True); shutil.copyfile(src, f'site/{folder}/index.html')
@@ -70,7 +77,7 @@ for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
 <a class="pic" href="{folder}/"><img src="thumbs/{folder}.webp" alt="" loading="{'eager' if k < 2 else 'lazy'}" width="720" height="450"><span>Open ↗</span></a>
 <div class="txt"><h2><a href="{folder}/"><b>{size}</b> {E(title)}</a></h2>
 <p class="line">{E(line)}</p>
-<div class="fill"><div class="jar"><i style="width:{max(pct, .4):.2f}%"></i></div><p><b>{pct:.1f}% full</b> · {n:,} of {lim:,} bytes, {E(like)}</p></div>
+<div class="fill">{jar(folder, size, lim)}<p><b>{pct:.1f}% full</b> · {n:,} of {lim:,} bytes, {E(like)} · <button class="where" data-r="{folder}">where they go</button></p></div>
 {extra}</div></section>
 '''
 # ---- the two agents, readable in a pop-up on this page: each round as turns, Ash on the left and Rowan on the right
@@ -99,7 +106,7 @@ talk = f'''<dialog id="talk" aria-labelledby="talk-h"><div class="tk">
 {tpls}'''
 page = '''<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Orders of Magnitude: one forest, five sizes</title>
+<title>(M)orders of Magnitude: one world, five sizes</title>
 <style>
 :root { --field: #0d120d; --ink: #eef0e2; --dim: #a9b19c; --line: rgba(238,240,226,.16); --amber: #e8b25a; --lichen: #a8c99a; --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
 * { box-sizing: border-box; }
@@ -125,8 +132,6 @@ h2 a { color: inherit; text-decoration: none; } h2 a:hover { color: var(--amber)
 h2 b { display: block; font: 700 clamp(30px, 5vw, 44px)/1 var(--serif); font-style: normal; color: var(--amber); margin-bottom: 4px; font-variant-numeric: lining-nums; }
 .line { margin: 0 0 14px; max-width: 54ch; text-wrap: pretty; }
 .fill p { margin: 6px 0 0; font-size: 13px; color: var(--dim); } .fill b { color: var(--ink); font-weight: 600; }
-.jar { height: 8px; max-width: 320px; border-radius: 999px; background: rgba(238,240,226,.1); overflow: hidden; }
-.jar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--lichen), var(--amber)); }
 .code { margin: 16px 0 0; } .code figcaption { font: italic 400 14px/1 var(--serif); color: var(--lichen); margin-bottom: 6px; }
 .code code { display: block; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid var(--line); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); word-break: break-all; }
 .was { margin: 10px 0 0; font-size: 14px; opacity: .8; } .r4 .was { grid-column: 1; } .was a { color: var(--lichen); }
@@ -180,12 +185,13 @@ footer a { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .pic img { transition: none; } }
 </style></head><body><main>
 <header>
-<h1>Orders of Magnitude<small>one forest, five sizes</small></h1>
-<p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules. At the top, its sequel, <i>(M)orders of Magnitude</i>: the real Earth, measured and alive, from quarks to the cosmic web. Smallest first:</p>
+<h1>(M)orders of Magnitude<small>one world, five sizes</small></h1>
+<p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules and, at the top, the measured Earth: a forest at first, then the real world, measured and alive, from quarks to the cosmic web. Click any rung’s fill bar to see what its bytes are spent on. Smallest first:</p>
 <div class="how"><p>How it works</p><a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a></div>
 </header>
 ''' + rows + '''<footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Natural Earth lakes, Little’s range maps (USGS), Caudullo et al. 2017, and the Moon, Mars, Venus and Mercury from LOLA, MOLA, Magellan and MESSENGER; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
 </main>
+''' + open('tools/bytes_ui.html').read().replace('__BYTES__', json.dumps(BYTES, ensure_ascii=False).replace('</', '<\\/')).replace('__HUES__', json.dumps(HUES)).replace('__HUE__', json.dumps(HUE)) + '''
 </body></html>
 '''
 open('site/index.html', 'w').write(page)

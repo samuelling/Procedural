@@ -1,4 +1,4 @@
-# Orders of Magnitude: a forest
+# (M)orders of Magnitude: one world, five sizes
 
 The same subject at five sizes. Each rung is one HTML page that must fit its allowance whole: program, numbers and
 unpacker. No stored images, models or sound files: every sound is synthesised.

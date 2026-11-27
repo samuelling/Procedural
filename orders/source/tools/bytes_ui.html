@@ -1,0 +1,90 @@
+<style>
+.jar { display: flex; width: 100%; height: 12px; max-width: 360px; padding: 0; border: 0; border-radius: 999px; background: rgba(238,240,226,.1); overflow: hidden; cursor: pointer; }
+.jar i { display: block; height: 100%; flex: none; box-shadow: inset -1px 0 0 rgba(13,18,13,.5); }
+.jar:hover, .jar:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.where { padding: 0; border: 0; background: none; color: var(--amber); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+#bytes .tk { display: flex; flex-direction: column; }
+#bytes header { padding: 22px 24px 4px; } #bytes h2 { margin: 0 44px 8px 0; }
+.crumbs { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; font-size: 14px; color: var(--dim); }
+.crumbs button { padding: 0; border: 0; background: none; color: var(--lichen); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.crumbs b { color: var(--ink); font-weight: 600; }
+.ice { display: grid; gap: 3px; padding: 16px 24px 6px; }
+.ice .row { position: relative; height: 48px; } .ice .r0 { height: 64px; } .ice .r2 { height: 36px; }
+.ice .blk { position: absolute; top: 0; bottom: 0; box-sizing: border-box; padding: 6px 0 0; border: 0; border-radius: 6px; overflow: hidden; text-align: left; color: #141a12; font: 600 12.5px/1.25 system-ui, sans-serif; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(13,18,13,.35); }
+.ice .blk span, .ice .blk em { padding: 0 7px; } .ice .blk span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ice .blk em { display: block; font-style: normal; font-weight: 400; opacity: .8; white-space: nowrap; }
+.ice .r0 .blk { font-size: 15px; }
+.ice .blk.free { background: repeating-linear-gradient(135deg, rgba(238,240,226,.09) 0 6px, transparent 6px 12px) !important; color: var(--dim); box-shadow: inset 0 0 0 1px var(--line); }
+.ice .blk.leaf { cursor: default; }
+.ice .blk:hover, .ice .blk:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 1; }
+.parts { padding: 8px 24px 14px; overflow-y: auto; }
+.parts table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.parts td { padding: 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+.parts td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--dim); }
+.parts .nm { display: flex; align-items: baseline; gap: 8px; } .parts .sw { flex: none; width: 10px; height: 10px; border-radius: 3px; display: inline-block; position: relative; top: 1px; }
+.parts .bar { width: 24%; } .parts .bar i { display: block; height: 6px; border-radius: 3px; min-width: 1px; }
+.parts button { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: var(--dim); text-underline-offset: 3px; }
+.parts button:hover { color: var(--amber); }
+.how2 { margin: 0; padding: 4px 24px 22px; font-size: 13px; color: var(--dim); max-width: 78ch; text-wrap: pretty; }
+@media (max-width: 640px) { .ice, .parts, .how2, #bytes header { padding-left: 14px; padding-right: 14px; } .parts .bar { display: none; } }
+</style>
+<dialog id="bytes" aria-labelledby="bytes-h"><div class="tk">
+<header><h2 id="bytes-h">Where the bytes go</h2><button class="x" aria-label="Close">×</button><div class="crumbs" role="navigation" aria-label="Where you are"></div></header>
+<div class="ice" role="group" aria-label="The parts, each as long as its share"></div>
+<div class="parts"></div>
+<p class="how2">Each rung is one page: a small unpacker, then everything else in one compressed stream. Every part is charged what it adds to that stream where it stands, so a part that repeats what came before it costs less. Inside a file, its share is divided among its definitions by how big each one is compressed on its own. The two smallest rungs are not compressed and are counted by hand, character by character. Counted by <code>tools/bytes.mjs</code>.</p>
+</div></dialog>
+<script>
+const BY = __BYTES__, HUES = __HUES__, HUE = __HUE__;
+(() => {
+  const dlg = document.getElementById('bytes'), ice = dlg.querySelector('.ice'), parts = dlg.querySelector('.parts'), crumbs = dlg.querySelector('.crumbs'), h = document.getElementById('bytes-h');
+  const f = (n) => n.toLocaleString('en-US');
+  const pc = (b, L) => { const p = 100 * b / L; return p >= 10 ? p.toFixed(0) + '%' : p >= 1 ? p.toFixed(1) + '%' : p >= .01 ? p.toFixed(2) + '%' : '<0.01%'; };
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const hue = (n, j) => HUES[n.name] || HUE[j % HUE.length];   // a group keeps its colour on every rung
+  const col = (g, depth, k) => { if (g < 0) return 'transparent'; const c = hue(R.kids[g], g); return depth < 2 ? c : `color-mix(in srgb, ${c} ${k % 2 ? 70 : 88}%, ${k % 2 ? '#0d120d' : '#ffffff'})`; };
+  const kidsOf = (n) => n.kids || [];
+  let R, path;
+  function draw() {
+    const node = path[path.length - 1], L = R.lim, top = path.length === 1;
+    const G = top ? -1 : R.kids.indexOf(path[1]);
+    const label = (n, i) => i ? n.name : R.name + ' rung';
+    h.textContent = top ? `Where the ${R.name} rung’s bytes go` : node.name;
+    crumbs.innerHTML = path.map((n, i) => i < path.length - 1 ? `<button data-i="${i}">${esc(label(n, i))}</button> ›` : `<b>${esc(label(n, i))}</b>&nbsp;${i ? `${f(n.b)} bytes, ${pc(n.b, L)} of the ${f(L)} allowed` : `${f(R.used)} of ${f(L)} bytes used, ${f(L - R.used)} left`}`).join(' ');
+    crumbs.querySelectorAll('button').forEach((b) => b.onclick = () => { path = path.slice(0, +b.dataset.i + 1); draw(); });
+    // the icicle: the part in view, its parts, and theirs, each as wide as its share
+    const rows = [[{ n: node, x: 0, w: top ? node.used / L : 1, g: G, k: 0 }]];
+    if (top) rows[0][0].w = 1;
+    for (let d = 1; d <= 2; d++) {
+      const row = [];
+      for (const p of rows[d - 1]) {
+        const ks = kidsOf(p.n), tot = ks.reduce((a, k) => a + k.b, 0) || 1; let x = p.x;
+        ks.forEach((k, j) => { const w = p.w * k.b / tot; row.push({ n: k, x, w, g: top && d === 1 ? (k.free ? -1 : j) : (k.free ? -1 : p.g), k: j }); x += w; });
+      }
+      if (!row.length) break; rows.push(row);
+    }
+    const W = ice.clientWidth || 600;
+    ice.innerHTML = rows.map((row, d) => `<div class="row r${d}">` + row.map((c, j) => {
+      const leaf = !kidsOf(c.n).length, px = c.w * W, depth = path.length - 1 + d;
+      return `<button class="blk${c.n.free ? ' free' : ''}${leaf || d === 0 ? ' leaf' : ''}" data-d="${d}" data-j="${j}" style="left:calc(${(c.x * 100).toFixed(4)}% + 1px);width:max(2px, calc(${(c.w * 100).toFixed(4)}% - 2px));background:${d === 0 && top ? 'rgba(238,240,226,.14)' : col(c.g, depth, c.k)};${d === 0 && top ? 'color:var(--ink)' : ''}" title="${esc(c.n.name)}: ${f(c.n.b)} bytes, ${pc(c.n.b, L)} of the allowance" aria-label="${esc(c.n.name)}, ${f(c.n.b)} bytes, ${pc(c.n.b, L)}">${px > 64 ? `<span>${esc(d === 0 && top ? R.name + ' allowance' : c.n.name)}</span>${px > 96 && d < 2 ? `<em>${d === 0 && top ? f(L) + ' bytes' : pc(c.n.b, L)}</em>` : ''}` : ''}</button>`;
+    }).join('') + '</div>').join('');
+    ice.querySelectorAll('.blk').forEach((b) => { const c = rows[+b.dataset.d][+b.dataset.j]; if (+b.dataset.d) b.onclick = () => go(c.n); });
+    // the list: the parts in view, biggest first as counted
+    const ks = kidsOf(node), big = Math.max(...ks.map((k) => k.b), 1);
+    const sw = (k, j) => k.free ? 'transparent' : col(top ? j : G, path.length, j);
+    parts.innerHTML = ks.length ? '<table>' + ks.map((k, j) => `<tr><td><span class="nm"><span class="sw" style="background:${sw(k, j)};${k.free ? 'box-shadow:inset 0 0 0 1px var(--dim)' : ''}"></span>${kidsOf(k).length ? `<button data-j="${j}">${esc(k.name)}</button>` : esc(k.name)}</span></td><td class="n">${f(k.b)} B</td><td class="n">${pc(k.b, L)}</td><td class="bar"><i style="width:${(100 * k.b / big).toFixed(2)}%;background:${k.free ? 'var(--line)' : sw(k, j)}"></i></td></tr>`).join('') + '</table>'
+      : '<p class="how2" style="padding:0">Nothing smaller is counted inside this part.</p>';
+    parts.querySelectorAll('button').forEach((b) => b.onclick = () => go(ks[+b.dataset.j]));
+  }
+  function go(n) {
+    if (!kidsOf(n).length) return;
+    const find = (p) => { const t = p[p.length - 1]; if (t === n) return p; for (const k of kidsOf(t)) { const r = find(p.concat([k])); if (r) return r; } return null; };
+    path = find([R]) || path; draw();
+  }
+  const open = (r) => { R = BY[r]; path = [R]; dlg.showModal(); draw(); };
+  document.querySelectorAll('.jar, .where').forEach((b) => b.onclick = () => open(b.dataset.r));
+  dlg.querySelector('.x').onclick = () => dlg.close();
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  addEventListener('resize', () => dlg.open && draw());
+})();
+</script>

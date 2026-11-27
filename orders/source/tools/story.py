@@ -100,7 +100,7 @@ hist = ''.join(f'<tr><td>{a}</td><td class="n">{b:,}</td></tr>' for a, b in [
   ('Round 4: humidity and diurnal range', 1313751), ('Round 5: wet days, sunshine, CRU’s own heights', 1608157), ('Round 6: wind, tree genera', 1740098)])
 
 body = f'''
-<p class="crumb"><a href="../">Orders of Magnitude</a> › What’s happening…</p>
+<p class="crumb"><a href="../">(M)orders of Magnitude</a> › What’s happening…</p>
 <h1>What’s happening: one forest, five orders of magnitude</h1>
 <p class="lede">The same subject, a forest, written five times, each time with ten times the room: 200 bytes, 2 kB, 20 kB, 200 kB and 2 MB. Each rung is a single page that must fit its allowance whole, program and numbers and unpacker, with no stored images, models or sounds.</p>
 <p>The bottom rungs are a problem of cutting. The top one turned into a problem of honest filling. Think of the same forest described as a haiku, a postcard, a field guide, a natural history, and an atlas. Each is not just longer than the one before: it is a different idea of what a forest is.</p>
@@ -149,7 +149,7 @@ body = f'''
 <dt>What it costs</dt><dd>A place is its block. Innsbruck’s valley is 608 m up at 2 MB, and 796 m here, because its block takes in the mountains on either side. Its year comes to much the same: 8.4 °C and 979 mm above, 8.3 °C and 1,023 mm here. That is because temperatures are stored reduced to sea level and lapsed back to the ground they stand on. The horizon, which looks 120 km out, mostly falls inside one block, so the ranges around a plot are softer than at 2 MB.</dd>
 </dl></section>
 
-<section class="rung"><header><b>2 MB</b><span>(M)orders of Magnitude: the living Earth, from quarks to the cosmic web</span><a href="../2mb/">Open ↗</a></header>
+<section class="rung"><header><b>2 MB</b><span>The living Earth, from quarks to the cosmic web</span><a href="../2mb/">Open ↗</a></header>
 {bar('2mb')}
 <div class="bar split" title="program, Earth's heights, the rest of the maps"><i style="width:{ek['prog'] / 20:.2f}%;background:#f1f3ea"></i><i style="width:{ek['ground'] / 20:.2f}%;background:#8fb8e0"></i><i style="width:{ek['rest'] / 20:.2f}%;background:var(--sun)"></i></div>
 <div class="legend"><span><i style="background:#f1f3ea"></i>program, about {ek['prog']:.0f} kB</span><span><i style="background:#8fb8e0"></i>the Earth’s ground and sea floor, about {ek['ground']:.0f} kB</span><span><i style="background:var(--sun)"></i>climate, lakes, tree ranges and the four rocky bodies, about {ek['rest']:.0f} kB</span></div>
@@ -219,7 +219,7 @@ It stopped at 87% on purpose. The last candidates either needed a ruling (is a m
 <li><b>The window</b>, designed by Rowan in round 5, was built the morning after: going in, the next world now appears inside a disc on the ground where its patch lies, at true scale and under the same sun, and takes over when it fills the view. Going out still dissolves.</li>
 </ul>
 '''
-open(f'{S}/index.html', 'w').write(page('What’s happening: Orders of Magnitude', body))
+open(f'{S}/index.html', 'w').write(page('What’s happening: (M)orders of Magnitude', body))
 
 # ---- the dialogue rounds ----------------------------------------------------------------------------------------
 def render(md):
@@ -239,7 +239,7 @@ for k, (f, t, w, n) in enumerate(files):
     md = open(f'dialogue/{f}.md').read()
     prev = files[k - 1] if k > 0 else None; nxt = files[k + 1] if k + 1 < len(files) else None
     nav = '<nav class="pn"><span>' + (f'<a href="{prev[0]}.html">← {html.escape(prev[1])}</a>' if prev else '') + '</span><span><a href="./">All orders</a></span><span>' + (f'<a href="{nxt[0]}.html">{html.escape(nxt[1])} →</a>' if nxt else '') + '</span></nav>'
-    head = f'<p class="crumb"><a href="../">Orders of Magnitude</a> › <a href="./">What’s happening</a> › {"Round " + str(k) if k else "Brief"}</p>'
+    head = f'<p class="crumb"><a href="../">(M)orders of Magnitude</a> › <a href="./">What’s happening</a> › {"Round " + str(k) if k else "Brief"}</p>'
     sz = f'<p class="dim">After this round the 2 MB rung stood at {n:,} bytes.</p>' if n else ''
-    open(f'{S}/{f}.html', 'w').write(page(f'{t}: Orders of Magnitude dialogue', head + render(md) + sz + nav))
+    open(f'{S}/{f}.html', 'w').write(page(f'{t}: (M)orders of Magnitude dialogue', head + render(md) + sz + nav))
 print('story:', len(files) + 1, 'pages;', sum(size(f'{S}/{x}') for x in os.listdir(S)), 'bytes')
