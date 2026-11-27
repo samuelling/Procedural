@@ -142,12 +142,15 @@ void main() { vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; vec3 alb, col
       }
       // the swimmers
       const t = performance.now() / 1000, L = [[], [], []];
+      const W = S.sea, fm = W ? min(2.5, max(0.15, W.fi / 0.5)) : 1;           // the sea's books (eco.js): as many fish as the plankton keeps, hunters as the fish keep
       for (const f of spots(G, S, 300, 300, (p, h, r) => r < 0.75 ? { p, h, n: 20 + floor(r * 80), r } : null)) {   // a school, circling and weaving
-        const dep = min(-f.h - 1, 2 + 18 * f.r), R0 = 6 + 10 * f.r;
-        for (let k = 0; k < f.n; k++) { const w = t * (0.25 + 0.1 * f.r) + k * 0.13, rr = R0 + sin(k * 7.7) * 3, ox = cos(w) * rr + sin(k * 3.1 + t * 0.6), oz = sin(w) * rr + cos(k * 2.3 + t * 0.5), oy = sin(k * 1.9 + t * 0.4) * 1.5;
+        const dep = min(-f.h - 1, 2 + 18 * f.r), R0 = 6 + 10 * f.r, n = Math.round(f.n * fm);
+        if (W && (f.r * 7.3) % 1 < W.pd * 0.8) for (let k = 0; k < 1 + floor(f.r * 3); k++) {   // its hunters, sweeping round it faster
+          const w = t * (0.9 + 0.2 * k) + k * 2, ox = cos(w) * (R0 + 4), oz = sin(w) * (R0 + 4), P = f.p.map((v, q) => v + S.F[0][q] * ox + S.F[2][q] * oz); place(G, S, P, dep + sin(t + k) * 2, L[1], 1, W.nm.pred === 'seals' ? 1.7 : 2.3, -w, f.r + k, 1); }
+        for (let k = 0; k < n; k++) { const w = t * (0.25 + 0.1 * f.r) + k * 0.13, rr = R0 + sin(k * 7.7) * 3, ox = cos(w) * rr + sin(k * 3.1 + t * 0.6), oz = sin(w) * rr + cos(k * 2.3 + t * 0.5), oy = sin(k * 1.9 + t * 0.4) * 1.5;
           const P = f.p.map((v, q) => v + S.F[0][q] * ox + S.F[2][q] * oz); place(G, S, P, dep - oy, L[0], 1, 0.16 + 0.12 * f.r, -w, k * 0.31 + f.r, 0); }
       }
-      for (const f of spots(G, S, 4000, 330, (p, h, r) => r < 0.35 && h < -40 && G.whales !== false ? { p, h, r } : null)) {   // a whale, slow
+      for (const f of spots(G, S, 4000, 330, (p, h, r) => r < 0.35 * (W ? (W.nm.whale ? min(1.6, W.wh / 0.25) : 0) : 1) && h < -40 && G.whales !== false ? { p, h, r } : null)) {   // a whale, slow
         const w = t * 0.02 + f.r * 9, ox = cos(w) * 300, oz = sin(w) * 300, P = f.p.map((v, q) => v + S.F[0][q] * ox + S.F[2][q] * oz); place(G, S, P, 25 + 10 * sin(t * 0.05), L[1], 1, 14 + 6 * f.r, -w, f.r, 1);
       }
       for (const f of spots(G, S, 60, 360, (p, h, r) => r < 0.3 && h < -8 ? { p, h, r } : null)) {    // jellyfish, drifting

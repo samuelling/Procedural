@@ -72,3 +72,30 @@ its block: climate in 3° blocks, heights and tree ranges (a genus counts if it 
   - Europe: Caudullo, G., Welk, E. and San-Miguel-Ayanz, J. (2017), Chorological maps for the main European woody
     species, *Data in Brief* 12, 662–666, doi:10.1016/j.dib.2017.05.007. CC BY 4.0.
 - **Climate classes:** see `source/src/kg.js` (kgcpy, BSD licence, after Rubel et al. 2017).
+
+## The living world (eco.js)
+
+Rates set from field studies, used as round numbers:
+
+- **Wolves**: 18–22 elk per wolf per year, 1.83 a month in winter; Yellowstone's northern range averaging 52.9 wolves
+  per 1000 km², packs of about 10 (US National Park Service, Yellowstone wolf facts and Yellowstone Science 24-1;
+  Smith et al. 2004, J. Wildl. Manage.). Northern Yellowstone elk about 5 per km² (about 7,000 counted, 2025).
+- **Cougars**: 1.7–2.5 per 100 km² (Yellowstone Wolf, Cougar and Elk Project, 2025 report).
+- **Lions**: 0.14 per km² near the Serengeti (Maswa, PMC8592989); about 15 large prey per lion a year, 10–47 by study.
+- **Snowshoe hares and lynx**: hares 0.2–14.7 per hectare over the cycle, lynx kills 0.3–1.2 hares a day, coyotes
+  0.3–2.3, predators peaking a year after the hares; 16–18 young a female a summer at the peak (Kluane, Yukon:
+  O'Donoghue et al. 1998, Ecology 79:1193; Krebs et al.).
+- **Red deer**: 5–15 per km² in Scottish forests and hills; 60–70 calves per 100 hinds; woodland regenerates below
+  about 5 per km² (Deer Working Group, via Scottish Wildlife Trust 2024; Ratcliffe, Proc. R. Soc. Edinb. B).
+- **Soil**: springtails 500–50,000 per m², oribatid mites up to 250,000 (Bornebusch 1930; Moldenke and Lattin 1990);
+  predatory mites are a small share of the mites.
+
+Lifespans, litters and running speeds are textbook natural history. Everything else (the grass, insect, bird, hawk,
+water and sea pools and how they feed on each other) is the standard predator-prey form with coefficients chosen to
+give sensible levels, not fitted.
+
+## Weather
+
+The CRU means above, with the seasonal swing lagged 30 days behind the Sun; weather-system anomalies of about ±7 °C
+and a day-night swing of 2.5–7.5 °C (drier, larger); snowfall on wet days below 0.5 °C and melt of 3 mm of water per
+degree-day (a standard degree-day factor), the ground white at about 25 mm of water.

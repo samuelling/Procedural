@@ -34,7 +34,10 @@ export function mkLife(world) {
     $('lifeh').textContent = `${G.name}${G.E ? ', ' + G.ageName : ''}: ${total.toLocaleString()} tree species in ${G.species.length} families · you have met ${S.size.toLocaleString()}`;
   }
   $('lifeb').addEventListener('click', () => { open = !open; panel.hidden = !open; if (open) { document.exitPointerLock?.(); draw(world()); } });
-  $('lifex').addEventListener('click', () => { open = false; panel.hidden = true; });
+  const shut = () => { open = false; panel.hidden = true; };
+  $('lifex').addEventListener('click', shut); $('lifex2').addEventListener('click', shut);
+  addEventListener('keydown', (e) => { if (open && (e.code === 'Escape' || e.code === 'KeyL')) shut(); });
+  panel.addEventListener('pointerdown', (e) => { if (e.target === panel) shut(); });
   return {
     meet(G, codes) { let S = seen.get(G.id); if (!S) seen.set(G.id, S = new Set()); for (const c of codes) S.add(c); },
     count(G) { return (seen.get(G.id) || new Set()).size; },

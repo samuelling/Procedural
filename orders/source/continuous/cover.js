@@ -50,6 +50,7 @@ void main() {
   const tfo = gl.createTransformFeedback(), emptyVao = gl.createVertexArray();
   const VS = `
 layout(location = 0) in vec3 aP; layout(location = 5) in vec4 iA; layout(location = 6) in vec4 iB; layout(location = 7) in vec4 iC;
+uniform float uGraze;  // how much grass the grazers have left (eco.js): short and sparse when grazed hard
 uniform float uGcov;   // what covers open ground: grass (0), ferns (1, before there was grass), nothing (2, before land plants)
 uniform vec4 uBand; uniform float uFade;
 out vec3 vP, vN, vL; out float vW, vF, vSd, vT, vS;
@@ -80,8 +81,8 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
   // plants: a tuft of grass blades in the open; under trees, ferns; none where it is too dry or too cold
   const plant = mk(`
 void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, W, T, h, pa); ${edge}
-  vT = fo; bool fern = fo > .5 || uGcov > .5; if (fern && sd > .45 * smoothstep(.35, .75, pa)) vF = 0.; if (!fern && sd > .3 + .7 * smoothstep(.3, .7, pa)) vF = 0.; if (h < 1. || W < .15 + .5 * sd * sd || T < -6. || uGcov > 1.5) vF = 0.;
-  vS = W; sz *= .7 + .6 * pa;
+  vT = fo; bool fern = fo > .5 || uGcov > .5; if (fern && sd > .45 * smoothstep(.35, .75, pa)) vF = 0.; if (!fern && sd > (.3 + .7 * smoothstep(.3, .7, pa)) * min(1., .35 + .65 * uGraze)) vF = 0.; if (h < 1. || W < .15 + .5 * sd * sd || T < -6. || uGcov > 1.5) vF = 0.;
+  vS = W * (fern ? 1. : mix(.6, 1., min(uGraze, 1.))); sz *= (.7 + .6 * pa) * (fern ? 1. : .4 + .6 * min(uGraze, 1.2));
   float bi = floor(aP.x), b = fract(aP.x), lat = aP.z, ht = (fern ? .45 : .3) * sz / sqrt(max(uGrav, .3));
   float ba = a + bi * 2.4, lean = fern ? 1.1 : .35 + .3 * h1(vec2(bi, sd)), len = ht * (fern ? 1. : .7 + .5 * h1(vec2(sd, bi)));
   vec2 dir = vec2(cos(ba), sin(ba)); float t = b, bend = lean * t * t, wid = fern ? .09 * (1. - t * .8) : .006 * (1. - t);
@@ -139,7 +140,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
         // and draw them
         const P = bd.P; gl.useProgram(P.p); common(P); setNoise(P);
         gl.uniform4f(P.uBand, bd.s, bd.n, ub - ib, uc - ic); gl.uniform1f(P.uFade, fade); gl.uniform1f(P.uCy, S.cy); gl.uniform1f(P.uMat, bd.mat);
-        for (const [n, v] of [['uGrass', G.grass], ['uDry', G.grassDry], ['uSoil', G.soil], ['uRock', G.rock], ['uSand', G.sand], ['uLitter', dead]]) if (P[n]) gl.uniform3fv(P[n], v); if (P.uGcov) gl.uniform1f(P.uGcov, G.ground === 'ferns' ? 1 : G.ground === 'bare' ? 2 : 0);
+        for (const [n, v] of [['uGrass', G.grass], ['uDry', G.grassDry], ['uSoil', G.soil], ['uRock', G.rock], ['uSand', G.sand], ['uLitter', dead]]) if (P[n]) gl.uniform3fv(P[n], v); if (P.uGraze) gl.uniform1f(P.uGraze, S.graze ?? 1); if (P.uGcov) gl.uniform1f(P.uGcov, G.ground === 'ferns' ? 1 : G.ground === 'bare' ? 2 : 0);
         if (bd.kind) gl.uniform3fv(P.uKind, bd.kind);
         gl.bindVertexArray(bd.va.v); gl.drawArraysInstanced(gl.TRIANGLES, 0, bd.va.n, bd.n * bd.n);
       }

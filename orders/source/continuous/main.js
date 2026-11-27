@@ -37,7 +37,7 @@ const madd = (a, b, k) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
 export const PRE = `#version 300 es
 precision highp float; precision highp int;
 uniform mat4 uVP; uniform vec3 uSun, uSunC, uSky; uniform float uT, uPix, uAlt, uHs; uniform vec3 uBeta;
-uniform float uSeasT, uAut, uBare, uSpr, uRain, uAur; uniform vec3 uAurC;   // the season here (warmth offset, autumn colour, leaf loss, spring flush), rain, aurora
+uniform float uSeasT, uAut, uBare, uSpr, uRain, uAur; uniform vec3 uAurC; uniform float uPack[12];   // uPack: snow on the ground for a place of each mean temperature, -30 to +25 °C (see snowpack())   // the season here (warmth offset, autumn colour, leaf loss, spring flush), rain, aurora
 float fdep(float w) { return log2(max(w, 1e-7) * 1e7 + 1.) / 56.; }
 // a surface's normal packed into one float for the pick buffer (two 12-bit octahedral coordinates, exact in a float)
 float pkn(vec3 n) { n /= abs(n.x) + abs(n.y) + abs(n.z) + 1e-9; vec2 e = n.xz; if (n.y < 0.) e = (1. - abs(e.yx)) * vec2(e.x < 0. ? -1. : 1., e.y < 0. ? -1. : 1.); e = clamp(e * .5 + .5, 0., 1.); return floor(e.x * 4095. + .5) * 4096. + floor(e.y * 4095. + .5); }
@@ -209,7 +209,8 @@ void main() {
     em += vec3(1.6, .32, .05) * fuel * (1. - smoothstep(.03, .3, ba)) * smoothstep(.7, .85, n2(wp * 2. + vec2(uT * .3, 0.)) * .5 + .5 * ff) * .35; }
   if (vBu > .02) alb = mix(alb, vec3(.12, .08, .05) * (.5 + .9 * n2(wp * vec2(9., 1.3) + n2(wp * 3.) * 4.)), smoothstep(.02, .3, vBu));   // dam and lodge: sticks and mud
   alb = mix(alb, uSand, smoothstep(5., 1.5, hA) * (1. - fo) * step(pdep, -1.));               // beaches
-  float snow = smoothstep(-3., -9., T + (uCl > 0 ? gSeas : uSeasT) + uSnowOff + 3. * NF(wp, 500.)) * smoothstep(.8, .5, sl) * (1. - uGiant);   // snow and ice where it is cold enough
+  float tb = clamp((T + uSnowOff + 30.) / 5., 0., 10.99), pk = mix(uPack[int(tb)], uPack[int(tb) + 1], fract(tb));
+  float snow = max(smoothstep(-3., -9., T + (uCl > 0 ? gSeas : uSeasT) + uSnowOff + 3. * NF(wp, 500.)), smoothstep(.15, .6, pk + .25 * (NF(wp, 60.) - .5))) * smoothstep(.8, .5, sl) * (1. - uGiant);   // snow where it is cold now, or lying from the winter
   alb = mix(alb, vec3(.8, .83, .88), snow);
   // close up: the floor's own grain, scale by scale, each fading in as it grows big enough to see
   float id, g1 = vor(wp / .03, id);
@@ -381,6 +382,20 @@ const L = { sun: [0, 1, 0], sunC: [0, 0, 0], sky: [0, 0, 0] };
 const SPEEDS = [0, 1 / 1200, 1 / 60, 1 / 6, 2, 30, 365, 3650], SPN = ['stopped', 'a day in 20 minutes', 'a day a minute', 'a day in 6 seconds', 'two days a second', 'a month a second', 'a year a second', 'ten years a second'];
 let speed = 1;
 const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
+const LAG = 30, PACK0 = new Array(12).fill(0);
+const sphAt = (G, t) => Math.sin(Math.asin(sunAt(G, t)[2])) / Math.sin(G.tilt);
+const seasAt = (G, t, lat) => season(G, t, lat).s;
+// the snow on the ground: a day-by-day account of the last nine months here, for places of each mean temperature from
+// -30 to +25 °C (the ground shader looks its own place up by its mean temperature): snow falls on wet days when it is
+// below freezing and melts by degree-days above it (3 mm of water a day for each degree), and the cover is full at about
+// 25 mm of water (a quarter of a metre of snow). Precipitation is the place's own (its yearly total, on its wet days)
+function snowpack(G, u, c, lat) {
+  const A = G.dat && G.dat.cl ? G.dat.cl.lin(u, 1) : 11 * min(1, G.tilt / 0.41), P = c.P || 1500 * c.W, out = [], days = 270, p = cam.P.map((v) => v / 2.2e5), T = [], wet = [];
+  for (let d = days; d > 0; d--) { const t = G.t - d, dr = t * 3, w = vn3(p[0] + dr, p[1] + dr * 0.6, p[2], 999 + G.kseed) * 0.7 + vn3(p[0] * 2.3 - dr, p[1] * 2.3, p[2] * 2.3 + dr, 998 + G.kseed) * 0.3;
+    T.push((G.dat && G.dat.cl ? A * sphAt(G, t - LAG) : A * seasAt(G, t - LAG, lat)) + (vn3(p[0] * 1.7 + dr * 0.8, p[1] * 1.7, p[2] * 1.7 - dr * 0.5, 997 + G.kseed) - 0.5) * 14); wet.push(w > 0.52 ? P / 365 / 0.35 : 0); }
+  for (let b = 0; b < 12; b++) { let swe = 0; const Tb = -30 + 5 * b; for (let k = 0; k < days; k++) { const Td = Tb + T[k]; if (Td < 0.5) swe += wet[k]; else swe = max(0, swe - Td * 3 - wet[k] * 0.5); } out.push(min(1, swe / 25)); }
+  return out;
+}
 function clock(dt, far) {
   // past a month a second, time goes on in whole days (the hour stays put), past a year a second in whole years
   // (the season stays put too), so the sky does not flicker while the years go by
@@ -388,16 +403,23 @@ function clock(dt, far) {
   let adv = dd; if (sp >= 30 && !far) { clock.acc = (clock.acc || 0) + dd; adv = floor(clock.acc / un) * un; clock.acc -= adv; }
   if (G.real) { realT += adv;   // (in space near the real worlds time runs at its own pace, so what moves can be caught)
  G.t = realT; world(G.n).t = realT; realSky(); } else G.t = (G.t || 0) + adv;
-  const u = nrm(cam.P), lat = Math.asin(max(-1, min(1, dot(u, G.axis)))), se = season(G, G.t, lat);
+  const u = nrm(cam.P), lat = Math.asin(max(-1, min(1, dot(u, G.axis)))), se = season(G, G.t - LAG, lat);   // leaves turn and come out with the warmth, so a month behind the Sun too
   S.lat = lat; S.seasonS = se.s; S.spring = se.spring;
-  S.seasT = 11 * se.s * min(1, G.tilt / 0.41);                            // warmer in summer, colder in winter
-  if (G.dat && G.dat.cl) { S.sph = Math.sin(Math.asin(sunAt(G, G.t)[2])) / Math.sin(G.tilt); S.seasT = G.dat.cl.lin(u, 1) * S.sph; }   // measured: this place's own swing, as far through the year as the Sun is
+  // the year's warmth follows the Sun a month behind (land and sea take that long to warm and cool)
+  S.seasT = 11 * seasAt(G, G.t - LAG, lat) * min(1, G.tilt / 0.41);
+  if (G.dat && G.dat.cl) { S.sph = sphAt(G, G.t - LAG); S.seasT = G.dat.cl.lin(u, 1) * S.sph; }   // measured: this place's own swing, as far through the year as the Sun was a month ago
   S.aut = se.spring ? 0 : min(1, max(0, (0.35 - se.s) / 0.45)); S.bare = min(1, max(0, (-0.15 - se.s) / 0.4)) * (se.spring ? 1 : min(1, S.aut * 1.2));
   S.spr = se.spring ? min(1, max(0, 1 - abs(se.s + 0.1) / 0.35)) : 0;
   // rain: weather systems a few hundred km across, drifting; where it is wet enough to rain, and cold enough, snow
   const p = cam.P.map((v) => v / 2.2e5), dr = G.t * 3, w = vn3(p[0] + dr, p[1] + dr * 0.6, p[2], 999 + G.kseed) * 0.7 + vn3(p[0] * 2.3 - dr, p[1] * 2.3, p[2] * 2.3 + dr, 998 + G.kseed) * 0.3;
   const c = climate(G, u.map((x) => x * G.R), max(S.g0 || 0, 0));
-  S.rain = min(1, max(0, (w - 0.6) / 0.14)) * min(1, max(0, (c.W - 0.25) / 0.2)); S.snow = c.T + S.seasT < 0;
+  // the weather on top: weather systems bring spells warmer or colder than the season; the day warms and the night
+  // cools, more under dry clear skies than wet cloudy ones; rain falls as snow when it is cold enough where you are
+  const anom = (vn3(p[0] * 1.7 + dr * 0.8, p[1] * 1.7, p[2] * 1.7 - dr * 0.5, 997 + G.kseed) - 0.5) * 14, s2 = S.sun || [0, 1, 0];
+  S.Tnow = c.T + S.seasT + anom + (2.5 + 5 * (1 - c.W)) * (1 - 0.6 * min(1, max(0, (w - 0.5) / 0.2))) * s2[1] * 1.4;
+  S.rain = min(1, max(0, (w - 0.6) / 0.14)) * min(1, max(0, (c.W - 0.25) / 0.2)); S.snow = S.Tnow < 0.8;
+  if (!(clock.pk > 0) || abs(G.t - clock.pt) > 1 || hypot(...madd(cam.P, clock.pp || cam.P, -1)) > 2e4) { clock.pk = 1; clock.pt = G.t; clock.pp = cam.P.slice(); S.pack = snowpack(G, u, c, lat); }
+  S.packHere = (() => { const tb = min(10.99, max(0, (c.T + 30) / 5)), i = floor(tb); return S.pack[i] * (1 - tb % 1) + S.pack[i + 1] * (tb % 1); })();
   // aurora: near the poles, in the dark
   S.aur = min(1, max(0, (abs(lat) - 0.95) / 0.2)) * min(1, max(0, (-0.08 - (S.sun ? S.sun[1] : 1)) / 0.15));
   if (S.rain > 0.75 && !S.snow && S.cy < G.cloudBase && Math.random() < dt * 0.12 * S.rain) { flash = 0.55; flashC = [0.85, 0.88, 1]; if (snd) snd.boom(true); }   // lightning
@@ -406,7 +428,7 @@ function clock(dt, far) {
     const s2 = sunAt(G, G.t), pu = [u[0], u[1]], ps = [s2[0], s2[1]], ha = Math.atan2(pu[0] * ps[1] - pu[1] * ps[0], pu[0] * ps[0] + pu[1] * ps[1]), hr = ((12 - ha / (2 * PI) * G.dayH) % G.dayH + G.dayH) % G.dayH;
     const sn = abs(lat) < 0.2 || G.tilt < 0.08 ? 'no seasons here' : se.s > 0.6 ? 'summer' : se.s < -0.6 ? 'winter' : se.spring ? 'spring' : 'autumn';
     const hm = `${floor(hr)}:${String(floor(hr % 1 * 60)).padStart(2, '0')}`, dd = new Date(msOf(realT)), date = `${dd.getUTCDate()} ${MONTHS[dd.getUTCMonth()]} ${dd.getUTCFullYear()}`;
-    $('clk').textContent = G.real ? (G.real === 'earth' ? `${date} · ${hm} sun time here` : `${hm} sun time of a ${G.dayH < 48 ? G.dayH.toFixed(1) + ' h' : (G.dayH / 24).toFixed(0) + '-day'} day · ${date} on Earth`) + (G.real === 'earth' ? ` · ${sn}` : '') + (S.rain > 0.3 && G.real === 'earth' ? (S.snow ? ' · snowing' : ' · raining') : '')
+    $('clk').textContent = G.real ? (G.real === 'earth' ? `${date} · ${hm} sun time here` : `${hm} sun time of a ${G.dayH < 48 ? G.dayH.toFixed(1) + ' h' : (G.dayH / 24).toFixed(0) + '-day'} day · ${date} on Earth`) + (G.real === 'earth' ? ` · ${sn} · ${Math.round(S.Tnow)} °C${S.packHere > 0.3 ? ' · snow on the ground' : ''}` : '') + (S.rain > 0.3 && G.real === 'earth' ? (S.snow ? ' · snowing' : ' · raining') : '')
       : `day ${floor(G.t) + 1} · ${hm} of a ${G.dayH} h day · ${sn}${S.rain > 0.3 ? (S.snow ? ' · snowing' : ' · raining') : ''}`;
     $('spd').textContent = SPN[speed];
   }
@@ -472,7 +494,7 @@ const common = (P) => {
   gl.uniform1f(P.uPix, 2 * Math.tan(cam.fov / 2) / Hp); gl.uniform1f(P.uAlt, S.cy); gl.uniform1f(P.uHs, G.Hs); gl.uniform3fv(P.uBeta, G.beta);
   if (P.uUnder) { gl.uniform1f(P.uUnder, S.under ? 1 : 0); gl.uniform1f(P.uCamDep, max(0, -S.cy)); gl.uniform3fv(P.uLiqA, G.liqA); gl.uniform3fv(P.uLiqC, G.liqC); }
   fire.set(P, G, S); beavers.set(P);
-  if (P.uSeasT) gl.uniform1f(P.uSeasT, S.seasT); if (P.uAut) gl.uniform1f(P.uAut, S.aut); if (P.uBare) gl.uniform1f(P.uBare, S.bare); if (P.uSpr) gl.uniform1f(P.uSpr, S.spr); if (P.uRain) gl.uniform1f(P.uRain, S.rain); if (P.uAur) { gl.uniform1f(P.uAur, S.aur); gl.uniform3fv(P.uAurC, G.aurora); }
+  if (P.uSeasT) gl.uniform1f(P.uSeasT, S.seasT); if (P.uPack) gl.uniform1fv(P.uPack, S.pack || PACK0); if (P.uAut) gl.uniform1f(P.uAut, S.aut); if (P.uBare) gl.uniform1f(P.uBare, S.bare); if (P.uSpr) gl.uniform1f(P.uSpr, S.spr); if (P.uRain) gl.uniform1f(P.uRain, S.rain); if (P.uAur) { gl.uniform1f(P.uAur, S.aur); gl.uniform3fv(P.uAurC, G.aurora); }
 };
 let flash = 0, flashC = [1, 1, 1];
 function frame(now) {
@@ -494,6 +516,8 @@ function frame(now) {
   if (!cave.C.in && !S.under && ctl.mode === 'fly' && S.hc < MICRO && S.g0 > -1e9) { pick(canvas.clientWidth / 2, canvas.clientHeight * 0.75); const m = pick.mat >= 1 && pick.mat <= 5 ? pick.mat : 1;
     micro.enter(nrm(cam.P).map((v) => v * (G.R + S.cy - S.hc)), S.F.map((v) => v.slice()), [0, S.hc, 0], groundMat(m), MICRO, microLook(groundMat(m), 0)); requestAnimationFrame(frame); return; }
   S.eco = eco; eco.tick(G, S, S.F, speed ? dt : 0, speed > 0 && SPEEDS[speed] <= 1 / 60, S.hc);
+  S.graze = G.real === 'earth' || !G.real ? eco.grassAt(S.foot) : 1; S.insects = eco.insAt(S.foot);
+  S.sea = S.g0 < 0 && S.hc < 3000 ? eco.sea(G, S) : null;
   targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.meet = (Gp, c) => life.meet(Gp, c); S.cast = () => SH.cast; S.shR = () => SH.r;
   if (cave.C.in) { gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]); gl.disable(gl.DEPTH_TEST); cave.render(common, cam, G, S, W, Hp); holes.none(); finish(dt); return; }
   if (S.cy > COS) {                                                        // far off: the planet as a world in space, its star, the stars, the galaxies
@@ -532,6 +556,7 @@ function frame(now) {
   marine.draw(common, setNoise, cam, G, S);
   fauna.draw(common, cam, G, S, eco);
   fauna.beasts(common, cam, G, S, eco);
+  if (!micro.M.on) fauna.insects(common, cam, G, S, eco);
   cave.draw(common, cam, G, S);
   beavers.draw(common, G, S);
   fire.draw(common, cam, G, S);
@@ -649,7 +674,8 @@ function zoomAt(px, py, f) {                                               // f 
 // Scrolling still goes toward whatever is under the pointer (the centre, when the mouse is captured) at any scale.
 const ctl = { mode: 'walk', vy: 0, ground: true, land: 0, touch: { x: 0, y: 0 }, bob: 0 };
 const EYE = 1.7, locked = () => document.pointerLockElement === canvas;
-const setMode = (m) => { if (ctl.mode === m) return; ctl.mode = m; ctl.vy = 0; if (m === 'walk') ctl.land = 1; $('mode').textContent = m === 'walk' ? 'walking' : 'flying'; $('mode').dataset.m = m; };
+const setMode = (m) => { if (ctl.mode === m) return; ctl.mode = m; ctl.vy = 0; if (m === 'walk') ctl.land = 1; $('modet').textContent = m === 'walk' ? 'walking' : 'flying'; $('mode').dataset.m = m; };
+$('mode').onclick = (e) => { e.stopPropagation(); e.currentTarget.blur(); setMode(ctl.mode === 'walk' ? 'fly' : 'walk'); };
 const look = (dx, dy, k) => { cam.yaw -= dx * k; cam.pitch = min(1.55, max(-1.55, cam.pitch - dy * k)); };
 let drag = null; const pts = new Map();
 const touchy = matchMedia('(pointer: coarse)').matches;
@@ -725,7 +751,7 @@ function fly(dt) {
   }
   ctl.dive = 0;
   ctl.bob += hypot(flyV[0], flyV[2]) * dt * (ctl.ground ? 1 : 0);
-  { const ph = floor(ctl.bob * 3.6 / PI); if (ph !== ctl.ph && snd && ctl.ground) snd.step(S.snow ? 3 : S.aut > 0.5 || S.bare > 0.5 ? 1 : Math.random() < 0.5 ? 0 : 2, k.ShiftLeft || k.ShiftRight ? 1 : 0.7, Math.random() < 0.04); ctl.ph = ph; }   // a footstep each half stride, by what is underfoot
+  { const ph = floor(ctl.bob * 3.6 / PI); if (ph !== ctl.ph && snd && ctl.ground) snd.step(S.packHere > 0.3 ? 3 : S.aut > 0.5 || S.bare > 0.5 ? 1 : Math.random() < 0.5 ? 0 : 2, k.ShiftLeft || k.ShiftRight ? 1 : 0.7, Math.random() < 0.04); ctl.ph = ph; }   // a footstep each half stride, by what is underfoot
   let a;
   if (ctl.land > 0 && above > EYE + 0.5) a = EYE + (above - EYE) * exp(-dt * 2.2);            // down from the air: a glide, then gravity
   else { ctl.land = 0; ctl.vy -= 9.81 * G.g * dt; a = above + ctl.vy * dt; if (a <= EYE) { a = EYE; ctl.vy = 0; ctl.ground = true; } else ctl.ground = false; }
@@ -754,12 +780,12 @@ function hud() {
   if (micro.M.on && c !== null && !micro.M.att && !(performance.now() - (micro.M.zt || 0) < 600)) micro.M.s = c;
   if ($('up').hidden === micro.M.on) $('up').hidden = !micro.M.on;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = micro.M.on && w < 0.05 ? micro.label(w) : BANDS.find((b) => w >= b[0])[1];
-  $('alt').textContent = micro.M.on ? (micro.M.P[1] > 0 ? `${fmt(micro.M.P[1])} above the ` : 'in among the atoms of the ') + (micro.MATS[micro.M.mat] || { on: 'ground' }).on + (w < 2e-7 ? ' · finer than light can show: the colours are a convention' : lampK(S, micro.M) > 0.35 ? ' · lit by the microscope’s lamp' : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
+  $('alt').textContent = micro.M.on ? (micro.M.P[1] > 0 ? `${fmt(micro.M.P[1])} above the ` : 'in among the atoms of the ') + (micro.MATS[micro.M.mat] || { on: 'ground' }).on + (w < 2e-7 ? ' · finer than light can show: the colours are a convention' : lampK(S, micro.M) > 0.35 ? ' · lit by the microscope’s lamp' : '') + ((micro.M.mat === 1 || micro.M.mat === 9) && w < 0.03 && w > 1e-5 && eco.soil(S) ? ' · ' + eco.soil(S) : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
   if (G.E && !cave.C.in && !micro.M.on && S.cy < 1e8) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
   if (G.real && !cave.C.in && !micro.M.on && S.cy < 1e8) { const u = nrm(cam.P), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI; $('alt').textContent += ` · ${abs(la).toFixed(2)}°${la < 0 ? 'S' : 'N'} ${abs(lo).toFixed(2)}°${lo < 0 ? 'W' : 'E'}`; }
   const code = PB.code ?? pick.code, an = code >= 2e6 ? drawn[Math.round(code - 2e6)] : null, sp = an || !(floor((Math.round(code) - 1) / 10000) < G.species.length) ? null : life.look(G, code), pc = (v) => (v >= 1 ? '+' : '−') + abs(Math.round((v - 1) * 100)) + '%';
   $('sp').textContent = an ? `${Who(an)}, ${an.age < 1 ? Math.round(an.age * 12) + ' months' : an.age.toFixed(0) + ' years'} old${an.dead >= 0 ? `, ${an.why === 'killed' ? 'killed' : 'dead'}` : ''} · a ${an.k.nm}, generation ${an.gen} · size ${pc(an.gn[0])}, speed ${pc(an.gn[1])}, wariness ${pc(an.gn[2])}` : sp ? sp.name : ''; $('sp').hidden = !an && !sp;
-  $('eco').textContent = [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent;
+  $('eco').textContent = S.sea ? eco.seaText(S.sea) : [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent;
   { const e = eco.log[eco.log.length - 1]; if (e && performance.now() - e.t < 7000) { if ($('say').textContent !== e.s) $('say').textContent = e.s; $('say').classList.add('on'); } else $('say').classList.remove('on'); }
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
