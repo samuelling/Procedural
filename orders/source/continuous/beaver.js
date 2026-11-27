@@ -44,7 +44,7 @@ export function mkBeavers(gl, prog, PRE) {
     if (G.fauna && G.fauna.none || G.E >= 40 || G.lifeless) return out;                // beavers (or what stands for them) are a late thing
     const i0 = floor(foot[b] / CELL), j0 = floor(foot[c] / CELL);
     for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) {
-      const key = `${G.id}:${fk}:${i}:${j}`; let f = memo.get(key); if (f === undefined) { f = find(G, a, sg, fk, i, j); memo.set(key, f); }
+      const key = `${G.id}@${G.E || 0}:${fk}:${i}:${j}`; let f = memo.get(key); if (f === undefined) { f = find(G, a, sg, fk, i, j); memo.set(key, f); }
       if (f) out.push(f);
     }
     return out;

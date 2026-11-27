@@ -188,7 +188,7 @@ void main() {
   // the colour of the planet from far off: a map, filled a few rows a frame
   const maps = new Map(), MW = 256, MH = 128;
   function map(G) {
-    let m = maps.get(G.id); if (!m) { m = { tex: gl.createTexture(), px: new Uint8Array(MW * MH * 4), row: 0 }; gl.bindTexture(gl.TEXTURE_2D, m.tex); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, MW, MH); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); maps.set(G.id, m); }
+    let m = maps.get(G.id + '@' + (G.E || 0)); if (!m) { m = { tex: gl.createTexture(), px: new Uint8Array(MW * MH * 4), row: 0 }; gl.bindTexture(gl.TEXTURE_2D, m.tex); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, MW, MH); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); maps.set(G.id + '@' + (G.E || 0), m); }
     if (m.row < MH) {
       const ax = G.axis, e1 = nrm(cross(ax, [0.31, 0.17, 0.93])), e2 = cross(ax, e1), sp = G.species, can = sp.length ? sp.reduce((c, s) => c.map((v, i) => v + s.canopy[i] / sp.length), [0, 0, 0]) : G.grass;
       for (let y = m.row; y < min(MH, m.row + 6); y++) for (let x = 0; x < MW; x++) {

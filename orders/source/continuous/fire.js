@@ -23,7 +23,7 @@ export function mkFire(gl, prog, PRE) {
     const foot = S.foot, ab = foot.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], sg = foot[a] >= 0 ? 1 : -1, fk = a * 2 + (sg > 0 ? 1 : 0), out = [], t = G.t || 0;
     const i0 = floor(foot[b] / CELL), j0 = floor(foot[c] / CELL), P = 700;   // each cell can burn every couple of years
     for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) for (let k = floor(t / P) - 26; k <= floor(t / P); k++) {
-      const key = `${G.id}:${fk}:${i}:${j}:${k}`; let e = memo.get(key);
+      const key = `${G.id}@${G.E || 0}:${fk}:${i}:${j}:${k}`; let e = memo.get(key);
       if (e === undefined) { e = null; const s = (q) => hs2(i * 131 + k, j * 71 - k, 500 + q + fk * 9);
         if (s(0) < 0.6) { const p = [0, 0, 0]; p[b] = (i + s(1)) * CELL; p[c] = (j + s(2)) * CELL; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c];
           if (d > 0) { p[a] = sg * sqrt(d); const h = H(G, p, 16), cl = climate(G, p, h); if (h > 5 && cl.W > 0.22 && cl.W < 0.72 && cl.T > 3) e = mk(G, p, (k + s(3)) * P, s(4) * 6.283, 600 + 1400 * (0.8 - cl.W), 1500 + 6000 * s(5)); } }

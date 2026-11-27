@@ -200,7 +200,7 @@ void main() {
   inst(quad, cib); gl.bindVertexArray(null);
   const kits = new Map();
   function kit(G) {
-    if (kits.has(G.id)) return kits.get(G.id);
+    if (kits.has(G.id + '@' + (G.E || 0))) return kits.get(G.id + '@' + (G.E || 0));
     const T = [];
     G.species.forEach((sp, s) => { for (let v = 0; v < V; v++) {
       const g = grow(sp, v + 1 + G.n * 10), o = { h: g.h, s };
@@ -218,7 +218,7 @@ void main() {
     const U = { form: new Float32Array(64) };
     G.species.forEach((sp, i) => { if (i >= 16) return; const f = FORM[sp.form];
       U.form.set([f, sp.h, f === 1 ? 0.24 : f === 7 ? 0.12 : f === 3 ? 0.3 : f === 2 ? 0.55 : f === 4 ? 0.5 + sp.spread * 0.3 : 0.3 + sp.spread * 0.25, 0], i * 4); });
-    const k = { T, U, memo: new Map(), block: new Map() }; kits.set(G.id, k); return k;
+    const k = { T, U, memo: new Map(), block: new Map() }; kits.set(G.id + '@' + (G.E || 0), k); return k;
   }
   const setU = (P, U) => { gl.uniform4fv(P.uForm, U.form); };
 

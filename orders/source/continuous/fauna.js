@@ -203,7 +203,7 @@ void main() { CAST
       for (let i = i0 - 6; i <= i0 + 6; i++) for (let j = j0 - 6; j <= j0 + 6; j++) {
         const r0 = hs2(i, j, 211 + fk); if (r0 > dens) continue;
         const kind = day > 0.02 ? (warm > 10 && hs2(i, j, 212 + fk) < 0.3 ? 1 + floor(hs2(i, j, 213 + fk) * 2.99) : 0) : warm > 12 && day < -0.08 ? 4 : -1; if (kind < 0) continue;
-        const key = `${G.id}:${fk}:${i}:${j}`; let cell = imemo.get(key);
+        const key = `${G.id}@${G.E || 0}:${fk}:${i}:${j}`; let cell = imemo.get(key);
         if (!cell) { const p = [0, 0, 0]; p[b] = (i + hs2(i, j, 214 + fk)) * CS; p[c] = (j + hs2(i, j, 215 + fk)) * CS; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d <= 0) continue; p[a] = sg * sqrt(d); cell = { p, h: H(G, p, 16), s: hs2(i, j, 216 + fk) * 50 }; imemo.set(key, cell); if (imemo.size > 4000) imemo.clear(); }
         if (cell.h < 0.3) continue;
         const D = cell.p.map((v, k) => v - foot[k]), q = [0, 1, 2].map((k) => D[0] * F[k][0] + D[1] * F[k][1] + D[2] * F[k][2]), s0 = cell.s, amp = kind === 0 ? 0.4 : 1.5;
@@ -227,7 +227,7 @@ void main() { CAST
         let cell = null;
         CL.forEach(([k, len, , spd, cap], ci) => {
           const lam = u[k] || 0, h0 = hs2(i, j, 231 + ci * 7 + fk), nk = min(cap, floor(lam + h0)); if (!nk) return;
-          if (!cell) { const key = `${G.id}:${fk}:${i}:${j}`; cell = gmemo.get(key); if (!cell) { const p = [0, 0, 0]; p[b] = i + 0.5; p[c] = j + 0.5; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d <= 0) return; p[a] = sg * sqrt(d); cell = { p, h: H(G, p, 16) }; gmemo.set(key, cell); if (gmemo.size > 3000) gmemo.clear(); } }
+          if (!cell) { const key = `${G.id}@${G.E || 0}:${fk}:${i}:${j}`; cell = gmemo.get(key); if (!cell) { const p = [0, 0, 0]; p[b] = i + 0.5; p[c] = j + 0.5; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d <= 0) return; p[a] = sg * sqrt(d); cell = { p, h: H(G, p, 16) }; gmemo.set(key, cell); if (gmemo.size > 3000) gmemo.clear(); } }
           if (cell.h < 0.3) return;
           const D = cell.p.map((v, m) => v - foot[m]), q = [0, 1, 2].map((m) => D[0] * F[m][0] + D[1] * F[m][1] + D[2] * F[m][2]);
           for (let m = 0; m < nk; m++) { const s0 = hs2(i * 7 + m, j, 232 + ci + fk) * 60, ph = t * 0.12 + s0, n0 = floor(ph), fr = ph - n0;
@@ -251,7 +251,7 @@ void main() { CAST
       const foot = S.foot, F = S.F, ab = foot.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], sg = foot[a] >= 0 ? 1 : -1, fk = a * 2 + (sg > 0 ? 1 : 0);
       const out = [], t = performance.now() / 1000, i0 = floor(foot[b] / SP), j0 = floor(foot[c] / SP);
       for (let i = i0 - 3; i <= i0 + 3; i++) for (let j = j0 - 3; j <= j0 + 3; j++) {
-        const key = `${G.id}:${fk}:${i}:${j}`; let f = memo.get(key);
+        const key = `${G.id}@${G.E || 0}:${fk}:${i}:${j}`; let f = memo.get(key);
         if (f === undefined) {
           f = null; if (hs2(i, j, 150 + fk) < 0.85) { const p = [0, 0, 0]; p[b] = (i + hs2(i, j, 151 + fk)) * SP; p[c] = (j + hs2(i, j, 152 + fk)) * SP; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d > 0) { p[a] = sg * sqrt(d); const h = H(G, p, 16), cl = climate(G, p, h); if (h > 0 && cl.T > -8) f = { p, h, n: 30 + floor(hs2(i, j, 153 + fk) ** 2 * NB), r: 60 + 200 * hs2(i, j, 154 + fk), alt: 30 + 220 * hs2(i, j, 155 + fk), sd: hs2(i, j, 156 + fk) }; } }
           memo.set(key, f);

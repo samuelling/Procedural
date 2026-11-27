@@ -116,7 +116,7 @@ void main() { vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; vec3 alb, col
     const foot = S.foot, ab = foot.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], sg = foot[a] >= 0 ? 1 : -1, fk = a * 2 + (sg > 0 ? 1 : 0), out = [];
     const i0 = floor(foot[b] / SP), j0 = floor(foot[c] / SP);
     for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) {
-      const key = `${G.id}:${salt}:${fk}:${i}:${j}`; let f = memo.get(key);
+      const key = `${G.id}@${G.E || 0}:${salt}:${fk}:${i}:${j}`; let f = memo.get(key);
       if (f === undefined) { f = null; const p = [0, 0, 0]; p[b] = (i + hs2(i, j, salt + fk)) * SP; p[c] = (j + hs2(i, j, salt + 1 + fk)) * SP; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c];
         if (d > 0) { p[a] = sg * sqrt(d); const h = H(G, p, 18); if (h < -3) f = test(p, h, hs2(i, j, salt + 2 + fk)); } memo.set(key, f); }
       if (f) out.push(f);
