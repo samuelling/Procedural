@@ -10,7 +10,7 @@ export function mkSound() {
   const src = ac.createBufferSource(); src.buffer = nb; src.loop = true; src.start();
   const mk = (type, f, q) => { const fl = ac.createBiquadFilter(), g = ac.createGain(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; g.gain.value = 0; src.connect(fl); fl.connect(g); g.connect(muf); return { fl, g }; };
   const low = mk('bandpass', 320, 0.5), leaves = mk('highpass', 2600, 0.3), rain = mk('highpass', 4200, 0.4), thun = mk('lowpass', 110, 0.5), burn = mk('bandpass', 1300, 0.7);
-  let st = { wind: 0.5, day: 1, night: 0, rain: 0, fire: 0, life: 1, birds: 'mixed', spring: 0, vol: 0 }, next = 0, nx2 = 0;
+  let st = { wind: 0.5, day: 1, night: 0, rain: 0, fire: 0, life: 1, birds: 'mixed', spring: 0, vol: 0, bm: 1 }, next = 0, nx2 = 0;
   // calls: a few notes each, as [from Hz, to Hz, seconds a note, how many, seconds apart, wave, loudness] (sketched, not checked against recordings)
   const E = { frog: [430, 380, 0.08, 5, 0.13, 'square', 0.015], wood: [1000, 800, 0.018, 13, 0.055, 'square', 0.03], cuckoo: [660, 520, 0.26, 2, 0.34, 'sine', 0.05], bark: [760, 480, 0.11, 3, 0.24, 'sawtooth', 0.03],
     thrush: [1900, 3500, 0.13, 5, 0.19, 'sine', 0.02], robin: [2300, 4100, 0.09, 7, 0.14, 'sine', 0.018], wren: [3600, 6400, 0.04, 14, 0.06, 'sine', 0.014], chickadee: [3900, 3300, 0.3, 2, 0.4, 'sine', 0.02], warbler: [4100, 6900, 0.06, 8, 0.1, 'sine', 0.014],
@@ -47,9 +47,9 @@ export function mkSound() {
     }
     if (st.rain < 0.3) { const r = Math.random(), B = W[st.birds] || W.mixed;   // who sings depends on the woods; most of all in the morning
       if (st.night < 0.3 && B.length && r < 0.012) ev('wood');
-      else if (st.night < 0.3 && B.length && r < 0.06 * st.day) ev(B[(Math.random() * B.length) | 0]);
+      else if (st.night < 0.3 && B.length && r < 0.06 * st.day * Math.min(1.6, st.bm)) ev(B[(Math.random() * B.length) | 0]);
       else if (st.night < 0.3 && st.spring && st.birds !== 'tropic' && r > 0.99) ev('cuckoo'); else if (st.night > 0.6 && r < 0.006) ev('bark'); }
-    if (t > next) { if (B0() && st.rain < 0.5 && Math.random() < st.day) bird(t + 0.05); next = t + 0.5 + Math.random() * 3.5; }
+    if (t > next) { if (B0() && st.rain < 0.5 && Math.random() < st.day * Math.min(1.6, st.bm)) bird(t + 0.05); next = t + 0.5 + Math.random() * 3.5; }
   }, 250);
   const B0 = () => (W[st.birds] || W.mixed).length > 0;
   const wn = ac.createBuffer(1, ac.sampleRate * 0.4, ac.sampleRate), c = wn.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = Math.random() * 2 - 1;

@@ -12,6 +12,7 @@ import { mkBeavers, POND_GLSL } from './beaver.js';
 import { mkCosmos, COS } from './cosmos.js';
 import { mkMicro, MICRO, ENT, lampK } from './micro.js';
 import { mkSound } from './sound.js';
+import { mkEco, drawn, Who } from './eco.js';
 import { nSpecies, sunAt, season, vn3, AGES, ageWorld, carry, sibling } from './planet.js';
 import { mkTrees } from './trees.js';
 import { mkCover } from './cover.js';
@@ -343,7 +344,7 @@ function shadowPass() {
   gl.bindFramebuffer(gl.FRAMEBUFFER, shFB.f); gl.viewport(0, 0, SH.size, SH.size); gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
   gl.clearBufferfv(gl.COLOR, 0, [-1e9, 0, 0, 0]); gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0);
-  SH.cast = true; trees.draw(common, setNoise, cam, G, S); city.draw(common, setNoise, cam, G, S); fauna.beasts(common, cam, G, S); SH.cast = false;
+  SH.cast = true; trees.draw(common, setNoise, cam, G, S); city.draw(common, setNoise, cam, G, S); fauna.beasts(common, cam, G, S, eco); SH.cast = false;
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, shFB.t); gl.activeTexture(gl.TEXTURE0);
 }
 const post = prog(`#version 300 es
@@ -363,7 +364,7 @@ const sky = mkSky(gl, prog, PRE);
 const trees = mkTrees(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND);
 const cover = mkCover(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const city = mkCity(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
-const fauna = mkFauna(gl, prog, PRE);
+const fauna = mkFauna(gl, prog, PRE), eco = mkEco();
 const life = mkLife(() => G);
 const marine = mkMarine(gl, prog, PRE + GLSL_NOISE + GLSL_GROUND + CLIM);
 const cave = mkCave(gl, prog, PRE);
@@ -377,12 +378,16 @@ const micro = mkMicro(gl, prog, PRE);
 // ---- light: the planet's star, where it stands over this spot ------------------------------------------------------
 const L = { sun: [0, 1, 0], sunC: [0, 0, 0], sky: [0, 0, 0] };
 // ---- time: each planet keeps its own clock (in its own days); the season and the weather where you are ----------
-const SPEEDS = [0, 1 / 1200, 1 / 60, 1 / 6, 2], SPN = ['stopped', 'a day in 20 minutes', 'a day a minute', 'a day in 6 seconds', 'two days a second'];
+const SPEEDS = [0, 1 / 1200, 1 / 60, 1 / 6, 2, 30, 365, 3650], SPN = ['stopped', 'a day in 20 minutes', 'a day a minute', 'a day in 6 seconds', 'two days a second', 'a month a second', 'a year a second', 'ten years a second'];
 let speed = 1;
 const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
 function clock(dt, far) {
-  if (G.real) { realT += (far ? min(SPEEDS[speed] * G.dayH / 24, 1 / 86400) : SPEEDS[speed] * G.dayH / 24) * dt;   // (in space near the real worlds time runs at its own pace, so what moves can be caught)
- G.t = realT; world(G.n).t = realT; realSky(); } else G.t = (G.t || 0) + SPEEDS[speed] * dt;
+  // past a month a second, time goes on in whole days (the hour stays put), past a year a second in whole years
+  // (the season stays put too), so the sky does not flicker while the years go by
+  const sp = SPEEDS[speed], dd = (G.real ? (far ? min(sp * G.dayH / 24, 1 / 86400) : sp * G.dayH / 24) : sp) * dt, un = sp >= 3650 ? G.yearD : G.real ? G.dayH / 24 : 1;
+  let adv = dd; if (sp >= 30 && !far) { clock.acc = (clock.acc || 0) + dd; adv = floor(clock.acc / un) * un; clock.acc -= adv; }
+  if (G.real) { realT += adv;   // (in space near the real worlds time runs at its own pace, so what moves can be caught)
+ G.t = realT; world(G.n).t = realT; realSky(); } else G.t = (G.t || 0) + adv;
   const u = nrm(cam.P), lat = Math.asin(max(-1, min(1, dot(u, G.axis)))), se = season(G, G.t, lat);
   S.lat = lat; S.seasonS = se.s; S.spring = se.spring;
   S.seasT = 11 * se.s * min(1, G.tilt / 0.41);                            // warmer in summer, colder in winter
@@ -488,6 +493,7 @@ function frame(now) {
   if (!cave.C.in && cave.enter(cam, G, S)) { cam.yaw = 0; }
   if (!cave.C.in && !S.under && ctl.mode === 'fly' && S.hc < MICRO && S.g0 > -1e9) { pick(canvas.clientWidth / 2, canvas.clientHeight * 0.75); const m = pick.mat >= 1 && pick.mat <= 5 ? pick.mat : 1;
     micro.enter(nrm(cam.P).map((v) => v * (G.R + S.cy - S.hc)), S.F.map((v) => v.slice()), [0, S.hc, 0], groundMat(m), MICRO, microLook(groundMat(m), 0)); requestAnimationFrame(frame); return; }
+  S.eco = eco; eco.tick(G, S, S.F, speed ? dt : 0, speed > 0 && SPEEDS[speed] <= 1 / 60, S.hc);
   targets(W, Hp); matrices(); S.frame = (S.frame || 0) + 1; S.meet = (Gp, c) => life.meet(Gp, c); S.cast = () => SH.cast; S.shR = () => SH.r;
   if (cave.C.in) { gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.viewport(0, 0, W, Hp); gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]); gl.disable(gl.DEPTH_TEST); cave.render(common, cam, G, S, W, Hp); holes.none(); finish(dt); return; }
   if (S.cy > COS) {                                                        // far off: the planet as a world in space, its star, the stars, the galaxies
@@ -524,8 +530,8 @@ function frame(now) {
   cover.draw(common, setNoise, cam, G, S);
   city.draw(common, setNoise, cam, G, S);
   marine.draw(common, setNoise, cam, G, S);
-  fauna.draw(common, cam, G, S);
-  fauna.beasts(common, cam, G, S);
+  fauna.draw(common, cam, G, S, eco);
+  fauna.beasts(common, cam, G, S, eco);
   cave.draw(common, cam, G, S);
   beavers.draw(common, G, S);
   fire.draw(common, cam, G, S);
@@ -670,7 +676,7 @@ function sndSet() {                                                       // wha
   if (!snd || snd.ac.state !== 'running') return; const s = S.sun || [0, 1, 0], el = Math.asin(max(-1, min(1, s[1]))) * 180 / PI, cl = (x) => min(1, max(0, x)), hc = micro.M.on ? 0 : S.hc || 0;
   const u = nrm(cam.P), lat = abs(Math.asin(u[2]) * 180 / PI), alive = !G.real || G.real === 'earth', wet = (S.rain || 0) * (!S.snow && S.cy < (G.cloudTop || 1e4) ? 1 : 0);
   snd.set({ vol: cl(G.air || 0) * cl(1 - ((S.cy || 0) - 3e4) / 7e4), wind: min(1, 0.3 + 0.5 * wet + Math.log10(1 + hc) / 5) * (cave.C.in ? 0.15 : 1), day: cl((el + 4) / 20), night: 1 - cl((el + 8) / 10), rain: cave.C.in ? 0 : wet,
-    fire: S.fireD ? cl(1 - S.fireD / 300) : 0, life: alive && !cave.C.in ? cl(1 - hc / 400) * (S.snow && S.bare > 0.5 ? 0.3 : 1) : 0, birds: G.real === 'earth' ? (lat < 23 ? 'tropic' : lat > 52 ? 'boreal' : 'mixed') : 'mixed', spring: S.spr > 0.5, muffle: micro.M.on || ctl.dive > 0.05 });
+    fire: S.fireD ? cl(1 - S.fireD / 300) : 0, life: alive && !cave.C.in ? cl(1 - hc / 400) * (S.snow && S.bare > 0.5 ? 0.3 : 1) : 0, birds: G.real === 'earth' ? (lat < 23 ? 'tropic' : lat > 52 ? 'boreal' : 'mixed') : 'mixed', spring: S.spr > 0.5, bm: G.real === 'earth' || !G.real ? eco.birdsAt(S.foot) : 1, muffle: micro.M.on || ctl.dive > 0.05 });
 }
 setInterval(sndSet, 250);
 addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) sndToggle(); });
@@ -736,7 +742,7 @@ const BANDS = [[3e25, 'the cosmic web'], [3e23, 'clusters of galaxies'], [3e21, 
 // (a plain readPixels stalls the pipeline: every sixth frame took twice as long, a visible hitch in any motion)
 const PB = { buf: null, sync: null, val: null };
 function pickLate(px, py) {
-  if (PB.sync) { if (gl.clientWaitSync(PB.sync, 0, 0) === gl.TIMEOUT_EXPIRED) return PB.val; gl.deleteSync(PB.sync); PB.sync = null; const o = new Float32Array(4); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, PB.buf); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, o); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); PB.val = o[0] < 1e11 ? o[0] : null; }
+  if (PB.sync) { if (gl.clientWaitSync(PB.sync, 0, 0) === gl.TIMEOUT_EXPIRED) return PB.val; gl.deleteSync(PB.sync); PB.sync = null; const o = new Float32Array(4); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, PB.buf); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, o); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); PB.val = o[0] < 1e11 ? o[0] : null; PB.code = o[0] < 1e11 ? o[1] : 0; }
   if (!FB) return PB.val; if (!PB.buf) { PB.buf = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, PB.buf); gl.bufferData(gl.PIXEL_PACK_BUFFER, 16, gl.STREAM_READ); }
   gl.bindFramebuffer(gl.FRAMEBUFFER, FB.f); gl.readBuffer(gl.COLOR_ATTACHMENT1); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, PB.buf);
   gl.readPixels(Math.floor(px * W / canvas.clientWidth), Math.floor(Hp - 1 - py * Hp / canvas.clientHeight), 1, 1, gl.RGBA, gl.FLOAT, 0);
@@ -751,7 +757,10 @@ function hud() {
   $('alt').textContent = micro.M.on ? (micro.M.P[1] > 0 ? `${fmt(micro.M.P[1])} above the ` : 'in among the atoms of the ') + (micro.MATS[micro.M.mat] || { on: 'ground' }).on + (w < 2e-7 ? ' · finer than light can show: the colours are a convention' : lampK(S, micro.M) > 0.35 ? ' · lit by the microscope’s lamp' : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
   if (G.E && !cave.C.in && !micro.M.on && S.cy < 1e8) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
   if (G.real && !cave.C.in && !micro.M.on && S.cy < 1e8) { const u = nrm(cam.P), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI; $('alt').textContent += ` · ${abs(la).toFixed(2)}°${la < 0 ? 'S' : 'N'} ${abs(lo).toFixed(2)}°${lo < 0 ? 'W' : 'E'}`; }
-  const sp = life.look(G, pick.code); $('sp').textContent = sp ? sp.name : ''; $('sp').hidden = !sp;
+  const code = PB.code ?? pick.code, an = code >= 2e6 ? drawn[Math.round(code - 2e6)] : null, sp = an || !(floor((Math.round(code) - 1) / 10000) < G.species.length) ? null : life.look(G, code), pc = (v) => (v >= 1 ? '+' : '−') + abs(Math.round((v - 1) * 100)) + '%';
+  $('sp').textContent = an ? `${Who(an)}, ${an.age < 1 ? Math.round(an.age * 12) + ' months' : an.age.toFixed(0) + ' years'} old${an.dead >= 0 ? `, ${an.why === 'killed' ? 'killed' : 'dead'}` : ''} · a ${an.k.nm}, generation ${an.gen} · size ${pc(an.gn[0])}, speed ${pc(an.gn[1])}, wariness ${pc(an.gn[2])}` : sp ? sp.name : ''; $('sp').hidden = !an && !sp;
+  $('eco').textContent = [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent;
+  { const e = eco.log[eco.log.length - 1]; if (e && performance.now() - e.t < 7000) { if ($('say').textContent !== e.s) $('say').textContent = e.s; $('say').classList.add('on'); } else $('say').classList.remove('on'); }
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
   $('bar').style.width = min(100, max(1, (Math.log10(w) + 18) / 45 * 100)) + '%';
@@ -781,4 +790,4 @@ goSel.addEventListener('change', () => { if (goSel.value !== '') goPlace(+goSel.
 // first: on the Earth, wherever among these places the Sun now stands highest short of noon's glare
 { let best = 0, bs = -9; const E = world(100), s = sunAt(E, realT); PLACES.forEach((p, i) => { if (p[1] !== 100) return; const el = Math.asin(dot(unitLL(p[2], p[3]), s)) * 180 / PI, sc = -abs(el - 32); if (sc > bs) { bs = sc; best = i; } }); goPlace(best); }
 requestAnimationFrame(frame);
-window.sylva = { get snd() { return snd; }, sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
+window.sylva = { get snd() { return snd; }, get eco() { return eco; }, get speed() { return speed; }, set speed(v) { speed = v; }, sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };

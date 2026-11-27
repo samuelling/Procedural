@@ -238,8 +238,10 @@ void main() {
         if ((i1 - i0) * (j1 - j0) > 60000) continue;
         for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
           const key = ((a * 2 + (sg > 0 ? 1 : 0)) * 2000003 + i) * 2000003 + j; let t = K.memo.get(key);
-          if (t === undefined) { if (budget-- <= 0) continue; t = site(G, a, sg, i, j); K.memo.set(key, t); }
-          if (!t) continue;
+          const z = S.eco ? S.eco.site(key) : undefined;                // near you a tree is a living thing (eco.js): its size, or a snag, or nothing yet
+          if (z !== undefined) { if (z === null) continue; t = z.t; }
+          else { if (t === undefined) { if (budget-- <= 0) continue; t = site(G, a, sg, i, j); K.memo.set(key, t); }
+            if (!t) continue; }
           const D = [t.p[0] - foot[0], t.p[1] - foot[1], t.p[2] - foot[2]], q = [D[0] * F[0][0] + D[1] * F[0][1] + D[2] * F[0][2], D[0] * F[1][0] + D[1] * F[1][1] + D[2] * F[1][2], D[0] * F[2][0] + D[1] * F[2][1] + D[2] * F[2][2]];
           const d = hypot(q[0], q[2]); if (d > r2) continue;
           const pos = [q[0] + q[0] * t.h / G.R, q[1] + (t.h - S.cy) + q[1] * t.h / G.R, q[2] + q[2] * t.h / G.R];
@@ -247,7 +249,8 @@ void main() {
           const fNear = min(1, max(0, (R1 - d) / 14)), fFar = min(1, max(0, (d - (R1 - 14)) / 14)) * min(1, max(0, (r2 - d) / 60));
           // after a fire: burning, then a black snag, which in a few years falls; then a sapling, growing back
           let bs = 0, s3 = sc2; const ba = S.fireAge ? S.fireAge(t.p) : -1;
-          if (ba >= 0) { const yr = ba / G.yearD; if (ba < 0.12) bs = 2; else if (yr < 7) { bs = 1; if (yr > 2.5 && (t.seed * 7.31) % 1 < (yr - 2.5) / 4.5) continue; } else s3 = sc2 * (0.05 + 0.95 * min(1, ((yr - 7) / 50) ** 0.8)); }
+          if (z) { s3 = z.sz; if (z.snag >= 0) bs = 1; if (ba >= 0 && ba < 0.12) bs = 2; }
+          else if (ba >= 0) { const yr = ba / G.yearD; if (ba < 0.12) bs = 2; else if (yr < 7) { bs = 1; if (yr > 2.5 && (t.seed * 7.31) % 1 < (yr - 2.5) / 4.5) continue; } else s3 = sc2 * (0.05 + 0.95 * min(1, ((yr - 7) / 50) ** 0.8)); }
           if (S.pondAt) { const pa = S.pondAt(t.p, t.h); if (pa === 1) bs = max(bs, 1); else if (pa < 0) continue; else if (pa > 0) s3 = min(s3, sc2 * (0.05 + 0.95 * pa)); }
           const g = t.spc, gx = [g.hM, g.wM, g.leaf[0], g.leaf[1], g.canopy[0], g.canopy[1], g.canopy[2], g.leaf[2], g.bark[0], g.bark[1], g.bark[2], g.rough, g.code, g.decid, g.fall, bs];
           if (d < 40) metNow.push(g.code);

@@ -291,6 +291,17 @@ export function site(G, a, sg, i, j) {
   return { p, h, sp: s, spc: species(G, s, ix[0] + (base + k * 61) % nS), seed: hs2(i, j, 80 + fk) };
 }
 
+// a site's ground and how well a tree would do there (the forest's own density, 0..1), whether or not one stands
+// there now: where a seed lands (eco.js)
+export function siteP(G, a, sg, i, j) {
+  const [b, c] = AX[a], fk = a * 2 + (sg > 0 ? 1 : 0), xb = (i + 0.15 + 0.7 * hs2(i, j, 40 + fk)) * TREE, xc = (j + 0.15 + 0.7 * hs2(i, j, 50 + fk)) * TREE, d = G.R * G.R - xb * xb - xc * xc;
+  if (d <= 0) return null; const xa = sg * Math.sqrt(d); if (Math.abs(xa) < Math.max(Math.abs(xb), Math.abs(xc))) return null;
+  const p = [0, 0, 0]; p[a] = xa; p[b] = xb; p[c] = xc;
+  const h = H(G, p, 26); if (h < 0.5) return null; const { T, W } = climate(G, p, h);
+  if (river(G, p, h, W) > 0.25) return null;
+  return { p, h, T, W, F: forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)), seed: hs2(i, j, 80 + fk) };
+}
+
 // ---- cities: on inhabited planets, a few towns and cities in each 60 km cell of the cube faces, where the land
 // suits them (low, not too steep, not desert or ice). rho is how built-up a place is (0..1): a city's core is 1.
 export const CITY = 60000, LOT = 30;
