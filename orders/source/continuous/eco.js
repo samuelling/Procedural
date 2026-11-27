@@ -229,10 +229,10 @@ export function mkEco() {
     const q = R.grass / (R.grass + 0.25); let eat = 0;                     // each chain at its carrying capacity takes a fixed share of the regrowth
     R.ch.forEach((C, ci) => { eat += (ci ? 0.2 : 0.45) * C.herd.reduce((s, d) => s + (d.dead < 0 ? sizeAt(d) ** 2.25 : 0), 0) / (C.K * C.g.sz ** 2.25); });   // intake goes as mass^0.75
     eat *= q * 0.75;
-    R.grass = cl(R.grass + dy * (2.2 * R.grass * (1 - R.grass) * R.warm + 0.03 - eat - 0.45 * R.ins * R.grass), 0.01, 1);
-    R.ins = cl(R.ins + dy * (R.ins * (2.6 * (0.5 * R.grass + 0.7 * R.fF) * R.warm - 1 - 1.7 * R.birds) + 0.02), 0.01, 3);
-    R.birds = cl(R.birds + dy * (R.birds * (2 * R.ins / (R.ins + 0.4) - 0.9 - 1.1 * R.hawk) + 0.01), 0.01, 2);
-    if (R.nm.hawk) R.hawk = cl(R.hawk + dy * (R.hawk * (1.1 * R.birds / (R.birds + 0.25) - 0.6) + 0.003), 0.002, 1.5);   // hawks on the small birds: they follow them up and down, a year or two behind
+    R.grass = cl(R.grass + dy * (2.2 * R.grass * (1 - R.grass) * R.warm + 0.03 - eat - 0.3 * R.ins * R.grass), 0.01, 1);
+    R.ins = cl(R.ins + dy * (R.ins * (2.6 * (0.5 * R.grass + 0.7 * R.fF) * R.warm * (1 - R.ins / 2) - 1 - 1.7 * R.birds) + 0.02), 0.01, 3);   // insects are limited by their own food too
+    R.birds = cl(R.birds + dy * (R.birds * (2.2 * R.ins / (R.ins + 0.3) - 0.8 - 1.1 * R.hawk) + 0.01), 0.01, 2);
+    if (R.nm.hawk) R.hawk = cl(R.hawk + dy * (R.hawk * (1.1 * R.birds / (R.birds + 0.2) - 0.5 - 0.5 * R.hawk) + 0.003), 0.002, 1.5);   // (and by their territories: a crowded sky holds fewer)   // hawks on the small birds: they follow them up and down, a year or two behind
     if (R.wet > 0) {                                                       // the streams and ponds: insects in the water, fish on them, otters and herons on the fish
       R.aq = cl(R.aq + dy * (R.aq * (2.4 * R.warm * (0.6 + 0.4 * R.fF) - 0.8 - 1.3 * R.fish) + 0.02), 0.02, 3);
       R.fish = cl(R.fish + dy * (R.fish * (1.4 * R.aq / (R.aq + 0.5) - 0.5 - (R.nm.top ? 1.2 * R.otter : 0.4)) + 0.01), 0.01, 3);
@@ -443,7 +443,7 @@ export function mkEco() {
         R.near = true; R.seen = 1; R.ea = ea; R.eb = eb;
         // catch up the years since it was last seen, then this frame's share; a month a step at most
         let gap = (G.t - R.t) / yearD; if (gap > 300) gap = 300; let t0 = G.t - gap * yearD;
-        while (gap > 1e-9) { const dy = min(gap, 1 / 12); step(R, dy, t0, wall && gap < 0.1); t0 += dy * yearD; gap -= dy; }
+        while (gap > 1e-9) { const dy = min(gap, gap > 0.5 ? 1 / 6 : 1 / 12); step(R, dy, t0, wall && gap < 0.1); t0 += dy * yearD; gap -= dy; }
         R.t = G.t;
         const D = R.p.map((v, k) => v - foot[k]), cx = -(D[0] * ea[0] + D[1] * ea[1] + D[2] * ea[2]), cz = -(D[0] * eb[0] + D[1] * eb[1] + D[2] * eb[2]); R.cam = [cx, cz];
         if (wall && dt > 0) for (const C of R.ch) behave(G, R, C, min(dt, 0.1), [cx, cz, camH]);
@@ -455,7 +455,7 @@ export function mkEco() {
       }
       const T1 = performance.now();
       // the stands round you (within about 250 m): set up a slice a frame, then kept up a year at a time
-      const pi0 = floor(foot[b] / TREE / PATCH), pj0 = floor(foot[c] / TREE / PATCH), here = []; let bud = 1500, setup = 48;
+      const pi0 = floor(foot[b] / TREE / PATCH), pj0 = floor(foot[c] / TREE / PATCH), here = []; let bud = 900, setup = 48;
       for (let pi = pi0 - 2; pi <= pi0 + 2; pi++) for (let pj = pj0 - 2; pj <= pj0 + 2; pj++) {
         const P = stand(G, a, sg, pi, pj); if (!P.ready) { if (setup > 0) setup = build(G, P, setup); if (!P.ready) continue; } P.seen = 1; here.push(P);
       }
@@ -476,7 +476,7 @@ export function mkEco() {
     site(k) { const s = sites.get(k); if (!s || !s.P.ready) return undefined; if (s.empty) return null; return s; },
     at(p) { let best = null, bd = 4e6; for (const R of near) { const d = (R.p[0] - p[0]) ** 2 + (R.p[1] - p[1]) ** 2 + (R.p[2] - p[2]) ** 2; if (d < bd) { bd = d; best = R; } } return best; },
     birdsAt(p) { const R = this.at(p); return R ? R.birds / 0.3 : 1; },
-    hawksAt(p) { const R = this.at(p); return R && R.nm.hawk ? R.hawk / 0.1 : 0; },
+    hawksAt(p) { const R = this.at(p); return R && R.nm.hawk ? R.hawk / 0.2 : 0; },
     // what is here, in a line: the herds and hunters, the grass, the insects, the birds
     here(S) {
       const R0 = this.at(S.foot); if (!R0) return ''; let R = R0, bg = 2.6e6; const f = S.foot;
@@ -486,7 +486,7 @@ export function mkEco() {
         const H0 = alive(C.herd), P0 = alive(C.pack), yg = H0.filter((d) => d.age < 1).length, gen = H0.length ? max(...H0.map((d) => d.gen)) : 0, m = (i) => H0.length ? H0.reduce((s, d) => s + d.gn[i], 0) / H0.length : 1;
         out.push(`${H0.length} ${H0.length === 1 ? C.g.nm : C.g.pl}${yg ? ` (${yg} ${yg > 1 ? plural(C.g.yg) : C.g.yg})` : ''}` + (C.h ? `, ${P0.length} ${P0.length === 1 ? C.h.nm : C.h.pl}` : '') + (ci ? ' in 10 ha' : C.A > 1.01 ? ` in ${Math.round(C.A)} km²` : '') + (gen && !ci ? ` · generation ${gen}: size ${pc(m(0))}, speed ${pc(m(1))}, wariness ${pc(m(2))}` : ''));
       });
-      out.push(`grass ${Math.round(R0.grass * 100)}% · insects ${R0.ins.toFixed(1)} · ${R0.nm.birds || 'birds'} ${(R0.birds / 0.3).toFixed(1)}×` + (R0.nm.hawk ? ` · ${R0.nm.hawk}s ${(R0.hawk / 0.1).toFixed(1)}×` : ''));
+      out.push(`grass ${Math.round(R0.grass * 100)}% · insects ${R0.ins.toFixed(1)} · ${R0.nm.birds || 'birds'} ${(R0.birds / 0.3).toFixed(1)}×` + (R0.nm.hawk ? ` · ${R0.nm.hawk}s ${(R0.hawk / 0.4).toFixed(1)}×` : ''));
       if (R0.wet > 0) out.push(`in the water: insects ${R0.aq.toFixed(1)}, ${R0.nm.fish} ${R0.fish.toFixed(1)}` + (R0.nm.top ? `, ${R0.nm.top}s ${R0.otter.toFixed(1)}` : '') + (R0.herons.length ? `, ${R0.herons.length} ${R0.herons.length > 1 ? R0.nm.heron.pl : R0.nm.heron.nm}` : ''));
       return out.join(' · ');
     },
