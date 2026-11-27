@@ -2,65 +2,66 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>(M)orders of Magnitude: one world, five sizes</title>
 <style>
-:root { --field: #0d120d; --ink: #eef0e2; --dim: #a9b19c; --line: rgba(238,240,226,.16); --amber: #e8b25a; --lichen: #a8c99a; --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; }
+:root { --field: #0d120d; --ink: #eef0e2; --dim: #a9b19c; --line: rgba(238,240,226,.16); --amber: #e8b25a; --lichen: #a8c99a; --serif: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; --dot: 'Doto', ui-monospace, monospace; --ui: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+@font-face { font-family: 'Doto'; src: url(fonts/doto.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
 * { box-sizing: border-box; }
 html { background: var(--field); }
 body { margin: 0; background: radial-gradient(1400px 700px at 20% 0%, #1a2418 0%, rgba(13,18,13,0) 70%) no-repeat; color: var(--ink); font: 400 16px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif; }
 main { max-width: 980px; margin: 0 auto; padding: 64px 22px 90px; }
 header { max-width: 640px; margin-bottom: 44px; }
-h1 { margin: 0 0 14px; font: italic 600 clamp(40px, 7vw, 64px)/1 var(--serif); letter-spacing: -.01em; }
-h1 small { display: block; margin-top: 10px; font: italic 400 clamp(19px, 2.6vw, 24px)/1.2 var(--serif); color: var(--lichen); letter-spacing: 0; }
+h1 { margin: 0 0 14px; font: 800 clamp(40px, 7vw, 64px)/1 var(--dot); letter-spacing: -.01em; }
+h1 small { display: block; margin-top: 10px; font: 700 clamp(19px, 2.6vw, 24px)/1.2 var(--dot); color: var(--lichen); letter-spacing: 0; }
 .lede { margin: 0 0 22px; font-size: 17px; color: var(--ink); text-wrap: pretty; }
-.how { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .how > p { width: 100%; margin: 0 0 2px; font: italic 400 15px/1 var(--serif); color: var(--lichen); }
-.story { display: inline-block; background: none; cursor: pointer; padding: 10px 18px; border: 1px solid var(--amber); border-radius: 999px; color: var(--ink); text-decoration: none; font: italic 500 17px/1.2 var(--serif); }
+.how { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; } .how > p { width: 100%; margin: 0 0 2px; font: 500 15px/1 var(--ui); color: var(--lichen); }
+.story { display: inline-block; background: none; cursor: pointer; padding: 10px 18px; border: 1px solid var(--amber); border-radius: 999px; color: var(--ink); text-decoration: none; font: 600 17px/1.2 var(--ui); }
 .story:hover, .story:focus-visible { background: var(--amber); color: #1b160c; outline: none; }
 .rung { display: grid; grid-template-columns: minmax(0, var(--w)) minmax(260px, 1fr); gap: 22px 28px; align-items: start; }
 .r4 { grid-template-columns: 1fr; }
 .pic { position: relative; display: block; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
 .pic img { display: block; width: 100%; height: auto; transition: transform .5s cubic-bezier(.2,.7,.2,1); }
-.pic span { position: absolute; right: 10px; bottom: 10px; padding: 5px 11px; border-radius: 999px; background: rgba(13,18,13,.72); font: italic 500 14px/1 var(--serif); opacity: 0; transition: opacity .2s; }
+.pic span { position: absolute; right: 10px; bottom: 10px; padding: 5px 11px; border-radius: 999px; background: rgba(13,18,13,.72); font: 600 14px/1 var(--ui); opacity: 0; transition: opacity .2s; }
 .pic:hover img, .pic:focus-visible img { transform: scale(1.04); } .pic:hover span, .pic:focus-visible span { opacity: 1; }
 .pic:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
-h2 { margin: 0 0 8px; font: italic 500 clamp(22px, 3vw, 28px)/1.15 var(--serif); }
+h2 { margin: 0 0 8px; font: 800 clamp(22px, 3vw, 28px)/1.15 var(--dot); }
 h2 a { color: inherit; text-decoration: none; } h2 a:hover { color: var(--amber); }
-h2 b { display: block; font: 700 clamp(30px, 5vw, 44px)/1 var(--serif); font-style: normal; color: var(--amber); margin-bottom: 4px; font-variant-numeric: lining-nums; }
+h2 b { display: block; font: 800 clamp(30px, 5vw, 44px)/1 var(--dot); font-style: normal; color: var(--amber); margin-bottom: 4px; font-variant-numeric: lining-nums; }
 .line { margin: 0 0 14px; max-width: 54ch; text-wrap: pretty; }
 .fill p { margin: 6px 0 0; font-size: 13px; color: var(--dim); } .fill b { color: var(--ink); font-weight: 600; }
-.code { margin: 16px 0 0; } .code figcaption { font: italic 400 14px/1 var(--serif); color: var(--lichen); margin-bottom: 6px; }
+.code { margin: 16px 0 0; } .code figcaption { font: 500 14px/1 var(--ui); color: var(--lichen); margin-bottom: 6px; }
 .code code { display: block; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid var(--line); font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); word-break: break-all; }
 .was { margin: 10px 0 0; font-size: 14px; opacity: .8; } .r4 .was { grid-column: 1; } .was a { color: var(--lichen); }
-.try { margin-top: 16px; } .try p { margin: 0 0 6px; font: italic 400 15px/1 var(--serif); color: var(--lichen); }
+.try { margin-top: 16px; } .try p { margin: 0 0 6px; font: 500 15px/1 var(--ui); color: var(--lichen); }
 .try ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .try li { padding-left: 20px; position: relative; font-size: 14.5px; max-width: 60ch; text-wrap: pretty; }
 .try li::before { content: ''; position: absolute; left: 3px; top: .55em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--amber); }
 .try b { font-weight: 600; color: var(--ink); }
 .r4 .txt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 36px; } .r4 .txt > h2, .r4 .txt > .line, .r4 .txt > .fill { grid-column: 1; } .r4 .try { grid-column: 2; grid-row: 1 / span 3; margin-top: 4px; } .r4 details { grid-column: 1 / -1; }
 details { margin-top: 22px; border-top: 1px solid var(--line); }
-summary { cursor: pointer; padding: 14px 0; font: italic 500 18px/1.2 var(--serif); color: var(--ink); list-style: none; }
+summary { cursor: pointer; padding: 14px 0; font: 600 18px/1.2 var(--ui); color: var(--ink); list-style: none; }
 summary::-webkit-details-marker { display: none; } summary::after { content: ' +'; color: var(--amber); } details[open] summary::after { content: ' −'; }
 summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 28px; }
-dt { font: italic 600 16px/1.2 var(--serif); color: var(--lichen); } dd { margin: 4px 0 0; font-size: 14px; color: var(--dim); text-wrap: pretty; }
+dt { font: 600 16px/1.2 var(--ui); color: var(--lichen); } dd { margin: 4px 0 0; font-size: 14px; color: var(--dim); text-wrap: pretty; }
 .step { position: relative; height: 74px; }
 .step::before { content: ''; position: absolute; left: 18px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(var(--line), var(--amber), var(--line)); }
-.step span { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); font: italic 400 14px/1 var(--serif); color: var(--lichen); }
+.step span { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); font: 500 14px/1 var(--ui); color: var(--lichen); }
 dialog { padding: 0; border: 1px solid var(--line); border-radius: 16px; background: #121a12; color: var(--ink); width: min(900px, calc(100% - 24px)); max-height: calc(100dvh - 40px); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
 dialog::backdrop { background: rgba(5,8,5,.72); backdrop-filter: blur(3px); }
 dialog[open] { animation: pop .22s cubic-bezier(.2,.8,.2,1); } @keyframes pop { from { transform: translateY(14px) scale(.98); opacity: 0; } }
 .tk { display: flex; flex-direction: column; max-height: calc(100dvh - 42px); }
 .tk header { max-width: none; margin: 0; padding: 22px 24px 0; border-bottom: 1px solid var(--line); position: relative; }
-.tk h2 { margin: 0 0 8px; font: italic 600 28px/1.1 var(--serif); } .tk header p { margin: 0 0 14px; font-size: 14.5px; color: var(--dim); max-width: 70ch; text-wrap: pretty; }
+.tk h2 { margin: 0 0 8px; font: 800 28px/1.1 var(--dot); } .tk header p { margin: 0 0 14px; font-size: 14.5px; color: var(--dim); max-width: 70ch; text-wrap: pretty; }
 .tk .a { color: var(--amber); } .tk .r { color: var(--lichen); }
 .x { position: absolute; right: 14px; top: 12px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; } .x:hover { border-color: var(--amber); }
 .tk nav { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: thin; }
-.tk nav button { flex: none; display: flex; align-items: baseline; gap: 7px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--dim); font: 400 14px/1.2 var(--serif); cursor: pointer; }
+.tk nav button { flex: none; display: flex; align-items: baseline; gap: 7px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--dim); font: 500 14px/1.2 var(--ui); cursor: pointer; }
 .tk nav button b { font-style: normal; font-weight: 700; color: var(--amber); }
 .tk nav button[aria-selected="true"] { background: var(--amber); border-color: var(--amber); color: #1b160c; } .tk nav button[aria-selected="true"] b { color: #1b160c; }
 .body { overflow-y: auto; padding: 18px 24px 30px; display: flex; flex-direction: column; gap: 14px; }
 .settled { margin: 0; padding: 12px 14px; border-radius: 10px; background: rgba(168,201,154,.08); font-size: 14px; color: var(--dim); } .settled b { color: var(--ink); font-weight: 600; }
 .note { font-size: 13.5px; color: var(--dim); } .note p { margin: 0 0 8px; }
 .turn { position: relative; max-width: 88%; padding: 12px 16px 6px; border-radius: 16px; font-size: 14.5px; line-height: 1.55; text-wrap: pretty; }
-.turn .who { display: block; margin-bottom: 4px; font: italic 700 16px/1 var(--serif); }
+.turn .who { display: block; margin-bottom: 4px; font: 600 16px/1 var(--ui); }
 .turn.ash { align-self: flex-start; background: rgba(232,178,90,.08); border: 1px solid rgba(232,178,90,.35); border-bottom-left-radius: 4px; } .turn.ash .who { color: var(--amber); }
 .turn.rowan { align-self: flex-end; background: rgba(168,201,154,.08); border: 1px solid rgba(168,201,154,.35); border-bottom-right-radius: 4px; } .turn.rowan .who { color: var(--lichen); }
 .turn.builder { align-self: center; max-width: 94%; background: rgba(238,240,226,.05); border: 1px dashed var(--line); } .turn.builder .who { color: var(--ink); }
@@ -76,45 +77,139 @@ footer a { color: var(--ink); }
   .rung { grid-template-columns: 1fr; } .pic { width: var(--w); min-width: 46%; }
   .r4 .txt { display: block; } .step { height: 56px; }
 }
+.sizes { margin: -14px 0 56px; padding: 22px 24px 18px; border: 1px solid var(--line); border-radius: 14px; }
+.sizes h2 { margin: 0 0 8px; font: 800 24px/1.15 var(--dot); }
+.sizes > p { margin: 0 0 20px; max-width: 70ch; font-size: 15px; color: var(--dim); text-wrap: pretty; }
+.sizes ol { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin: 0; padding: 0; list-style: none; }
+.sizes ol > li { display: grid; grid-template-rows: 100px auto auto 1fr; align-content: start; }
+.sizes .sq { align-self: end; display: block; min-width: 1px; min-height: 1px; margin-bottom: 10px; background: var(--lichen); border-radius: 1px; }
+.sizes b { font: 800 22px/1.1 var(--dot); color: var(--ink); } .sizes i { font-style: normal; font-size: 13px; color: var(--dim); margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
+.sizes ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 13.5px; line-height: 1.4; text-wrap: pretty; }
+.sizes ul li { padding-left: 11px; position: relative; } .sizes ul li::before { content: ''; position: absolute; left: 0; top: .6em; width: 4px; height: 4px; border-radius: 50%; background: var(--amber); }
+.sizes .more { margin: 18px 0 0; font-size: 14px; color: var(--dim); }
+@media (max-width: 760px) { .sizes ol { grid-template-columns: 1fr; gap: 16px; } .sizes ol > li { grid-template-columns: 100px 1fr; grid-template-rows: auto auto 1fr; column-gap: 14px; } .sizes .sq { grid-row: 1 / 4; align-self: start; justify-self: center; margin: 4px 0 0; } }
+#field { position: absolute; top: 0; left: 0; width: 100%; height: min(760px, 100vh); pointer-events: none; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+main { position: relative; }
+@media (max-width: 760px) { #field { opacity: .45; } }
+h1, h2 { letter-spacing: -.02em; } h1 { font-variation-settings: 'ROND' 100; text-shadow: 0 0 22px rgba(168,201,154,.35); }
+.rung h2 b { text-shadow: 0 0 18px rgba(232,178,90,.35); }
+.step span { font: 800 20px/1 var(--dot); letter-spacing: -.01em; }
+.rail { position: fixed; right: max(14px, calc((100vw - 980px) / 2 - 120px)); top: 50%; transform: translate(10px, -50%); display: grid; gap: 0; opacity: 0; transition: opacity .3s, transform .3s; z-index: 2; }
+.rail.show { opacity: 1; transform: translate(0, -50%); }
+.rail a { display: flex; align-items: center; gap: 9px; padding: 9px 4px; color: var(--dim); text-decoration: none; font: 800 16px/1 var(--dot); position: relative; }
+.rail a::before { content: ''; position: absolute; left: 7px; top: -9px; height: 18px; border-left: 1px dotted var(--line); } .rail a:first-child::before { display: none; }
+.rail i { width: 9px; height: 9px; margin: 0 3px; border-radius: 50%; border: 1px solid var(--dim); flex: none; }
+.rail a:hover { color: var(--ink); } .rail a[aria-current] { color: var(--amber); } .rail a[aria-current] i { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 10px var(--amber); }
+@media (max-width: 1200px) { .rail { display: none; } }
+.sizes ul { align-content: start; } .sizes h2 { font-size: 30px; }
 @media (prefers-reduced-motion: reduce) { .pic img { transition: none; } }
-</style></head><body><main>
+</style></head><body><canvas id="field" aria-hidden="true"></canvas><main>
 <header>
 <h1>(M)orders of Magnitude<small>one world, five sizes</small></h1>
-<p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules and, at the top, the measured Earth: a forest at first, then the real world, measured and alive, from quarks to the cosmic web. Click any rung’s fill bar to see what its bytes are spent on. Smallest first:</p>
+<p class="lede">Each rung gets ten times more room than the one before, and has to fit in it whole. There are no pictures or 3D models inside, only rules and, at the top, the measured Earth: a forest at first, then the real world, measured and alive, from quarks to the cosmic web. Click any rung’s fill bar to see what its bytes are spent on. Start at the bottom and climb.</p>
 <div class="how"><p>How it works</p><a class="story" href="story/">What’s happening… how each one was squeezed or stuffed ↗</a></div>
 </header>
-<section class="rung r0" style="--w:30%">
-<a class="pic" href="0.2kb/"><img src="thumbs/0.2kb.webp" alt="" loading="eager" width="720" height="450"><span>Open ↗</span></a>
+<section class="sizes" aria-labelledby="sizes-h"><h2 id="sizes-h">How big is a kilobyte?</h2><p>A byte holds one letter. A kilobyte (kB) is a thousand bytes, about half a page of a book; a megabyte (MB) is a million, about a long novel. Each rung is ten times the one before, so the top one holds ten thousand times what the bottom one does. Each square below is drawn with an area in proportion to its rung’s allowance.</p><ol><li><span class="sq" style="width:0.96px;height:0.96px"></span><b>0.2 kB</b><i>200 bytes</i><ul><li>A text message and a bit (one holds 160 letters)</li><li>More than the Atari 2600 console’s whole memory: 128 bytes</li></ul></li><li><span class="sq" style="width:3.04px;height:3.04px"></span><b>2 kB</b><i>2,000 bytes</i><ul><li>A page of a paperback</li><li>The Gettysburg Address, with room to spare</li><li>Combat, the game packed in with the Atari 2600, on its 2 kB cartridge</li></ul></li><li><span class="sq" style="width:9.60px;height:9.60px"></span><b>20 kB</b><i>20,000 bytes</i><ul><li>A short story</li><li>The original Pac-Man arcade game: 16 kB of program</li></ul></li><li><span class="sq" style="width:30.36px;height:30.36px"></span><b>200 kB</b><i>200,000 bytes</i><ul><li>A short novel (The Great Gatsby is about 270 kB)</li><li>One floppy disk of the first IBM PC: 160 kB</li><li>Five copies of Super Mario Bros. (40 kB each)</li></ul></li><li><span class="sq" style="width:96.00px;height:96.00px"></span><b>2 MB</b><i>2,000,000 bytes</i><ul><li>A little more than a 3½-inch floppy disk (1.44 MB)</li><li>Less than one photo from your phone (2 to 5 MB)</li><li>Less than a typical web page today (about 2.5 MB)</li><li>Two minutes of a song as an MP3</li></ul></li></ol><p class="more">For scale, a phone that holds 128 GB could hold sixty-four thousand copies of the top rung.</p></section><section class="rung r0" id="rung-0.2kb" style="--w:30%">
+<a class="pic" href="0.2kb/"><img src="thumbs/0.2kb.webp" alt="" loading="eager" width="720" height="450"><span>Step in ↗</span></a>
 <div class="txt"><h2><a href="0.2kb/"><b>0.2 kB</b> One formula</a></h2>
 <p class="line">Eighty firs fading into mist, from one loop. Each tree’s size, height and paleness come from its number in the line.</p>
-<div class="fill"><button class="jar" data-r="0.2kb" aria-label="What the 0.2 kB rung’s bytes are spent on"><i style="width:74.500%;background:#7fb3c8" title="The one formula: 149 bytes"></i><i style="width:24.500%;background:#a8c99a" title="The page around it: 49 bytes"></i></button><p><b>99.0% full</b> · 198 of 200 bytes, about a text message and a half · <button class="where" data-r="0.2kb">where they go</button></p></div>
+<div class="fill"><button class="jar" data-r="0.2kb" aria-label="What the 0.2 kB rung’s bytes are spent on"><i style="width:74.500%;background:#7fb3c8" title="The one formula: 149 bytes"></i><i style="width:24.500%;background:#a8c99a" title="The page around it: 49 bytes"></i></button><p><b>99.0% full</b> · 198 of 200 bytes, about one text message · <button class="where" data-r="0.2kb">where they go</button></p></div>
 <figure class="code"><figcaption>All of it:</figcaption><code>&lt;canvas id=c width=900 height=500&gt;&lt;svg onload=&quot;for(q=c.getContext`2d`,i=0;i&lt;80;i++)for(q.fillStyle=`hsl(120,15%,${90-i}%)`,j=28;j--;)q.fillRect(i*i*7%900-(w=(j%4+j/4)*(s=i*i/500))/2,240-i+j*s,w,s)&quot;&gt;</code></figure></div></section>
-<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r1" style="--w:42%">
-<a class="pic" href="2kb/"><img src="thumbs/2kb.webp" alt="" loading="eager" width="720" height="450"><span>Open ↗</span></a>
+<div class="step" aria-hidden="true"><span>×10 the room ↓</span></div><section class="rung r1" id="rung-2kb" style="--w:42%">
+<a class="pic" href="2kb/"><img src="thumbs/2kb.webp" alt="" loading="eager" width="720" height="450"><span>Step in ↗</span></a>
 <div class="txt"><h2><a href="2kb/"><b>2 kB</b> One shader</a></h2>
 <p class="line">Every pixel works out which tree it falls on. Ten rows of conifers, birches and oaks, sun shafts with dust in them, leaves falling, and now and then a deer.</p>
 <div class="fill"><button class="jar" data-r="2kb" aria-label="What the 2 kB rung’s bytes are spent on"><i style="width:52.700%;background:#7fb3c8" title="The shader: 1,054 bytes"></i><i style="width:22.650%;background:#a8c99a" title="The JavaScript host: 453 bytes"></i><i style="width:8.150%;background:#e8b25a" title="The unpacker: 163 bytes"></i></button><p><b>83.5% full</b> · 1,670 of 2,000 bytes, about a page of a paperback · <button class="where" data-r="2kb">where they go</button></p></div>
 <div class="try"><p>Try</p><ul><li>Just watch. It drifts sideways forever, and the deer is in no hurry.</li></ul></div></div></section>
-<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r2" style="--w:58%">
-<a class="pic" href="20kb/"><img src="thumbs/20kb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
+<div class="step" aria-hidden="true"><span>×10 the room ↓</span></div><section class="rung r2" id="rung-20kb" style="--w:58%">
+<a class="pic" href="20kb/"><img src="thumbs/20kb.webp" alt="" loading="lazy" width="720" height="450"><span>Step in ↗</span></a>
 <div class="txt"><h2><a href="20kb/"><b>20 kB</b> A genome and a grammar</a></h2>
 <p class="line">Real 3D. Trees grown branch by branch from a genome, with moss where the rain runs, shadows, fog, wind and birdsong.</p>
 <div class="fill"><button class="jar" data-r="20kb" aria-label="What the 20 kB rung’s bytes are spent on"><i style="width:29.370%;background:#a8c99a" title="The living world: 5,874 bytes"></i><i style="width:59.060%;background:#e8b25a" title="The engine: drawing, moving, the readout: 11,812 bytes"></i><i style="width:3.405%;background:#d98f8a" title="Map, compass and sound: 681 bytes"></i><i style="width:7.965%;background:#8f978a" title="The page and its unpackers: 1,593 bytes"></i></button><p><b>99.8% full</b> · 19,960 of 20,000 bytes, a short story · <button class="where" data-r="20kb">where they go</button></p></div>
 <div class="try"><p>Try</p><ul><li>Switch forests, then <b>Reseed</b> for a new one. No two are the same.</li></ul></div></div></section>
-<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r3" style="--w:78%">
-<a class="pic" href="200kb/"><img src="thumbs/200kb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
+<div class="step" aria-hidden="true"><span>×10 the room ↓</span></div><section class="rung r3" id="rung-200kb" style="--w:78%">
+<a class="pic" href="200kb/"><img src="thumbs/200kb.webp" alt="" loading="lazy" width="720" height="450"><span>Step in ↗</span></a>
 <div class="txt"><h2><a href="200kb/"><b>200 kB</b> The measured Earth, seen coarser</a></h2>
 <p class="line">The real-Earth forest: every animal, every age, every scale, grown on the climate of anywhere you click. The Earth is measured in 300 km squares.</p>
-<div class="fill"><button class="jar" data-r="200kb" aria-label="What the 200 kB rung’s bytes are spent on"><i style="width:48.910%;background:#7fb3c8" title="Measured data: 97,821 bytes"></i><i style="width:20.166%;background:#a8c99a" title="The living world: 40,332 bytes"></i><i style="width:7.787%;background:#c9a46c" title="Ground, water, towns and weather: 15,574 bytes"></i><i style="width:2.090%;background:#ab9bd8" title="Sky, space and the very small: 4,179 bytes"></i><i style="width:15.274%;background:#e8b25a" title="The engine: drawing, moving, the readout: 30,548 bytes"></i><i style="width:1.091%;background:#d98f8a" title="Map, compass and sound: 2,182 bytes"></i><i style="width:2.259%;background:#8f978a" title="The page and its unpackers: 4,518 bytes"></i></button><p><b>97.6% full</b> · 195,154 of 200,000 bytes, a novella · <button class="where" data-r="200kb">where they go</button></p></div>
+<div class="fill"><button class="jar" data-r="200kb" aria-label="What the 200 kB rung’s bytes are spent on"><i style="width:48.910%;background:#7fb3c8" title="Measured data: 97,821 bytes"></i><i style="width:20.166%;background:#a8c99a" title="The living world: 40,332 bytes"></i><i style="width:7.787%;background:#c9a46c" title="Ground, water, towns and weather: 15,574 bytes"></i><i style="width:2.090%;background:#ab9bd8" title="Sky, space and the very small: 4,179 bytes"></i><i style="width:15.274%;background:#e8b25a" title="The engine: drawing, moving, the readout: 30,548 bytes"></i><i style="width:1.091%;background:#d98f8a" title="Map, compass and sound: 2,182 bytes"></i><i style="width:2.259%;background:#8f978a" title="The page and its unpackers: 4,518 bytes"></i></button><p><b>97.6% full</b> · 195,154 of 200,000 bytes, a short novel · <button class="where" data-r="200kb">where they go</button></p></div>
 <div class="try"><p>Try</p><ul><li>Tap <b>Fallen leaf</b> on the scale at the right and fall 100,000 times smaller, a window at a time</li><li><b>Places → Anywhere on Earth</b>, then click where you grew up</li></ul></div></div></section>
-<div class="step" aria-hidden="true"><span>×10 the room</span></div><section class="rung r4" style="--w:100%">
-<a class="pic" href="2mb/"><img src="thumbs/2mb.webp" alt="" loading="lazy" width="720" height="450"><span>Open ↗</span></a>
+<div class="step" aria-hidden="true"><span>×10 the room ↓</span></div><section class="rung r4" id="rung-2mb" style="--w:100%">
+<a class="pic" href="2mb/"><img src="thumbs/2mb.webp" alt="" loading="lazy" width="720" height="450"><span>Step in ↗</span></a>
 <div class="txt"><h2><a href="2mb/"><b>2 MB</b> The living Earth, from quarks to the cosmic web</a></h2>
 <p class="line">The real Earth from its measured maps: ground and sea floor, lakes, climate, and real trees where they grow, under the Sun, Moon and stars where they are right now, with its cities’ real lights on the night side. The Moon, Mercury, Venus and Mars from their own maps, the giants to their cloud tops. Herds, hares, hawks, fish and whales that are born, compete, evolve and die; trees that grow, seed and fight for light and water; weather and snow that build through the year. Zoom from the quarks in a grain of sand out past the Milky Way to the cosmic web without one cut, with synthesised sound, and through a wormhole at the Earth’s L4 point to six invented worlds.</p>
-<div class="fill"><button class="jar" data-r="2mb" aria-label="What the 2 MB rung’s bytes are spent on"><i style="width:91.121%;background:#7fb3c8" title="Measured data: 1,822,420 bytes"></i><i style="width:2.115%;background:#a8c99a" title="The living world: 42,302 bytes"></i><i style="width:2.309%;background:#c9a46c" title="Ground, water, towns and weather: 46,180 bytes"></i><i style="width:1.470%;background:#ab9bd8" title="Sky, space and the very small: 29,397 bytes"></i><i style="width:1.339%;background:#e8b25a" title="The engine: drawing, moving, the readout: 26,785 bytes"></i><i style="width:0.427%;background:#d98f8a" title="Map, compass and sound: 8,547 bytes"></i><i style="width:0.289%;background:#8f978a" title="The page and its unpackers: 5,781 bytes"></i></button><p><b>99.1% full</b> · 1,981,412 of 2,000,000 bytes, one photo from your phone · <button class="where" data-r="2mb">where they go</button></p></div>
+<div class="fill"><button class="jar" data-r="2mb" aria-label="What the 2 MB rung’s bytes are spent on"><i style="width:91.121%;background:#7fb3c8" title="Measured data: 1,822,420 bytes"></i><i style="width:2.115%;background:#a8c99a" title="The living world: 42,302 bytes"></i><i style="width:2.309%;background:#c9a46c" title="Ground, water, towns and weather: 46,180 bytes"></i><i style="width:1.470%;background:#ab9bd8" title="Sky, space and the very small: 29,397 bytes"></i><i style="width:1.339%;background:#e8b25a" title="The engine: drawing, moving, the readout: 26,785 bytes"></i><i style="width:0.427%;background:#d98f8a" title="Map, compass and sound: 8,547 bytes"></i><i style="width:0.289%;background:#8f978a" title="The page and its unpackers: 5,781 bytes"></i></button><p><b>99.1% full</b> · 1,981,412 of 2,000,000 bytes, less than one photo from your phone · <button class="where" data-r="2mb">where they go</button></p></div>
 <div class="try"><p>Try</p><ul><li>Open <b>Go to…</b> at the bottom right: a real place on Earth, the Moon, Mars, or a giant’s cloud tops. You arrive wherever the Sun now stands nicely</li><li>Look at a tree to read its name: a real species, of a genus that grows there</li><li>Use <b>time of day…</b> and <b>month…</b> at the bottom right to see the same place at sunrise, at midnight, or in another season</li><li>Point at an animal to read who it is: its name, age, generation and how its genes differ from its ancestors’. Then set <b>ten years a second</b> (the time button, or <b>]</b>) and watch the herd and its hunters rise and fall, and the gaps in the forest fill. What you have seen is still there next visit</li><li>Go to the boreal forest of Quebec, pick <b>month… March</b>, and walk on the snow; fly up to see the flocks; swim off a coast to see the schools and what hunts them</li><li>Fly low and keep scrolling into the ground: past grains and crystals down to atoms and quarks. Scroll back out, or press <b>U</b>, to come up</li><li>Scroll out until the Earth is a dot: the Moon, the planets and the Sun are where they are today. Keep going: the Milky Way in its true tilt, then galaxies, then the web</li><li>Pick <b>Go to… → The wormhole at the Earth’s L4 point</b> and fly in. You come out on Sylva, the first of six invented worlds</li><li>Pick an age (or press <b>,</b> and <b>.</b>): the same ground in the last ice age, or 150 million years ago, under that age’s plants</li></ul></div><p class="was">This rung once held six invented worlds, still open on their own: <a href="worlds/">the invented worlds ↗</a>.</p><details><summary>Everything in it</summary><dl><dt>The Earth</dt><dd>ETOPO 2022 heights every 6 arc-minutes (11 km) on land, the sea floor every 24, and 255 lakes from Natural Earth at their own levels. Finer than the map, invented octaves as rough as the map is rough there, so ranges are craggy and plains stay plains, held back at the shore so the coast stays where the map has it. Around each of the 24 places in Go to…, a square about 44 km across is finer still, from ETOPO’s 15 arc-second heights (about 450 m), so the real ridges and gullies are there.</dd><dt>Climate</dt><dd>CRU CL 2.0 normals (1961–90) every half degree: the year’s mean temperature, the swing from winter to summer, the year’s rain. They decide forest, savanna, grassland, desert, snow and the tree line; the season is the real one for the date.</dd><dt>Trees</dt><dd>64 real genera and 671 named species. Nine (oaks, beeches, spruces, pines, birches, firs, larches, maples, limes) grow where range maps put them in North America and Europe; the rest by region and climate (eucalyptus in Australia, baobabs in Africa and Madagascar, saguaros in the Sonoran Desert, southern beeches in Chile and New Zealand). Which species of a genus stands where within a region is drawn from that region’s list, not mapped. The forest is where the climate would put it: farms and cities are not in the maps.</dd><dt>Sky and time</dt><dd>The real date and time: the Sun where it stands over your place, the Moon in its phase, the planets as points in the night sky (to a few minutes of arc). Speed time up and the seasons turn as they do. Overhead, the 10,526 real stars of the HYG catalogue; on the Earth’s night side, its real lights, from NASA’s Black Marble.</dd><dt>The Moon and the planets</dt><dd>Land on the Moon (LOLA) and Mars (MOLA), each from a half-degree map, and Venus (Magellan) and Mercury (MESSENGER) from one-degree maps, with invented craters and detail finer than that. Jupiter, Saturn (with its rings), Uranus and Neptune go down to their cloud tops. Each turns on its real axis at its real rate, so a lunar day lasts a month, and from the Moon the Earth hangs in the sky.</dd><dt>The wormhole</dt><dd>Sixty degrees ahead of the Earth in its orbit, at its L4 point, a mouth 1,000 km across bends the starlight and shows Sylva inside. Go in and you come out there; Sylva’s own mouths lead on to the other five invented worlds, and one leads back.</dd><dt>Down to quarks</dt><dd>Zoom into anything under the pointer and it goes on down in its own kind: a leaf to veins, jigsaw cells, stomata and the wax of its cuticle; bark to cork cells and cellulose fibrils; water to the diatoms drifting under its skin; snow to six-armed crystals; sand, rock, soil and lunar dust to their grains and crystals. Each ends in its own atoms (carbon and hydrogen in wax, water’s bent molecules, oxygen and silicon in quartz), then an electron cloud, a nucleus of alpha clusters (or for hydrogen one proton), and three quarks held by the gluon field. Below about a fifth of a micrometre the colours are conventions, said so on screen. At night the microscope brings its own lamp.</dd><dt>Out to the cosmic web</dt><dd>The Sun and the real planets on their orbits, then the real stars round the Sun (every one the eye can see and every one within 20 parsecs, from the HYG catalogue, at their measured places and distances, so the constellations come apart as you leave), invented stars beyond, the Milky Way marched through as disc, arms, bulge and dust in its real orientation, with its centre 8.2 kpc off toward Sagittarius, then other galaxies and the walls and filaments of the cosmic web. Forty-four powers of ten in all.</dd><dt>Deep time</dt><dd>Eight ages back 450 million years: the climate warms or cools, the sea rises or falls, and the plants are those of the age, each genus from when it first appears in the fossil record, then cycads, tree ferns, scale trees and the first trees. The continents stay where they are today: their real past positions are not in this page’s data.</dd><dt>Animals</dt><dd>Each square kilometre of open country keeps two food chains, chosen by place: a herd and its hunters (bison and wolves on the Great Plains, elk and cougars in the West, mule deer in its deserts, wildebeest and lions in the Serengeti, red deer and wolves in Europe, kangaroos and dingoes, guanacos and pumas, chital and tigers; mammoths in the ice age, sauropods and Allosaurus 150 million years ago), and in a 10-hectare plot of it, hares and the foxes, lynx or jackals that live on them (snowshoe hares and lynx in the boreal north). Every animal is an individual with a name, a sex, an age and four genes from both parents (size, speed, wariness, coat), born in spring and dying of age, hunger, cold or the hunters, and built to its kind: antlers on stags, horns, humps, manes, a trunk and tusks, a kangaroo that hops, an Allosaurus on two legs. Nothing is scripted: the hunters catch the slow, the young and the old; big bodies survive cold winters but starve first when grass is short; the wary are caught less but raise fewer young. So the herds evolve, and the hunters grow, starve, arrive and move on as their prey rise and fall. Near you there are chases, won and lost. Densities, kill rates and litters come from field studies (Yellowstone’s wolves and elk, the Serengeti’s lions, Kluane’s hares and lynx, Scotland’s red deer).</dd><dt>Who lives where</dt><dd>Every square kilometre also keeps a census of a hectare of it, class by class, set by its climate the way field counts go: ants by the million in the tropics and warm deserts, earthworms by the million in cool damp soil (and none in frozen ground), red-backed salamanders near ten thousand a hectare in eastern North American forests, frogs in wet tropical litter, lizards in deserts, mice and voles, birds by what the land grows, bats sparsest of all; named by region (harvester ants and side-blotched lizards in the Mojave, weaver ants and litter frogs in Borneo, mantellas and chameleons in Madagascar), with the weight of each. Walk and look down: the ants foraging, salamanders and frogs out on wet nights, lizards basking on warm days, mice at night and bats after dusk are drawn as many as are out at that moment.</dd><dt>Undergrowth and everyday animals</dt><dd>Under and between the trees, plants by climate and region: shrubs, heath and heather, saguaros in the Sonoran Desert and euphorbias in Africa’s, tussock and spinifex on dry plains, sagebrush, bamboo in East Asia, wildflowers in season, moss in wet woods and lichen on the tundra. And the animals you actually see on a walk: songbirds feeding and flitting about you by day (pigeons and sparrows in town) and squirrels, as many as the census holds.</dd><dt>Towns</dt><dd>On today’s Earth the towns stand where people really live: how built-up each place is comes from NASA’s measured night lights (18 km cells), and the downtowns of 136 big cities are placed by hand with how tall they run, so Manhattan and Hong Kong rise in towers, Paris stays at six storeys, and Watertown is two- and three-storey houses with yards and street trees. The readout and the map name the nearest city; towns hum with traffic by day. The world’s major rivers (126 of them, from Natural Earth) run where they really run, good to about 2 km, named as you reach them. The streets and the buildings themselves are invented, and the wildlife thins where the ground is built over.</dd><dt>Finding your way</dt><dd>A compass ball (top right) always shows where the sky and the ground are, north and the rest, and your target, even down a microscope where “up” is the surface you went into. A ruler under the scale shows where you are among the orders of magnitude, ten powers of ten at a time with something that size at each (a cell, a tree, a mountain, the Earth, the Milky Way), sliding as you zoom, over the whole span from quarks to the cosmic web. N opens a map, drawn from the same terrain and climate as the world, from 200 m across to the whole globe, with waypoints: the herds and water near you, the named places of each world, your own marks and the other worlds; pick one to follow it on the compass, or go. U rights you anywhere: out of the ground or the microscope, the view levelled, or turned to face the planet from space; and flying, the ground can no longer pin you. If you let the browser share your location, you start where you are standing, on today’s Earth (Go to… › Where you are brings you back).</dd><dt>Plants, insects and birds</dt><dd>Within about 250 m every tree is a living thing: it grows by the light that gets past its taller neighbours and the water it wins against every crown near it, by its kind (a beech or fir grows on in shade where a birch or pine gives up), dies when it cannot keep up, stands as a snag and falls; mature trees seed the gaps, and a seedling takes where there is light and water and the deer do not eat it (more than about five deer to a square kilometre and the woods stop regenerating). Grass is shared by both chains of grazers and the insects, and grows short and brown where it is grazed hard. Midges, butterflies and, on warm nights, fireflies fly as thick as the insect numbers say; songbirds live on the insects and flock in murmurations; hawks live on the songbirds, rising a year or two after them. Under the microscope the soil tells you its springtails and the predatory mites that eat them.</dd><dt>Water</dt><dd>Streams and ponds keep their own chain: insects in the water, trout (or tilapia, catfish, piranhas) on the insects, otters (a platypus in Australia) and herons on the fish; you may see a heron standing in the shallows. In the sea, plankton blooms with light and the nutrients of cold water, small fish eat it, seals, dolphins or sharks eat them, and whales strain the plankton and krill: the schools you swim among grow and shrink with these numbers, their hunters sweep round them, and the whales come and go.</dd><dt>Weather</dt><dd>Each place’s measured mean, seasonal swing and rainfall, with the warmth a month behind the Sun (as land and sea are). On top, weather systems that bring spells warmer or colder than the season, and days that warm and nights that cool, most under dry skies. Rain falls as snow when it is below freezing where you are, and snow lies: a day-by-day account of the last nine months builds the snowpack and melts it by degree-days, so Quebec is deep in snow in March and Lake Baikal into April. The temperature is in the clock line.</dd><dt>As on the invented worlds</dt><dd>Fire that runs before the wind, beaver ponds that fill and drain, kelp, reefs, fish and whales, caves with glow-worms, storms and aurora. On the invented worlds, towns stand where the land suits a town; on today’s Earth they stand where its measured lights say (see Towns).</dd><dt>Sound</dt><dd>All synthesised, nothing recorded, and on from the first click or key (M turns it off): wind that swells with height, rain, thunder after lightning, fire crackling, birds by day (parrots in the tropics, crossbills and kinglets in the north), crickets and owls at night, and footsteps on moss, leaves or snow. It thins out as you climb, stops above the air and on airless worlds, and is muffled under water and in the microscope.</dd></dl></details></div></section>
 <footer>The pictures on this page are screenshots, taken for the index; the rungs themselves contain none. Rungs from 2 kB up unpack themselves in the browser, so open them from the web rather than as saved files. Measured data: ETOPO 2022 (NOAA), CRU CL 2.0, Natural Earth lakes, Little’s range maps (USGS), Caudullo et al. 2017, and the Moon, Mars, Venus and Mercury from LOLA, MOLA, Magellan and MESSENGER; see <a href="https://github.com/samuelling/procedural/blob/main/orders/DATA.md">DATA.md</a>. Source: <a href="https://github.com/samuelling/procedural/tree/main/orders">github.com/samuelling/procedural</a>.</footer>
 </main>
+<nav class="rail" aria-label="The rungs"><a href="#rung-0.2kb"><i></i><span>0.2 kB</span></a><a href="#rung-2kb"><i></i><span>2 kB</span></a><a href="#rung-20kb"><i></i><span>20 kB</span></a><a href="#rung-200kb"><i></i><span>200 kB</span></a><a href="#rung-2mb"><i></i><span>2 MB</span></a></nav>
+<script>// The index's opening: an LED panel of dots you fly through. Points stream out of a vanishing point that follows the
+// pointer, each lighting the panel's nearest dots, so the motion reads as zooming through orders of magnitude.
+(() => {
+  const c = document.getElementById('field'); if (!c || !c.getContext) return;
+  const g = c.getContext('2d'), still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const CELL = 9, N = 640, P = [], base = document.createElement('canvas');
+  let W = 0, H = 0, dpr = 1, cols = 0, rows = 0, lit = new Float32Array(0), hue = new Uint8Array(0);
+  let vx = .74, vy = .42, tx = vx, ty = vy, on = true, last = 0;
+  const seed = (p, far) => { p.x = (Math.random() * 2 - 1) * 1.6; p.y = (Math.random() * 2 - 1) * 1.1; p.z = far ? 1 + Math.random() * .2 : .05 + Math.random(); p.a = Math.random() < .14; };
+  for (let i = 0; i < N; i++) { const p = {}; seed(p, false); P.push(p); }
+  function size() {
+    dpr = Math.min(2, devicePixelRatio || 1); W = c.clientWidth; H = c.clientHeight;
+    c.width = W * dpr; c.height = H * dpr; cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
+    lit = new Float32Array(cols * rows); hue = new Uint8Array(cols * rows);
+    base.width = c.width; base.height = c.height; const b = base.getContext('2d'); b.scale(dpr, dpr); b.fillStyle = 'rgba(238,240,226,.07)';
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { b.beginPath(); b.arc(i * CELL, j * CELL, 1.1, 0, 7); b.fill(); }
+  }
+  function light(sx, sy, r, v, a) {   // light the panel's dots within r of (sx, sy)
+    const i0 = Math.max(0, Math.floor((sx - r) / CELL)), i1 = Math.min(cols - 1, Math.ceil((sx + r) / CELL));
+    const j0 = Math.max(0, Math.floor((sy - r) / CELL)), j1 = Math.min(rows - 1, Math.ceil((sy + r) / CELL));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const d = Math.hypot(i * CELL - sx, j * CELL - sy); if (d > r) continue;
+      const k = j * cols + i, w = v * (1 - d / (r + 1)); if (w > lit[k]) { lit[k] = Math.min(1, w); hue[k] = a ? 1 : 0; }
+    }
+  }
+  function frame(t) {
+    const dt = Math.min(50, t - (last || t)) / 16.7; last = t;
+    vx += (tx - vx) * .04 * dt; vy += (ty - vy) * .04 * dt;
+    const cx = vx * W, cy = vy * H, S = Math.min(W, H) * .32;
+    for (let k = 0; k < lit.length; k++) lit[k] *= still ? 0 : Math.pow(.9, dt);
+    for (const p of P) {
+      if (!still) p.z -= .0055 * dt * (.6 + p.z);
+      if (p.z < .04) seed(p, true);
+      const sx = cx + p.x / p.z * S, sy = cy + p.y / p.z * S;
+      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) { seed(p, true); continue; }
+      const near = Math.min(1, (1.2 - p.z) / 1.1);
+      light(sx, sy, CELL * .5 + Math.max(0, .9 / p.z - 1.2) * CELL * .55, .2 + .8 * near * near, p.a);
+    }
+    const cr = c.getBoundingClientRect(), quiet = [...document.querySelectorAll('main > header, .sizes')].map((e) => { const r = e.getBoundingClientRect(); return [r.left - cr.left - 24, r.top - cr.top - 16, r.right - cr.left + 24, r.bottom - cr.top + 16]; });
+    const hush = (x, y) => { for (const q of quiet) if (x > q[0] && x < q[2] && y > q[1] && y < q[3]) return .22; return 1; };   // keep the words readable
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); g.drawImage(base, 0, 0); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const v = lit[j * cols + i] * hush(i * CELL, j * CELL); if (v < .04) continue;
+      g.fillStyle = hue[j * cols + i] ? `rgba(232,178,90,${v * .9})` : `rgba(168,201,154,${v * .75})`;
+      g.beginPath(); g.arc(i * CELL, j * CELL, 1.2 + v * 2.4, 0, 7); g.fill();
+    }
+    if (on && !still) requestAnimationFrame(frame);
+  }
+  size(); addEventListener('resize', () => { size(); if (still) frame(0); });
+  addEventListener('pointermove', (e) => { const r = c.getBoundingClientRect(); if (e.clientY > r.bottom) return; tx = Math.min(.95, Math.max(.05, (e.clientX - r.left) / r.width)); ty = Math.min(.9, Math.max(.1, (e.clientY - r.top) / r.height)); });
+  new IntersectionObserver(([e]) => { const was = on; on = e.isIntersecting && !document.hidden; if (on && !was && !still) requestAnimationFrame(frame); }).observe(c);
+  document.addEventListener('visibilitychange', () => { const was = on; on = !document.hidden; if (on && !was && !still) requestAnimationFrame(frame); });
+  if (still) for (let k = 0; k < 40; k++) frame(k * 16.7); else requestAnimationFrame(frame);
+})();
+// The rail: where you are on the ladder as you scroll, and a way to jump.
+(() => {
+  const links = [...document.querySelectorAll('.rail a')], rungs = links.map((a) => document.getElementById(a.getAttribute('href').slice(1)));
+  if (!links.length) return;
+  const vis = new Map();
+  const io = new IntersectionObserver((es) => {
+    es.forEach((e) => vis.set(e.target, e.intersectionRatio));
+    let best = -1, bi = -1; rungs.forEach((r, i) => { const v = vis.get(r) || 0; if (v > best + .02) { best = v; bi = i; } });
+    links.forEach((a, i) => a.toggleAttribute('aria-current', i === bi && best > 0));
+    document.querySelector('.rail').classList.toggle('show', best > 0);
+  }, { threshold: [0, .15, .3, .5, .7, .9] });
+  rungs.forEach((r) => r && io.observe(r));
+})();
+</script>
 <style>
 .jar { display: flex; width: 100%; height: 12px; max-width: 360px; padding: 0; border: 0; border-radius: 999px; background: rgba(238,240,226,.1); overflow: hidden; cursor: pointer; }
 .jar i { display: block; height: 100%; flex: none; box-shadow: inset -1px 0 0 rgba(13,18,13,.5); }
