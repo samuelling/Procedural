@@ -73,6 +73,21 @@ its block: climate in 3° blocks, heights and tree ranges (a genus counts if it 
     species, *Data in Brief* 12, 662–666, doi:10.1016/j.dib.2017.05.007. CC BY 4.0.
 - **Climate classes:** see `source/src/kg.js` (kgcpy, BSD licence, after Rubel et al. 2017).
 
+## Towns on today's Earth (planet.js: litRho, CORES)
+
+- **How built-up each place is** comes from the same night lights as the night side (NASA Black Marble 2016, sixth-of-
+  a-degree cells, about 18 by 14 km at 42°N, read bilinear): below about 0.45 of full brightness there are no towns;
+  from there to 0.85 they thicken to continuous suburb. Inside a cell, neighbourhoods and open ground vary on an
+  invented 2 km noise. The lights are what people built, so the invented-world rule for where towns may stand (low,
+  mild, wet ground) is not applied; only water and steep slopes are kept clear.
+- **High-rise cores**: the lights saturate in every big city, so a suburb and a downtown look the same at 18 km. 136
+  downtown cores of large cities are listed by hand with an approximate centre, a radius (0.4–3 km) and how tall they
+  run (Manhattan 1, Paris's even six storeys about 0.6). They are approximate, from general knowledge of the cities.
+- **Invented**: the street grid (every fourth and fifth 30 m lot), each building's footprint, height and material, and
+  the parks. Real streets, rivers through town, and buildings are not in the data.
+- Wildlife thins where the ground is built over: amphibians and reptiles nearly to nothing, earthworms and ants by
+  half or more, and the small mammals are house mice and rats.
+
 ## The living world (eco.js)
 
 Rates set from field studies, used as round numbers:

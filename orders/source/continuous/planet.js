@@ -9,7 +9,7 @@
 // in double precision (for the camera, picking and placing) and in GLSL (for drawing). They agree to the bit in the
 // lattice hash and to float precision elsewhere.
 
-import { earth, body, genAt, patches, patchAt } from './earth.js';
+import { earth, body, genAt, patches, patchAt, lights } from './earth.js';
 import { sunReal } from './ephem.js';
 export { earth, body, genAt };
 export const K = 40, LS = 22, GOLD = 2.39996323, PLA = 1.32471795724;
@@ -283,7 +283,7 @@ export function site(G, a, sg, i, j) {
   const [b, c] = AX[a], fk = a * 2 + (sg > 0 ? 1 : 0), xb = (i + 0.15 + 0.7 * hs2(i, j, 40 + fk)) * TREE, xc = (j + 0.15 + 0.7 * hs2(i, j, 50 + fk)) * TREE, d = G.R * G.R - xb * xb - xc * xc;
   if (d <= 0) return null; const xa = sg * Math.sqrt(d); if (Math.abs(xa) < Math.max(Math.abs(xb), Math.abs(xc))) return null;
   const p = [0, 0, 0]; p[a] = xa; p[b] = xb; p[c] = xc;
-  const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)); if (hs2(i, j, 60 + fk) > F || river(G, p, h, W) > 0.25) return null;
+  const h = H(G, p, 26); const { T, W } = climate(G, p, h), F = forestF(G, p, h, T, W) * (1 - Math.min(0.85, cityRho(G, p) * citySuit(h, T, W, 0, G) * 1.6)); if (hs2(i, j, 60 + fk) > F || river(G, p, h, W) > 0.25) return null;
   let w = speciesW(G, T, W), pr = null; if (G.present) { pr = G.present(G, p.map((v) => v / G.R), h, T, W); w = w.map((x, n) => pr.ok[n] ? x : 0); }   // measured worlds: only the families that grow here
   const tot = w.reduce((x, y) => x + y, 0); if (tot < 1e-3) return null;
   let x = hs2(i, j, 70 + fk) * tot, s = 0; while (s < w.length - 1 && x > w[s]) x -= w[s++];
@@ -299,14 +299,29 @@ export function siteP(G, a, sg, i, j) {
   const p = [0, 0, 0]; p[a] = xa; p[b] = xb; p[c] = xc;
   const h = H(G, p, 26); if (h < 0.5) return null; const { T, W } = climate(G, p, h);
   if (river(G, p, h, W) > 0.25) return null;
-  return { p, h, T, W, F: forestF(G, p, h, T, W) * (1 - Math.min(1, cityRho(G, p) * citySuit(h, T, W, 0) * 2.5)), seed: hs2(i, j, 80 + fk) };
+  return { p, h, T, W, F: forestF(G, p, h, T, W) * (1 - Math.min(0.85, cityRho(G, p) * citySuit(h, T, W, 0, G) * 1.6)), seed: hs2(i, j, 80 + fk) };
 }
 
 // ---- cities: on inhabited planets, a few towns and cities in each 60 km cell of the cube faces, where the land
 // suits them (low, not too steep, not desert or ice). rho is how built-up a place is (0..1): a city's core is 1.
 export const CITY = 60000, LOT = 30;
+// On today's Earth, how built-up a place is comes from its measured light at night (lights(): sixth-of-a-degree cells
+// of NASA's Black Marble, read bilinear): dim cells are country, bright ones town, only the brightest the high-rise
+// cores; inside a cell, neighbourhoods and open ground vary on a 2 km noise. The streets and buildings are invented.
+// what 18 km light cells cannot tell from their suburbs: the high-rise cores of the big cities (latitude, longitude,
+// radius in km, how tall 0..1: Manhattan 1, Paris's even six storeys .62), approximate, placed from the cities' plans
+export const CORES = '40.755,-73.984,2.2,1;40.708,-74.010,1,1;40.718,-74.035,.7,.85;40.693,-73.987,.6,.8;42.355,-71.060,1.1,.9;42.348,-71.082,.6,.8;39.952,-75.165,1,.9;38.900,-77.030,1.3,.7;39.289,-76.612,.7,.8;40.441,-80.000,.6,.85;33.757,-84.390,1,.9;33.785,-84.384,.7,.85;25.770,-80.193,1,.9;35.227,-80.843,.6,.85;41.881,-87.630,1.6,1;42.331,-83.046,.7,.85;41.499,-81.694,.6,.8;44.977,-93.270,.7,.85;38.627,-90.193,.6,.8;39.100,-94.583,.6,.8;29.758,-95.367,1,.95;32.780,-96.800,1,.9;30.268,-97.743,.7,.85;39.745,-104.990,.8,.85;33.449,-112.074,.6,.75;36.115,-115.173,1.5,.85;34.050,-118.255,1,.9;32.716,-117.162,.6,.8;37.790,-122.400,1,.95;47.608,-122.335,.9,.9;45.520,-122.678,.6,.8;49.283,-123.120,1,.9;43.650,-79.381,1.4,.95;45.503,-73.570,.9,.85;51.047,-114.068,.7,.85;19.427,-99.160,2,.8;8.980,-79.520,1,.9;-23.560,-46.650,2.5,.85;-22.905,-43.180,1.2,.85;-34.603,-58.380,1.8,.85;-33.425,-70.620,1.2,.85;-12.090,-77.030,1,.75;4.650,-74.060,1.2,.8;10.500,-66.880,1,.8;51.514,-.085,1,.9;51.505,-.020,.5,.95;51.507,-.128,1.5,.6;48.857,2.345,3,.62;48.892,2.238,.6,.9;52.515,13.390,2,.65;40.420,-3.695,1.8,.7;41.390,2.165,2,.65;41.898,12.480,1.5,.55;45.475,9.190,1.5,.75;48.208,16.372,1.5,.6;48.140,11.575,1.2,.6;50.112,8.675,.8,.9;52.372,4.895,1.2,.55;50.847,4.355,1,.65;55.752,37.617,2.5,.75;55.749,37.537,.5,1;59.935,30.325,2,.6;41.010,28.980,1.5,.6;41.080,29.010,.8,.85;52.230,21.005,1,.8;59.330,18.065,1,.6;37.980,23.730,1.5,.6;38.715,-9.140,1,.6;50.085,14.425,1,.55;47.500,19.050,1.5,.6;50.450,30.523,1.2,.7;55.678,12.570,1,.55;53.347,-6.260,.8,.55;53.480,-2.243,.7,.75;47.373,8.540,.8,.6;53.550,9.993,1,.65;30.045,31.235,2,.75;6.450,3.395,1,.8;-26.204,28.045,1,.85;-26.107,28.056,.6,.8;-1.286,36.820,.8,.8;-33.920,18.425,.7,.8;33.590,-7.610,1,.7;9.010,38.760,1,.7;-4.320,15.310,1,.65;5.555,-.200,.8,.65;25.195,55.275,2,1;25.080,55.140,.8,1;24.490,54.365,1,.9;25.320,51.530,.8,.95;24.690,46.685,1.2,.85;32.075,34.785,1,.85;35.700,51.410,2,.7;24.860,67.010,1.5,.7;18.930,72.830,1.5,.85;19.000,72.825,.8,.9;19.065,72.865,.6,.85;28.630,77.220,1.5,.6;28.495,77.090,1,.85;12.975,77.595,1.2,.75;13.060,80.260,1.2,.7;22.570,88.360,1.5,.7;23.780,90.410,2,.75;17.440,78.380,1,.8;35.681,139.767,1.2,.9;35.690,139.695,.8,.95;35.659,139.701,.5,.85;35.660,139.745,1,.85;34.700,135.495,1.2,.9;37.567,126.978,1.5,.85;37.500,127.035,1.5,.9;39.910,116.460,1.5,.95;39.910,116.400,2,.6;31.238,121.502,1,1;31.230,121.470,2,.8;22.282,114.160,1.2,1;22.305,114.172,1.5,.9;22.540,114.055,2,.95;23.120,113.320,1.5,.9;29.560,106.575,1.5,.9;25.035,121.560,1.5,.85;1.283,103.851,1.2,.95;13.745,100.540,2,.9;3.155,101.712,1.2,.95;-6.210,106.820,2,.9;14.555,121.025,1,.9;10.775,106.700,1.2,.85;21.025,105.850,1,.7;30.590,114.300,1.5,.85;30.660,104.065,1.5,.85;39.125,117.200,1.2,.85;-33.867,151.207,1.2,.9;-37.815,144.963,1.2,.9;-27.470,153.025,.8,.85;-31.953,115.858,.7,.8;-36.848,174.765,.7,.8'.split(';').map((s) => { const [la, lo, r, t] = s.split(',').map(Number), a = la * Math.PI / 180, b = lo * Math.PI / 180; return [Math.cos(a) * Math.cos(b), Math.cos(a) * Math.sin(b), Math.sin(a), r * 1000, t]; });
+export function coreAt(p) {
+  const l = Math.hypot(...p); let c = 0; for (const k of CORES) { const d = Math.hypot(p[0] / l - k[0], p[1] / l - k[1], p[2] / l - k[2]) * 6.371e6; if (d < k[3]) c = Math.max(c, k[4] * ss(k[3], k[3] * 0.35, d)); } return c;
+}
+export function litRho(G, p) {
+  const l = Math.hypot(...p), L = lights(), x = (Math.atan2(p[1], p[0]) / (2 * Math.PI) + 0.5) * L.w - 0.5, y = (0.5 - Math.asin(p[2] / l) / Math.PI) * L.h - 0.5, i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j;
+  const g = (a, b) => L.a[Math.min(L.h - 1, Math.max(0, b)) * L.w + ((a % L.w) + L.w) % L.w], v = g(i, j) * (1 - fx) * (1 - fy) + g(i + 1, j) * fx * (1 - fy) + g(i, j + 1) * (1 - fx) * fy + g(i + 1, j + 1) * fx * fy;
+  const b = ss(0.45, 0.85, v), n = vn3(p[0] / 1800, p[1] / 1800, p[2] / 1800, 77), c = coreAt(p); return Math.max(b * Math.min(1, Math.max(0, 0.25 + 1.1 * n)) * 0.55, c * (0.85 + 0.15 * n));
+}
 export function cityRho(G, p) {
   if (!G.cities) return 0;
+  if (G.real === 'earth' && !G.E) return litRho(G, p);
   const ab = p.map(Math.abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, c] = AX[a], fk = a * 2 + (p[a] > 0 ? 1 : 0), u = p[b] / CITY, v = p[c] / CITY;
   let r = 0; for (let i = Math.floor(u) - 1; i <= Math.floor(u) + 1; i++) for (let j = Math.floor(v) - 1; j <= Math.floor(v) + 1; j++) {
     if (hs2(i, j, 90 + fk) > 0.45) continue;
@@ -315,7 +330,9 @@ export function cityRho(G, p) {
   }
   return r;
 }
-export const citySuit = (h, T, W, sl) => ss(3, 12, h) * ss(900, 500, h) * ss(-4, 2, T) * ss(0.15, 0.3, W) * ss(0.25, 0.1, sl);
+// whether the land suits a town: on an invented world low, mild, wet and flat ground; on today's Earth the lights have
+// already said where people live, so only land that is not too steep (pass G)
+export const citySuit = (h, T, W, sl, G) => G && G.real === 'earth' && !G.E ? ss(0.5, 2, h) * ss(0.35, 0.15, sl) : ss(3, 12, h) * ss(900, 500, h) * ss(-4, 2, T) * ss(0.15, 0.3, W) * ss(0.25, 0.1, sl);
 
 // ---- the same, for the shaders ----------------------------------------------------------------------------------------
 // uOct: per octave one row of 7 texels: lattice offset at the camera's foot and the value there; the gradient and
@@ -506,8 +523,11 @@ vec3 climate(vec3 q, float h) {   // warmth (°C), wetness (0..1), latitude (rad
 }
 uniform vec3 uFootP; uniform mat3 uFrm; uniform int uCities;
 // how built-up the place at q is (see cityRho); and whether the land suits a town
+uniform highp sampler2D uLitC; uniform vec4 uCore[6]; uniform float uCoreR[6];   // the six city cores nearest you: direction, how tall; radius
 float cityRho(vec3 q) {
-  if (uCities == 0) return 0.; vec3 p = uFootP + uFrm * q, ab = abs(p); int a = ab.x >= ab.y && ab.x >= ab.z ? 0 : ab.y >= ab.z ? 1 : 2, b = a == 0 ? 1 : a == 1 ? 2 : 0, c = a == 0 ? 2 : a == 1 ? 0 : 1, fk = a * 2 + (p[a] > 0. ? 1 : 0);
+  if (uCities == 0) return 0.; vec3 p = uFootP + uFrm * q, ab = abs(p);
+  // today's Earth: its measured light (see litRho)
+  if (uCities == 2) { float L = texture(uLitC, dTC(normalize(p))).r, n = vnd3(p / 1800., 77).x, cr = 0.; for (int i = 0; i < 6; i++) cr = max(cr, uCore[i].w * (1. - smoothstep(uCoreR[i] * .35, uCoreR[i], length(normalize(p) - uCore[i].xyz) * 6.371e6))); return max(smoothstep(.45, .85, L) * clamp(.25 + 1.1 * n, 0., 1.) * .55, cr * (.85 + .15 * n)); } int a = ab.x >= ab.y && ab.x >= ab.z ? 0 : ab.y >= ab.z ? 1 : 2, b = a == 0 ? 1 : a == 1 ? 2 : 0, c = a == 0 ? 2 : a == 1 ? 0 : 1, fk = a * 2 + (p[a] > 0. ? 1 : 0);
   vec2 uv = vec2(p[b], p[c]) / ${CITY}.; ivec2 f = ivec2(floor(uv)); float r = 0.;
   for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) { ivec2 cc = f + ivec2(i, j); if (hs2(cc, 90 + fk) > .45) continue;
     vec2 ce = vec2(cc) + .2 + .6 * vec2(hs2(cc, 91 + fk), hs2(cc, 92 + fk)); float R = (1500. + 10000. * pow(hs2(cc, 93 + fk), 3.)) / ${CITY}., d = length(uv - ce) / R;
@@ -521,10 +541,10 @@ float riverM(vec3 q, float h, float W, out float dist, out float wd) {
   float n = a.x * .7 + b.x * .3; vec3 g = a.yzw * .7 + b.yzw * .6; dist = abs(n - .5) / max(length(g) * D.z, 1e-12);
   return 1. - smoothstep(wd * .5, wd * 1.5, dist);
 }
-float citySuit(float h, float T, float W, float sl) { return smoothstep(3., 12., h) * smoothstep(900., 500., h) * smoothstep(-4., 2., T) * smoothstep(.15, .3, W) * smoothstep(.25, .1, sl); }
+float citySuit(float h, float T, float W, float sl) { if (uCities == 2) return smoothstep(.5, 2., h) * smoothstep(.35, .15, sl); return smoothstep(3., 12., h) * smoothstep(900., 500., h) * smoothstep(-4., 2., T) * smoothstep(.15, .3, W) * smoothstep(.25, .1, sl); }
 float forestF(vec3 q, float h, float T, float W, float fp) {
   if (h < 2.) return 0.; float n = mix(clim(2, q), .5, smoothstep(200., 700., fp)) * .6 + mix(clim(3, q), .5, smoothstep(60., 200., fp)) * .4;
-  return (uCl > 0 ? smoothstep(.38, .66, W) * smoothstep(7., 11., gTs) : smoothstep(.3, .55, W) * smoothstep(-9., -5., T)) * clamp((n - .3 + .25 * (W - .5)) * 4., 0., 1.) * (1. - min(1., cityRho(q) * citySuit(h, T, W, 0.) * 2.5));
+  return (uCl > 0 ? smoothstep(.38, .66, W) * smoothstep(7., 11., gTs) : smoothstep(.3, .55, W) * smoothstep(-9., -5., T)) * clamp((n - .3 + .25 * (W - .5)) * 4., 0., 1.) * (1. - min(.85, cityRho(q) * citySuit(h, T, W, 0.) * 1.6));
 }
 `;
 

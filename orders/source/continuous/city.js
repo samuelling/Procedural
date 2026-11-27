@@ -23,8 +23,8 @@ void main() {
   bool street = (c.x & 3) == 0 || (c.y + 1000000) % 5 == 0;
   float s1 = hs2(c, 120), s2 = hs2(c, 121), s3 = hs2(c, 122), park = step(hs2(c / ivec2(4, 5), 123), .12);
   float on = !street && rho > .04 && s1 < rho * 1.8 && park < .5 ? 1. : 0.;
-  float ht = (4. + 3.5 * floor(1. + 2. * s2 + rho * rho * 40. * pow(s3, 2.5))) / sqrt(max(uGrav, .3));   // storeys, taller in the core; lower pull, taller towers
-  tA = vec4(o - up * 1.5, ht + 1.5); tB = vec4(${LOT}. * (.55 + .3 * s2), ${LOT}. * (.55 + .3 * s1), s3, rho); tC = vec4(on, hs2(c, 124), 0., 0.);
+  float ht = (4. + 3.5 * floor(1. + 1.6 * s2 + pow(rho, 4.) * 40. * pow(s3, 2.5))) / sqrt(max(uGrav, .3));   // storeys, taller in the core; lower pull, taller towers
+  tA = vec4(o - up * 1.5, ht + 1.5); tB = vec4(${LOT}. * (.26 + .2 * s2 + .35 * rho), ${LOT}. * (.26 + .2 * s1 + .35 * rho), s3, rho); tC = vec4(on, hs2(c, 124), 0., 0.);
   gl_Position = vec4(0.);
 }`;
   const tfp = (() => {

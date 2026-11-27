@@ -21,7 +21,7 @@ import { mkSky } from './sky.js';
 import { mkHoles, RL4 } from './wormhole.js';
 import { realWorld, REAL, region, NAMES } from './real.js';
 import { dayOf, msOf, moonGeo, helio, frame as bodyFrame, toBody, unit as unitV } from './ephem.js';
-import { dataH, reliefAt, lakeAt, speciesW, CRS, patchOf } from './planet.js';
+import { dataH, reliefAt, lakeAt, speciesW, CRS, patchOf, CORES } from './planet.js';
 
 const $ = (id) => document.getElementById(id), canvas = $('c');
 const gl = canvas.getContext('webgl2', { antialias: false, depth: false, alpha: false, powerPreference: 'high-performance' });
@@ -252,7 +252,7 @@ const grid = (() => {
 // ---- per frame: the octave table for the camera's foot, as a texture every shader reads -----------------------------
 const octTex = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, octTex); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-const S = {};                                                              // this frame's shared state
+const S = { cores: { v: new Float32Array(24), r: new Float32Array(6).fill(1) } };   // this frame's shared state
 // measured worlds: their maps as textures (heights and lakes; climate and relief; the forest's colour), made once each
 const dtex = new Map();
 function texOf(w, h, fmt, f, data, lin) { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, fmt, w, h, 0, f, gl.FLOAT, data);
@@ -295,6 +295,7 @@ function octaves(F) {
     if (DT.can) { gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, DT.can); } if (DT.lit) { gl.activeTexture(gl.TEXTURE11); gl.bindTexture(gl.TEXTURE_2D, DT.lit); } gl.activeTexture(gl.TEXTURE0);
   }
   S.axis = toLocal(F, G.axis); S.sun = toLocal(F, sunAt(G, G.t || 0)); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
+  { const u = nrm(foot), near = CORES.map((k) => [hypot(u[0] - k[0], u[1] - k[1], u[2] - k[2]), k]).sort((a, b) => a[0] - b[0]).slice(0, 6), v = new Float32Array(24), r = new Float32Array(6); near.forEach(([, k], i) => { v.set([k[0], k[1], k[2], k[4]], i * 4); r[i] = k[3]; }); S.cores = { v, r }; }   // the six city cores nearest you, for the shaders
   S.tb = foot.map((v) => floor(v / TREE)); S.tf = foot.map((v, i) => v / TREE - S.tb[i]); S.lb = foot.map((v) => floor(v / LOT)); S.lf = foot.map((v, i) => v / LOT - S.lb[i]);
   S.night = min(1, max(0, (0.06 - S.sun[1]) / 0.16));
 }
@@ -310,7 +311,7 @@ const setNoise = (P) => {
   if (P.uCrP) { gl.uniform1f(P.uCrP, S.dt && G.crP || 0); if (S.cr) { gl.uniform3fv(P.uCf, S.cr.f); gl.uniform3iv(P.uCb, S.cr.b); } }
   if (P.uCl) { gl.uniform1i(P.uCl, G.dat && G.dat.cl ? 1 : 0); gl.uniform1i(P.uClim, 9); gl.uniform1f(P.uSph, S.sph || 0); }
   if (P.uLapse) gl.uniform1f(P.uLapse, G.lapse ?? 6.5);
-  if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? 1 : 0); }
+  if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? (G.real === 'earth' && !G.E && S.dt ? 2 : 1) : 0); if (P.uLitC) gl.uniform1i(P.uLitC, 11); if (P.uCore) { gl.uniform4fv(P.uCore, S.cores.v); gl.uniform1fv(P.uCoreR, S.cores.r); } }
   if (P.uAxis) { gl.uniform3fv(P.uAxis, S.axis); gl.uniform1f(P.uTeq, G.Teq); gl.uniform1f(P.uTgrad, G.Tgrad); gl.uniform1f(P.uWet, G.wet); gl.uniform1f(P.uGrav, G.g); }
   if (P.uSpN) { const a = new Float32Array(64), c = new Float32Array(64); G.species.forEach((s, i) => { if (i < 16) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, s.decid || 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, G.present ? 0 : min(16, G.species.length)); }
 };

@@ -144,6 +144,7 @@ function census(G, R, la, lo) {
     amph: T < -9 ? 0 : 5000 * wet ** 2 * (0.25 + 0.75 * R.fF) * cl((T + 4) / 14) * (east ? 2.5 : 1) * age(370),
     rept: 250 * hot ** 2 * (1.25 - 0.7 * wet) * bare * age(310), rod: (5 + 40 * R.prod * (0.6 + 0.4 * (1 - R.fF))) * age(200),
     bird: 1.2 + 12 * R.prod * (0.7 + 0.3 * R.fF), bat: T < -3 ? 0 : (0.2 + 2.5 * cl((T + 2) / 26) ** 2 * (0.4 + 0.6 * R.fF)) * age(52) };
+  const ub = cl((R.urb || 0) * 2.5); c.amph *= 1 - 0.99 * ub; c.rept *= 1 - 0.95 * ub; c.worm *= 1 - 0.8 * ub; c.ant *= 1 - 0.5 * ub;   // paved and built over
   c.snake = c.rept * 0.08; if (E >= 150) c.bird = 0;
   const N = E > 0 ? { ant: 'ants', worm: 'earthworms', amph: E > 250 ? 'early amphibians' : 'frogs and salamanders', rept: E > 66 ? 'small reptiles' : 'lizards', snake: 'snakes', rod: E > 56 ? 'small early mammals' : 'mice and shrews', bird: 'birds', bat: 'bats' } : {
     ant: pick(mg && 'ants', sa && trop && 'leafcutter and army ants', af && trop && 'driver ants', (as || au) && trop && 'weaver ants', arid && 'harvester ants', eu && 'red wood and garden ants', 'ants'),
@@ -151,7 +152,7 @@ function census(G, R, la, lo) {
     amph: pick(mg && 'mantella and other Malagasy frogs', east && 'red-backed salamanders', na && arid && 'spadefoot toads', na && lo < -115 && 'Pacific tree frogs', na && 'wood frogs', eu && (T < 11 ? 'common frogs' : 'green toads'), af && (arid ? 'rain frogs' : 'reed frogs'), sa && (trop ? 'rain frogs' : 'four-eyed frogs'), au && (arid ? 'water-holding frogs' : 'striped marsh frogs'), as && (trop ? 'litter frogs' : cold ? 'Siberian salamanders' : 'tree frogs'), 'frogs'),
     rept: pick(mg && 'chameleons and skinks', na && arid && 'side-blotched lizards', na && la > 45 && 'garter snakes', na && 'skinks and fence lizards', eu && (T < 12 ? 'common lizards' : 'wall lizards'), af && (arid ? 'fringe-toed lizards' : 'rainbow skinks'), sa && In(10, 27, -86, -59) && 'anoles and dwarf geckos', sa && (trop ? 'whiptail lizards' : 'tree iguanas'), au && (arid ? 'Ctenotus skinks' : 'water skinks'), as && (trop ? 'forest skinks' : cold ? 'common lizards' : 'grass lizards'), 'lizards'),
     snake: 'snakes',
-    rod: pick(mg && 'tenrecs and tufted-tailed rats', T < -6 && R.fF < 0.3 && 'lemmings', na && arid && 'kangaroo rats and pocket mice', na && (la > 47 || R.fF < 0.4) && 'deer mice and voles', na && 'white-footed mice and shrews', eu && (R.fF > 0.4 ? 'wood mice, bank voles and shrews' : 'field voles and shrews'), af && (arid ? 'gerbils' : 'multimammate mice'), au && (arid ? 'hopping mice' : 'bush rats'), sa && (trop ? 'spiny rats' : 'grass mice'), as && (arid ? 'jirds' : trop ? 'spiny rats' : la > 50 ? 'red-backed voles' : 'field mice'), 'mice and shrews'),
+    rod: pick((R.urb || 0) > 0.15 && 'house mice and rats', mg && 'tenrecs and tufted-tailed rats', T < -6 && R.fF < 0.3 && 'lemmings', na && arid && 'kangaroo rats and pocket mice', na && (la > 47 || R.fF < 0.4) && 'deer mice and voles', na && 'white-footed mice and shrews', eu && (R.fF > 0.4 ? 'wood mice, bank voles and shrews' : 'field voles and shrews'), af && (arid ? 'gerbils' : 'multimammate mice'), au && (arid ? 'hopping mice' : 'bush rats'), sa && (trop ? 'spiny rats' : 'grass mice'), as && (arid ? 'jirds' : trop ? 'spiny rats' : la > 50 ? 'red-backed voles' : 'field mice'), 'mice and shrews'),
     bird: R.nm.birds || 'birds',
     bat: pick(mg && 'Malagasy fruit bats', sa && trop && 'leaf-nosed bats', (af || as || au) && trop && 'fruit bats and free-tailed bats', na && 'little brown bats', eu && 'pipistrelles', 'bats') };
   return { c, N };
@@ -230,11 +231,11 @@ export function mkEco() {
     const [b, c] = AX[a], p = [0, 0, 0]; p[b] = (i + 0.2 + 0.6 * hs2(i, j, 171 + fk)) * HS; p[c] = (j + 0.2 + 0.6 * hs2(i, j, 172 + fk)) * HS; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c];
     R = null;
     if (d > 0) { p[a] = sg * sqrt(d); const h = H(G, p, 20), cm = climate(G, p, h), u = p.map((v) => v / G.R);
-      if (h > 0.5) { const fF = forestF(G, p, h, cm.T, cm.W), ok = cityRho(G, p) * citySuit(h, cm.T, cm.W, 0) < 0.05 && river(G, p, h, cm.W) < 0.1, kk = kinds(G, u, cm.T, cm.W);
+      if (h > 0.5) { const fF = forestF(G, p, h, cm.T, cm.W), ok = cityRho(G, p) * citySuit(h, cm.T, cm.W, 0, G) < 0.05 && river(G, p, h, cm.W) < 0.1, kk = kinds(G, u, cm.T, cm.W);
         const prod = cl(cm.W * 1.5) * cl((cm.T + 8) / 22), gK = prod * (1 - 0.7 * fF);   // how much the square grows, and how much of it is grass
         R = { key, p, h, T: cm.T, W: cm.W, fF, gK, prod, warm: cl((cm.T + 10) / 22), cold: cl((3 - cm.T) / 14), south: u[2] < 0, grass: 0.75, ins: 0.6, birds: 0.3, hawk: 0.1, spr: 2, mite: 0.3,
           ch: [], ev: [], t: G.t, near: false, la: Math.asin(u[2]) * 180 / PI, lo: atan2(u[1], u[0]) * 180 / PI, aq: 0.6, fish: 0.5, otter: 0.2, herons: [] };
-        R.nm = waters(G, R.la, R.lo, cm.T); R.cz = census(G, R, R.la, R.lo);
+        R.nm = waters(G, R.la, R.lo, cm.T); R.urb = cityRho(G, p) * citySuit(h, cm.T, cm.W, 0, G); R.cz = census(G, R, R.la, R.lo);
         // how much fresh water the square holds: a few points tested for river or lake
         let wet = 0; for (let k = 0; k < 9; k++) { const q = p.map((v, m) => v + (hs2(i * 3 + k, j, 190 + m) - 0.5) * HS * 0.9), l = hypot(...q), qg = q.map((v) => v / l * G.R), hq = H(G, qg, 16); if (river(G, qg, hq, cm.W) > 0.15 || lakeAt(G, qg.map((v) => v / G.R)) > hq) wet++; }
         R.wet = wet / 9; if (!R.nm.hawk) R.hawk = 0;
