@@ -73,6 +73,18 @@ SIZES = [  # each rung's allowance in things people already know the size of
 ]
 sizes = '<section class="sizes" aria-labelledby="sizes-h"><h2 id="sizes-h">How big is a kilobyte?</h2><p>A byte holds one letter. A kilobyte (kB) is a thousand bytes, about half a page of a book; a megabyte (MB) is a million, about a long novel. Each rung is ten times the one before, so the top one holds ten thousand times what the bottom one does. Each square below is drawn with an area in proportion to its rung’s allowance.</p><ol>' + ''.join(
     f'<li><span class="sq" style="width:{96 * (b / 2e6) ** .5:.2f}px;height:{96 * (b / 2e6) ** .5:.2f}px"></span><b>{k}</b><i>{b:,} bytes</i><ul>' + ''.join(f'<li>{E(t)}</li>' for t in things) + '</ul></li>' for k, b, things in SIZES) + '</ol><p class="more">For scale, a phone that holds 128 GB could hold sixty-four thousand copies of the top rung.</p></section>'
+PIC = {  # "Everything in it": a screenshot of each part, taken in the 2 MB world by tools/scenes.py (tag, what it shows)
+ 'The Earth': ('earth', 'Flying over the Himalaya in the morning'), 'Climate': ('climate', 'Africa from 9,000 km up, desert to rainforest'),
+ 'Trees': ('trees', 'Under the trees in the Great Smoky Mountains'), 'Sky and time': ('sky', 'Europe’s night side, its cities lit'),
+ 'The Moon and the planets': ('moon', 'Over the Moon’s Tycho crater, 12 km up'), 'The wormhole': ('wormhole', 'The wormhole at the Earth’s L4 point'),
+ 'Down to quarks': ('quarks', 'Zoomed into the forest floor'), 'Out to the cosmic web': ('cosmos', 'Zoomed out past the galaxies'),
+ 'Deep time': ('deeptime', 'The Smokies 310 million years ago, among scale trees'), 'Animals': ('animals', 'The Serengeti from just above the grass'),
+ 'Who lives where': ('census', 'The forest floor in the Great Smoky Mountains'), 'Undergrowth and everyday animals': ('under', 'Saguaros in the Sonoran Desert'),
+ 'Towns': ('towns', 'Manhattan from 350 m up'), 'Finding your way': ('nav', 'The compass, the scale ruler and the map, in the Alps'),
+ 'Plants, insects and birds': ('plants', 'In the Black Forest'), 'Water': ('water', 'The shore of Lake Baikal in late November, from 900 m up'),
+ 'Weather': ('weather', 'Snow in the boreal forest of Quebec in March'), 'As on the invented worlds': ('aurora', 'Night over the Greenland ice sheet'),
+ 'Sound': ('sound', 'The Amazon at dawn, when the birds start'),
+}
 rows, W = '', [30, 42, 58, 78, 100]   # the picture's share of the row, rung by rung
 for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
     os.makedirs('site/' + folder, exist_ok=True); shutil.copyfile(src, f'site/{folder}/index.html')
@@ -82,7 +94,8 @@ for k, (folder, lim, src, title, line, like, tries, inside) in enumerate(R):
     if folder == '0.2kb': extra = f'<figure class="code"><figcaption>All of it:</figcaption><code>{E(open(src).read().strip())}</code></figure>'
     if tries: extra += '<div class="try"><p>Try</p><ul>' + ''.join(f'<li>{t}</li>' for t in tries) + '</ul></div>'
     if folder == '2mb': extra += '<p class="was">This rung once held six invented worlds, still open on their own: <a href="worlds/">the invented worlds ↗</a>.</p>'
-    if inside: extra += '<details><summary>Everything in it</summary><dl>' + ''.join(f'<dt>{E(a)}</dt><dd>{E(b)}</dd>' for a, b in inside) + '</dl></details>'
+    if inside: extra += f'<details><summary>Everything in it <small>{len(inside)} parts, each seen in the world itself</small></summary><dl class="inside">' + ''.join(
+        (f'<div><img src="thumbs/in-{PIC[a][0]}.webp" alt="" loading="lazy" width="640" height="400"><small class="seen">{E(PIC[a][1])}</small>' if a in PIC and os.path.exists(f'thumbs/in-{PIC[a][0]}.webp') else '<div>') + f'<dt>{E(a)}</dt><dd>{E(b)}</dd></div>' for a, b in inside) + '</dl></details>'
     step = '' if k == 0 else '<div class="step" aria-hidden="true"><span>×10 the room ↓</span></div>'
     rows += f'''{step}<section class="rung r{k}" id="rung-{folder}" style="--w:{W[k]}%">
 <a class="pic" href="{folder}/"><img src="thumbs/{folder}.webp" alt="" loading="{'eager' if k < 2 else 'lazy'}" width="720" height="450"><span>Step in ↗</span></a>
@@ -157,7 +170,10 @@ details { margin-top: 22px; border-top: 1px solid var(--line); }
 summary { cursor: pointer; padding: 14px 0; font: 600 18px/1.2 var(--ui); color: var(--ink); list-style: none; }
 summary::-webkit-details-marker { display: none; } summary::after { content: ' +'; color: var(--amber); } details[open] summary::after { content: ' −'; }
 summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 28px; }
+dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 26px 26px; }
+.inside > div { display: flex; flex-direction: column; } .inside img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--line); background: #050805; }
+summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font: 800 26px/1.15 var(--dot) !important; letter-spacing: -.02em; } summary small { order: 3; width: 100%; }
+.seen { margin: -4px 0 8px; font-size: 12.5px; font-style: italic; color: var(--dim); } summary small { display: block; margin-top: 4px; font: 500 14px/1.3 var(--ui); color: var(--dim); letter-spacing: 0; }
 dt { font: 600 16px/1.2 var(--ui); color: var(--lichen); } dd { margin: 4px 0 0; font-size: 14px; color: var(--dim); text-wrap: pretty; }
 .step { position: relative; height: 74px; }
 .step::before { content: ''; position: absolute; left: 18px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(var(--line), var(--amber), var(--line)); }

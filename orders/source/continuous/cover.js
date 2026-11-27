@@ -175,7 +175,7 @@ void main() { vec3 o; float sz, sd, a, h, fo, W, T, pa; place(o, sz, sd, a, fo, 
       const dead = [litter[0] * 1.6 + 0.05, litter[1] * 0.9 + 0.02, litter[2] * 0.4];
       for (const bd of BANDS) {
         const reach = bd.s * bd.n * 0.5, fade = min(1, max(0, (reach * 0.9 - hc) / (reach * 0.5))) * min(1, max(0, (bd.s * 160 - hc) / (bd.s * 60) + 1));
-        if (fade <= 0) continue;
+        if (fade <= 0 || (bd.P === shrub || bd.P === plant || bd.P === litter) && (G.lifeless || G.ground === 'bare')) continue;   // no plants or leaves where nothing grows
         const ub = foot[b] / bd.s, uc = foot[c] / bd.s, ib = floor(ub), ic = floor(uc);
         // place the cells
         const T = tfp; gl.useProgram(T.p); setNoise(T);
