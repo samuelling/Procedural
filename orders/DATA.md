@@ -73,6 +73,16 @@ its block: climate in 3° blocks, heights and tree ranges (a genus counts if it 
     species, *Data in Brief* 12, 662–666, doi:10.1016/j.dib.2017.05.007. CC BY 4.0.
 - **Climate classes:** see `source/src/kg.js` (kgcpy, BSD licence, after Rubel et al. 2017).
 
+## Undergrowth (cover.js)
+
+- One larger plant to a 2.5 m cell where the climate allows, chosen by temperature, wetness, forest cover and region:
+  shrubs (thicker under woods, bare in winter where deciduous), heath and dwarf shrubs on cool open ground (purple at
+  summer's end), columnar cacti only in the Americas' warm deserts (saguaro stands run some 30–80 a hectare) and
+  candelabra euphorbias in Africa's, tussock grass on dry plains (spinifex in Australia), sagebrush on dry steppe,
+  bamboo in warm wet East and Southeast Asia. Before grasses (and cacti) evolved, only shrubs. Grass thins with
+  dryness; wildflowers bloom in patches from spring to summer; moss carpets cool wet woods, lichen cold open ground.
+  The shapes, thresholds and densities are sketches, not measured.
+
 ## Towns on today's Earth (planet.js: litRho, CORES)
 
 - **How built-up each place is** comes from the same night lights as the night side (NASA Black Marble 2016, sixth-of-
@@ -128,6 +138,10 @@ Rates set from field studies, used as round numbers:
     model gives 100–250 per ha in warm deserts and tropics, tens in temperate country, none in the cold.
   - Small mammals: deer mice, voles and shrews at a few to a few tens per hectare (e.g. Storer et al. in the Sierra
     Nevada; Krebs et al. in the Yukon). The model gives 5–45.
+  - Tree squirrels: a few per hectare in woods, more in leafy suburbs, few in city cores (grey squirrels reach several
+    per hectare in parks and suburbs); named by region (red squirrels in Europe and the north, grey squirrels and
+    chipmunks in eastern North America, brushtail possums in Australia as the animal you would see instead). The
+    numbers are round, sketched from the general literature, not fitted.
   - How many of each are out on the surface at a moment (salamanders and frogs on wet nights, lizards on warm days,
     mice at night, bats after dusk) is the model's own sketch, not measured.
   - Names by region and climate are the common, widespread members of each class there (Madagascar has its own).

@@ -21,7 +21,7 @@ import { mkSky } from './sky.js';
 import { mkHoles, RL4 } from './wormhole.js';
 import { realWorld, REAL, region, NAMES } from './real.js';
 import { dayOf, msOf, moonGeo, helio, frame as bodyFrame, toBody, unit as unitV } from './ephem.js';
-import { dataH, reliefAt, lakeAt, speciesW, CRS, patchOf, CORES } from './planet.js';
+import { dataH, reliefAt, lakeAt, speciesW, CRS, patchOf, CORES, cityRho, citySuit } from './planet.js';
 
 const $ = (id) => document.getElementById(id), canvas = $('c');
 const gl = canvas.getContext('webgl2', { antialias: false, depth: false, alpha: false, powerPreference: 'high-performance' });
@@ -113,6 +113,8 @@ function arrive(n, P, look) {                                              // st
   if (!p) { const m = holes.mouths(n)[0], u0 = m.u, t = nrm(cross(u0, [0.31, 0.52, 0.79])); let best = null, bs = -1e9;
     for (let k = 0; k < 24; k++) { const a = k / 24 * 6.2832, dd = 1200 + (k % 3) * 400, dir = nrm(madd(t.map((v) => v * cos(a)), cross(u0, t), sin(a))), q = nrm(madd(u0, dir, dd / G.R)).map((v) => v * G.R), h = H(G, q); if (h < 5) continue; const c = climate(G, q, h), sc = -abs(c.W - 0.65) - (h > 2500 ? 2 : 0); if (sc > bs) { bs = sc; best = q; } }
     p = best || landing(G); look = madd(m.C, p, -1); }
+  if (G.real === 'earth' && !G.E) { const h0 = H(G, p), c = climate(G, p, h0); if (cityRho(G, p) * citySuit(h0, c.T, c.W, 0, G) > 0.04) {   // in a town: onto the nearest street, not inside a building
+    const ab = p.map(abs), a = ab[0] >= ab[1] && ab[0] >= ab[2] ? 0 : ab[1] >= ab[2] ? 1 : 2, [b, cc] = AX[a]; p = p.slice(); p[b] = (Math.round(p[b] / LOT / 4) * 4 + 0.5) * LOT; p[a] = Math.sign(p[a]) * sqrt(max(0, G.R * G.R - p[b] * p[b] - p[cc] * p[cc])); } }
   const u = nrm(p), h = H(G, p);
   cam.P = u.map((v) => v * (G.R + max(h, 0) + 1.7)); cam.ref = nrm(cross(u, cross([0.2, 0.9, 0.3], u)));
   if (look) { cam.ref = nrm(madd(look, u, -dot(look, u))); cam.yaw = 0; cam.pitch = 0.04; }
@@ -711,7 +713,7 @@ function sndSet() {                                                       // wha
   if (!snd || snd.ac.state !== 'running') return; const s = S.sun || [0, 1, 0], el = Math.asin(max(-1, min(1, s[1]))) * 180 / PI, cl = (x) => min(1, max(0, x)), hc = micro.M.on ? 0 : S.hc || 0;
   const u = nrm(cam.P), lat = abs(Math.asin(u[2]) * 180 / PI), alive = !G.real || G.real === 'earth', wet = (S.rain || 0) * (!S.snow && S.cy < (G.cloudTop || 1e4) ? 1 : 0);
   snd.set({ vol: cl(G.air || 0) * cl(1 - ((S.cy || 0) - 3e4) / 7e4), wind: min(1, 0.3 + 0.5 * wet + Math.log10(1 + hc) / 5) * (cave.C.in ? 0.15 : 1), day: cl((el + 4) / 20), night: 1 - cl((el + 8) / 10), rain: cave.C.in ? 0 : wet,
-    fire: S.fireD ? cl(1 - S.fireD / 300) : 0, life: alive && !cave.C.in ? cl(1 - hc / 400) * (S.snow && S.bare > 0.5 ? 0.3 : 1) : 0, birds: G.real === 'earth' ? (lat < 23 ? 'tropic' : lat > 52 ? 'boreal' : 'mixed') : 'mixed', spring: S.spr > 0.5, bm: G.real === 'earth' || !G.real ? eco.birdsAt(S.foot) : 1, muffle: micro.M.on || ctl.dive > 0.05 });
+    fire: S.fireD ? cl(1 - S.fireD / 300) : 0, life: alive && !cave.C.in ? cl(1 - hc / 400) * (S.snow && S.bare > 0.5 ? 0.3 : 1) : 0, birds: G.real === 'earth' ? (lat < 23 ? 'tropic' : lat > 52 ? 'boreal' : 'mixed') : 'mixed', spring: S.spr > 0.5, bm: G.real === 'earth' || !G.real ? eco.birdsAt(S.foot) : 1, muffle: micro.M.on || ctl.dive > 0.05, town: G.real === 'earth' && S.cen ? cl(S.cen.urb * 2.5) * cl(1 - hc / 800) : 0 });
 }
 setInterval(sndSet, 250);
 addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat) sndToggle(); });
@@ -790,7 +792,8 @@ function hud() {
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = micro.M.on && w < 0.05 ? micro.label(w) : BANDS.find((b) => w >= b[0])[1];
   $('alt').textContent = micro.M.on ? (micro.M.P[1] > 0 ? `${fmt(micro.M.P[1])} above the ` : 'in among the atoms of the ') + (micro.MATS[micro.M.mat] || { on: 'ground' }).on + (w < 2e-7 ? ' · finer than light can show: the colours are a convention' : lampK(S, micro.M) > 0.35 ? ' · lit by the microscope’s lamp' : '') + ((micro.M.mat === 1 || micro.M.mat === 9) && w < 0.03 && w > 1e-5 && eco.soil(S) ? ' · ' + eco.soil(S) : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
   if (G.E && !cave.C.in && !micro.M.on && S.cy < 1e8) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
-  if (G.real && !cave.C.in && !micro.M.on && S.cy < 1e8) { const u = nrm(cam.P), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI; $('alt').textContent += ` · ${abs(la).toFixed(2)}°${la < 0 ? 'S' : 'N'} ${abs(lo).toFixed(2)}°${lo < 0 ? 'W' : 'E'}`; }
+  if (G.real && !cave.C.in && !micro.M.on && S.cy < 1e8) { const u = nrm(cam.P), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI; $('alt').textContent += ` · ${abs(la).toFixed(2)}°${la < 0 ? 'S' : 'N'} ${abs(lo).toFixed(2)}°${lo < 0 ? 'W' : 'E'}`;
+    if (G.real === 'earth' && !G.E && S.cy < 2e5) { let best = null, bd = 6e4; for (const k of CORES) { const d = hypot(u[0] - k[0], u[1] - k[1], u[2] - k[2]) * 6.371e6; if (d < bd) { bd = d; best = k; } } if (best) $('alt').textContent += bd < best[3] ? ` · in ${best[5]}` : ` · ${fmt(bd)} from ${best[5]}`; } }   // the nearest big city's core, within 60 km
   const code = PB.code ?? pick.code, an = code >= 2e6 ? drawn[Math.round(code - 2e6)] : null, sp = an || !(floor((Math.round(code) - 1) / 10000) < G.species.length) ? null : life.look(G, code), pc = (v) => (v >= 1 ? '+' : '−') + abs(Math.round((v - 1) * 100)) + '%';
   $('sp').textContent = an ? `${Who(an)}, ${an.age < 1 ? Math.round(an.age * 12) + ' months' : an.age.toFixed(0) + ' years'} old${an.dead >= 0 ? `, ${an.why === 'killed' ? 'killed' : 'dead'}` : ''} · a ${an.k.nm}, generation ${an.gen} · size ${pc(an.gn[0])}, speed ${pc(an.gn[1])}, wariness ${pc(an.gn[2])}` : sp ? sp.name : ''; $('sp').hidden = !an && !sp;
   $('eco').textContent = S.sea ? eco.seaText(S.sea) : [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent; $('cen').textContent = !S.sea && S.cen && S.hc < 2000 && !micro.M.on ? S.cen.text : ''; $('cen').hidden = !$('cen').textContent;
@@ -810,7 +813,7 @@ function hint() {
 const PLACES = [['Great Smoky Mountains', 100, 35.61, -83.45], ['Yosemite Valley', 100, 37.73, -119.6], ['Grand Canyon', 100, 36.06, -112.14], ['Redwood coast, California', 100, 41.3, -124.0], ['Sonoran Desert, saguaros', 100, 32.25, -111.1],
   ['Boreal forest, Quebec', 100, 49.6, -73.4], ['Alaska, the Brooks Range', 100, 67.5, -151], ['Amazon rainforest', 100, -3.1, -60.1], ['Patagonian beech forest', 100, -41.1, -71.5], ['Atacama Desert', 100, -23.8, -68.2],
   ['The Alps, Grindelwald', 100, 46.62, 8.04], ['The Black Forest', 100, 48.0, 8.2], ['Tuscany', 100, 43.3, 11.3], ['Iceland', 100, 64.2, -19.5], ['The Sahara', 100, 23.5, 12.5], ['The Serengeti', 100, -2.33, 34.83], ['Avenue of the baobabs, Madagascar', 100, -20.25, 44.42],
-  ['Himalaya, below Everest', 100, 27.9, 86.85], ['Siberian taiga, Lake Baikal', 100, 52.2, 105.5], ['Hills above Kyoto', 100, 35.03, 135.75], ['Borneo rainforest', 100, 1.0, 114.0], ['Blue Mountains, Australia', 100, -33.7, 150.3], ['Fiordland, New Zealand', 100, -45.4, 167.7], ['Greenland ice sheet', 100, 72, -40],
+  ['Himalaya, below Everest', 100, 27.9, 86.85], ['Siberian taiga, Lake Baikal', 100, 52.2, 105.5], ['Hills above Kyoto', 100, 35.08, 135.70], ['Borneo rainforest', 100, 1.0, 114.0], ['Blue Mountains, Australia', 100, -33.7, 150.3], ['Fiordland, New Zealand', 100, -45.4, 167.7], ['Greenland ice sheet', 100, 72, -40],
   ['The Moon, Mare Tranquillitatis', 101, 0.67, 23.47], ['The Moon, Tycho', 101, -43.3, -11.2], ['Mercury, Caloris basin', 102, 31.5, 162.7], ['Venus, Maxwell Montes', 103, 65.2, 3.3], ['Mars, Valles Marineris', 104, -8.5, -72], ['Mars, Olympus Mons', 104, 18.65, -133.8], ['Mars, the north polar cap', 104, 84, 0],
   ['Jupiter, at the cloud tops', 105, 0, 0], ['Saturn, at the cloud tops', 106, 10, 0], ['Uranus, at the cloud tops', 107, 0, 0], ['Neptune, at the cloud tops', 108, 0, 0], ['The wormhole at the Earth\'s L4 point', -1, 0, 0]];
 const goSel = $('go'); goSel.innerHTML = '<option value="">Go to…</option><option value="here">📍 Where you are</option>' + PLACES.map((p, i) => `<option value="${i}">${p[0]}</option>`).join('');

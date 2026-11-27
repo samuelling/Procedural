@@ -131,7 +131,7 @@ function waters(G, la, lo, T) {
 // lungless salamanders of eastern North American forests most of all); reptiles with heat and dryness; birds and small
 // mammals with what the land grows; bats sparser than any of them. Insect-eaters follow the insect pool; the age decides
 // who exists yet. The masses (fresh weight, grams) give the weights by class.
-const CM = { ant: 0.002, worm: 0.3, amph: 0.6, rept: 6, snake: 60, rod: 22, bird: 25, bat: 12 };
+const CM = { ant: 0.002, worm: 0.3, amph: 0.6, rept: 6, snake: 60, rod: 22, sq: 450, bird: 25, bat: 12 };
 function census(G, R, la, lo) {
   if (G.real !== 'earth') return null;
   const E = G.E || 0, T = R.T, wet = cl(R.W * 1.4), hot = cl((T + 2) / 27), bare = cl(0.1 + R.prod * 8), In = (a, b, c, d) => la >= a && la <= b && lo >= c && lo <= d;
@@ -145,8 +145,9 @@ function census(G, R, la, lo) {
     rept: 250 * hot ** 2 * (1.25 - 0.7 * wet) * bare * age(310), rod: (5 + 40 * R.prod * (0.6 + 0.4 * (1 - R.fF))) * age(200),
     bird: 1.2 + 12 * R.prod * (0.7 + 0.3 * R.fF), bat: T < -3 ? 0 : (0.2 + 2.5 * cl((T + 2) / 26) ** 2 * (0.4 + 0.6 * R.fF)) * age(52) };
   const ub = cl((R.urb || 0) * 2.5); c.amph *= 1 - 0.99 * ub; c.rept *= 1 - 0.95 * ub; c.worm *= 1 - 0.8 * ub; c.ant *= 1 - 0.5 * ub;   // paved and built over
+  c.sq = R.W < 0.25 || T < -10 || mg ? 0 : (0.5 + 4 * R.fF) * cl((T + 10) / 18) * (1 + 2 * ub) * ((R.urb || 0) > 0.6 ? 0.3 : 1) * age(40);   // tree squirrels: a few a hectare in woods, more in leafy suburbs
   c.snake = c.rept * 0.08; if (E >= 150) c.bird = 0;
-  const N = E > 0 ? { ant: 'ants', worm: 'earthworms', amph: E > 250 ? 'early amphibians' : 'frogs and salamanders', rept: E > 66 ? 'small reptiles' : 'lizards', snake: 'snakes', rod: E > 56 ? 'small early mammals' : 'mice and shrews', bird: 'birds', bat: 'bats' } : {
+  const N = E > 0 ? { ant: 'ants', worm: 'earthworms', amph: E > 250 ? 'early amphibians' : 'frogs and salamanders', rept: E > 66 ? 'small reptiles' : 'lizards', snake: 'snakes', rod: E > 56 ? 'small early mammals' : 'mice and shrews', sq: 'squirrels', bird: 'birds', bat: 'bats' } : {
     ant: pick(mg && 'ants', sa && trop && 'leafcutter and army ants', af && trop && 'driver ants', (as || au) && trop && 'weaver ants', arid && 'harvester ants', eu && 'red wood and garden ants', 'ants'),
     worm: 'earthworms',
     amph: pick(mg && 'mantella and other Malagasy frogs', east && 'red-backed salamanders', na && arid && 'spadefoot toads', na && lo < -115 && 'Pacific tree frogs', na && 'wood frogs', eu && (T < 11 ? 'common frogs' : 'green toads'), af && (arid ? 'rain frogs' : 'reed frogs'), sa && (trop ? 'rain frogs' : 'four-eyed frogs'), au && (arid ? 'water-holding frogs' : 'striped marsh frogs'), as && (trop ? 'litter frogs' : cold ? 'Siberian salamanders' : 'tree frogs'), 'frogs'),
@@ -154,6 +155,7 @@ function census(G, R, la, lo) {
     snake: 'snakes',
     rod: pick((R.urb || 0) > 0.15 && 'house mice and rats', mg && 'tenrecs and tufted-tailed rats', T < -6 && R.fF < 0.3 && 'lemmings', na && arid && 'kangaroo rats and pocket mice', na && (la > 47 || R.fF < 0.4) && 'deer mice and voles', na && 'white-footed mice and shrews', eu && (R.fF > 0.4 ? 'wood mice, bank voles and shrews' : 'field voles and shrews'), af && (arid ? 'gerbils' : 'multimammate mice'), au && (arid ? 'hopping mice' : 'bush rats'), sa && (trop ? 'spiny rats' : 'grass mice'), as && (arid ? 'jirds' : trop ? 'spiny rats' : la > 50 ? 'red-backed voles' : 'field mice'), 'mice and shrews'),
     bird: R.nm.birds || 'birds',
+    sq: pick(au && 'brushtail possums', na && (la > 50 ? 'red squirrels' : lo < -115 ? 'western grey squirrels and chipmunks' : 'grey squirrels and chipmunks'), eu && 'red squirrels', af && 'bush squirrels', sa && 'tree squirrels', as && (trop ? 'giant and palm squirrels' : 'red squirrels'), 'squirrels'),
     bat: pick(mg && 'Malagasy fruit bats', sa && trop && 'leaf-nosed bats', (af || as || au) && trop && 'fruit bats and free-tailed bats', na && 'little brown bats', eu && 'pipistrelles', 'bats') };
   return { c, N };
 }
@@ -530,15 +532,15 @@ export function mkEco() {
     census(S) {
       const R = this.at(S.foot); if (!R || !R.cz) return null;
       const { c, N } = R.cz, ins = cl(R.ins / 0.6, 0.3, 2), q = sqrt(ins), Tn = S.Tnow ?? R.T, day = (S.sun || [0, 1, 0])[1], rain = S.rain || 0, snow = (S.packHere || 0) > 0.3;
-      const n = { ant: c.ant * q, worm: c.worm, amph: c.amph * q, rept: c.rept * q, snake: c.snake * q, rod: c.rod, bird: c.bird * R.birds / 0.3, bat: c.bat * q }, big = [];
+      const n = { ant: c.ant * q, worm: c.worm, amph: c.amph * q, rept: c.rept * q, snake: c.snake * q, rod: c.rod, sq: c.sq, bird: c.bird * R.birds / 0.3, bat: c.bat * q }, big = [];
       for (const C of R.ch) for (const [k, L] of [[C.g, C.herd], [C.h, C.pack]]) { if (!k) continue; const m = alive(L).length / (C.A * 100); if (m > 0) big.push([k.pl, m, 1.2e5 * k.sz ** 3]); }
       const night = day < -0.05, act = { ant: Tn > 8 ? 0.005 : 0, worm: night && rain > 0.3 && Tn > 3 ? 0.002 : 0, amph: Tn < 2 || snow ? 0 : night ? 0.04 + 0.25 * rain : 0.003 + 0.05 * rain,
-        rept: day > 0.05 && Tn > 12 ? 0.35 * cl((Tn - 12) / 12) : 0, snake: day > 0.05 && Tn > 15 ? 0.1 : 0, rod: snow ? 0 : night ? 0.3 : 0.02, bat: Tn > 6 && day < 0.03 ? 1 : 0 };
+        rept: day > 0.05 && Tn > 12 ? 0.35 * cl((Tn - 12) / 12) : 0, snake: day > 0.05 && Tn > 15 ? 0.1 : 0, rod: snow ? 0 : night ? 0.3 : 0.02, sq: day > 0.05 ? 0.5 : 0, bird: day > -0.02 ? 1 : 0, bat: Tn > 6 && day < 0.03 ? 1 : 0 };
       const surf = {}; for (const k in act) surf[k] = n[k] * act[k] / 1e4;
       const f = (v) => v >= 1e6 ? (v / 1e6).toFixed(1) + ' million' : v >= 100 ? (Math.round(v / 10) * 10).toLocaleString() : v >= 10 ? Math.round(v) + '' : v >= 0.1 ? v.toFixed(1) : '1 per ' + Math.round(1 / v) + ' ha';
       const L = Object.keys(n).filter((k) => n[k] > 0 && k !== 'snake').map((k) => [N[k], n[k], CM[k]]).concat(big), wt = L.map(([nm, v, g]) => [nm, v * g]).sort((a, b) => b[1] - a[1]);
       const text = 'per hectare: ' + L.map(([nm, v]) => (v < 0.1 ? `${nm} ${f(v)}` : `${f(v)} ${nm}`)).join(' · ') + ` · by weight: ${wt.slice(0, 4).map(([nm, w]) => nm + (w >= 1e3 ? ` ${(w / 1e3).toFixed(w >= 1e4 ? 0 : 1)} kg` : ` ${Math.round(w)} g`)).join(' > ')}`;
-      return { text, surf, N, n };
+      return { text, surf, N, n, urb: R.urb || 0 };
     },
     soil(S) { const R = this.at(S.foot); return R ? `each cm² here holds about ${R.spr < 1 ? R.spr.toFixed(1) : Math.round(R.spr)} springtails and ${R.mite < 1 ? R.mite.toFixed(1) : Math.round(R.mite)} predatory mites` : ''; },
     grassAt(p) { const R = this.at(p); return R ? cl(R.grass / 0.75, 0.15, 1.2) : 1; },

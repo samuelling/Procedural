@@ -1,7 +1,7 @@
 // Finding your way: a compass ball that always shows which way the sky is, the ground, north and your target; and a
 // map (N) that zooms from a hundred metres to the whole globe, drawn from the same terrain and climate as the world,
 // with waypoints: what lives near you, the named places of this world, your own marks, and the other worlds.
-import { H, climate, forestF, river, lakeAt } from './planet.js';
+import { H, climate, forestF, river, lakeAt, CORES } from './planet.js';
 
 const { sin, cos, atan2, asin, acos, hypot, max, min, abs, sqrt, round, PI } = Math;
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -9,7 +9,7 @@ const nrm = (a) => { const l = hypot(...a) || 1; return a.map((v) => v / l); }, 
 const fd = (m) => m < 30 ? 'here' : m < 1000 ? `${round(m)} m` : m < 1e5 ? `${(m / 1000).toFixed(1)} km` : `${round(m / 1000).toLocaleString()} km`;
 const PTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], pt = (b) => PTS[round(((b % 360) + 360) % 360 / 45) % 8];
 const EXT = [100, 300, 1e3, 3e3, 1e4, 3e4, 1e5, 3e5, 1e6, 3e6, 0];       // the map's half-widths, metres; 0 is the whole globe
-const HUE = { you: '#f2c46b', place: '#eef0e2', life: '#9fd28a', water: '#8cc4ef', mark: '#f08f6a' };
+const HUE = { you: '#f2c46b', place: '#eef0e2', life: '#9fd28a', water: '#8cc4ef', mark: '#f08f6a', city: '#c9b6f0' };
 
 export function mkNav(X) {
   const $ = (id) => document.getElementById(id), cv = $('compass'), cx = cv.getContext('2d');
@@ -120,6 +120,7 @@ export function mkNav(X) {
     }
     PLACES.forEach((p, i) => { if (p[1] === G.n) L.push({ k: 'place', nm: p[0], q: unit(p[2], p[3]), i, sec: 'world' }); else L.push({ k: 'place', nm: p[0], i, sec: 'other' }); });
     marks.forEach((m, i) => { if (m.n === G.n) L.push({ k: 'mark', nm: m.nm, q: m.q, mi: i, sec: 'mark' }); });
+    if (G.real === 'earth' && !G.E) for (const k of CORES) L.push({ k: 'city', nm: k[5], q: k.slice(0, 3), sec: 'city' });   // the big cities' downtowns
     for (const p of L) if (p.q) [p.d, p.b] = bearTo(f, p.q);
     return L;
   }
@@ -132,7 +133,7 @@ export function mkNav(X) {
         if (p.q || p.i !== undefined) { const b = document.createElement('button'); b.textContent = 'go'; b.title = 'go there'; b.onclick = (e) => { e.stopPropagation(); go(p); }; row.append(b); }
         if (p.k === 'mark') { const b = document.createElement('button'); b.textContent = '×'; b.title = 'forget this mark'; b.onclick = (e) => { e.stopPropagation(); marks.splice(p.mi, 1); keep(); if (target && target.nm === p.nm) target = null; list(); }; row.append(b); }
         el.append(row); }); };
-    sec('Near you', L.filter((p) => p.sec === 'near')); sec('Your marks', L.filter((p) => p.sec === 'mark')); sec(`On ${X.G().name}`, L.filter((p) => p.sec === 'world')); sec('Other worlds', L.filter((p) => p.sec === 'other'), false);
+    sec('Near you', L.filter((p) => p.sec === 'near')); sec('Your marks', L.filter((p) => p.sec === 'mark')); sec(`On ${X.G().name}`, L.filter((p) => p.sec === 'world')); { const cs = L.filter((p) => p.sec === 'city').sort((a, b) => a.d - b.d).slice(0, 12); sec('Nearest cities', cs); } sec('Other worlds', L.filter((p) => p.sec === 'other'), false);
     pins = L.filter((p) => p.q);
   }
   function go(p) { open && toggle(false); if (p.i !== undefined) X.goPlace(p.i); else X.goTo(p.q.map((v) => v * X.G().R)); if (p.q) target = null; }

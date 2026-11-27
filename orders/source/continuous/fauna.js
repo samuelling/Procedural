@@ -6,7 +6,7 @@ import { AX, H, hs2, climate, rng } from './planet.js';
 import { drawn } from './eco.js';
 
 export function mkFauna(gl, prog, PRE) {
-  const { floor, max, min, abs, hypot, sin, cos, sqrt, cbrt } = Math, SP = 1000, NB = 260;
+  const { floor, max, min, abs, hypot, sin, cos, sqrt, cbrt, PI } = Math, SP = 1000, NB = 260;
   const bird = prog(PRE + `
 layout(location = 0) in vec3 aP; layout(location = 4) in vec4 iP; layout(location = 5) in vec4 iS;
 uniform float uSpan, uBeat, uCy;
@@ -221,6 +221,7 @@ void main() { CAST
       // share of ants, salamanders or frogs, lizards and mice; and above, bats after dusk, one 20 m cell at a time
       const cz = S.cen; if (!cz || S.hc > 12) return;
       const u = cz.surf, sal = /salamander/.test(cz.N.amph), toad = /toad/.test(cz.N.amph), dry = R.W < 0.3;
+      const sqc = /red/.test(cz.N.sq || '') ? [0.5, 0.25, 0.1] : /possum/.test(cz.N.sq || '') ? [0.33, 0.31, 0.28] : [0.42, 0.41, 0.38];
       const CL = [['ant', 0.005, [0.07, 0.035, 0.02], 0.03, 6], ['amph', sal ? 0.09 : 0.05, sal ? [0.45, 0.12, 0.05] : toad ? [0.4, 0.33, 0.22] : [0.22, 0.3, 0.1], 0.004, 1], ['rept', 0.13, dry ? [0.55, 0.45, 0.3] : [0.24, 0.21, 0.14], 0.4, 1], ['rod', 0.15, [0.36, 0.28, 0.2], 0.5, 1]];
       const gout = CL.map(() => []), gi = floor(foot[b]), gj = floor(foot[c]);
       for (let i = gi - 9; i <= gi + 9; i++) for (let j = gj - 9; j <= gj + 9; j++) {
@@ -243,6 +244,35 @@ void main() { CAST
         const s0 = hs2(i, j, 242 + fk) * 50, x = (i + 0.5) * 20 - foot[b], z = (j + 0.5) * 20 - foot[c], P = [0, 0, 0]; P[b] = x; P[c] = z;
         const q = [0, 1, 2].map((m) => P[0] * F[m][0] + P[1] * F[m][1] + P[2] * F[m][2]), w = t * 1.3 + s0, jk = sin(t * 5.1 + s0) * 0.8;   // a bat's jinks after moths
         bo.push(q[0] + 7 * sin(w) + jk, 5 + 3 * sin(w * 0.7 + s0) - S.hc, q[2] + 7 * cos(w * 1.1) + jk, 1, 1, -w, s0, 0); }
+      // songbirds about you by day, as many as the census holds (in town, pigeons and sparrows, more of them): each feeds
+      // on the ground a while, hopping, then flies a low arc to another spot near by
+      const nbd = u.bird || 0, town = cz.urb > 0.2, gb = [], fb = [], BC = 6, bi0 = floor(foot[b] / BC), bj0 = floor(foot[c] / BC);
+      if (nbd > 0) for (let i = bi0 - 5; i <= bi0 + 5; i++) for (let j = bj0 - 5; j <= bj0 + 5; j++) {
+        if (hs2(i, j, 251 + fk) > nbd * BC * BC * 1.5 * (town ? 2.5 : 1)) continue;
+        const key = `${G.id}@${G.E || 0}:b${fk}:${i}:${j}`; let cell = gmemo.get(key);
+        if (!cell) { const p = [0, 0, 0]; p[b] = (i + 0.5) * BC; p[c] = (j + 0.5) * BC; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d <= 0) continue; p[a] = sg * sqrt(d); cell = { p, h: H(G, p, 16) }; gmemo.set(key, cell); }
+        if (cell.h < 0.3) continue;
+        const D = cell.p.map((v, m) => v - foot[m]), q = [0, 1, 2].map((m) => D[0] * F[m][0] + D[1] * F[m][1] + D[2] * F[m][2]), y0 = q[1] + (cell.h - S.cy) + q[1] * cell.h / G.R;
+        const s0 = hs2(i, j, 252 + fk) * 50, ph = (t + s0) / (14 + 8 * hs2(i, j, 253 + fk)), n0 = floor(ph), fr = ph - n0, sp = (m) => [(hs2(i * 31 + m, j, 254 + fk) - 0.5) * 10, (hs2(i, j * 31 + m, 255 + fk) - 0.5) * 10], A = sp(n0), B = sp(n0 + 1);
+        if (fr < 0.8) { const hp = abs(sin(t * 7 + s0)) ** 3 * 0.04; gb.push(q[0] + A[0] + 0.12 * sin(t * 0.7 + s0), y0 + 0.01 + hp, q[2] + A[1] + 0.12 * cos(t * 0.6 + s0), 1, 1, s0 + floor(t * 0.8 + s0), 0, 0); }
+        else { const f = (fr - 0.8) / 0.2; fb.push(q[0] + A[0] + (B[0] - A[0]) * f, y0 + 0.1 + 2.5 * sin(PI * f), q[2] + A[1] + (B[1] - A[1]) * f, 1, 1, Math.atan2(B[0] - A[0], B[1] - A[1]), s0, 0); }
+      }
+      const bcol = town ? [0.4, 0.41, 0.44] : [0.33, 0.25, 0.17], blen = town ? 0.3 : 0.16;
+      if (gb.length) { gl.bindVertexArray(cvao); gl.uniform1f(bird.uBeat, 0); gl.uniform1f(bird.uSpan, blen / 1.45); gl.uniform3fv(bird.uCol, bcol); gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(gb), gl.DYNAMIC_DRAW); gl.drawArraysInstanced(gl.TRIANGLES, 0, gc.length / 3, gb.length / 8); }
+      if (fb.length) { gl.bindVertexArray(vao); gl.uniform1f(bird.uBeat, 16); gl.uniform1f(bird.uSpan, blen * 0.9); gl.uniform3fv(bird.uCol, bcol); gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fb), gl.DYNAMIC_DRAW); gl.drawArraysInstanced(gl.TRIANGLES, 0, g.length / 3, fb.length / 8); }
+      S.nBirdsNear = gb.length / 8 + fb.length / 8;
+      // squirrels (or possums) by day, on 5 m cells out to 35 m: a bound, a pause to look about, another bound
+      const sq = [], si0 = floor(foot[b] / 5), sj0 = floor(foot[c] / 5);
+      if (u.sq > 0) for (let i = si0 - 7; i <= si0 + 7; i++) for (let j = sj0 - 7; j <= sj0 + 7; j++) {
+        if (hs2(i, j, 261 + fk) > u.sq * 25) continue;
+        const key = `${G.id}@${G.E || 0}:s${fk}:${i}:${j}`; let cell = gmemo.get(key);
+        if (!cell) { const p = [0, 0, 0]; p[b] = (i + 0.5) * 5; p[c] = (j + 0.5) * 5; const d = G.R * G.R - p[b] * p[b] - p[c] * p[c]; if (d <= 0) continue; p[a] = sg * sqrt(d); cell = { p, h: H(G, p, 16) }; gmemo.set(key, cell); }
+        if (cell.h < 0.3) continue;
+        const D = cell.p.map((v, m) => v - foot[m]), q = [0, 1, 2].map((m) => D[0] * F[m][0] + D[1] * F[m][1] + D[2] * F[m][2]), s0 = hs2(i, j, 262 + fk) * 50, ph = t * 0.35 + s0, n0 = floor(ph), fr = ph - n0, w = s0 + (n0 + min(1, max(0, (fr - 0.6) * 5))) * 2.2;
+        sq.push(q[0] + 1.8 * sin(w), q[1] + (cell.h - S.cy) + q[1] * cell.h / G.R + 0.02 + (fr > 0.6 ? 0.12 * abs(sin((fr - 0.6) * 5 * PI * 3)) : 0), q[2] + 1.8 * cos(w * 0.8), 1, 1, Math.atan2(cos(w), -0.8 * sin(w * 0.8)), 0, 0);
+      }
+      if (sq.length) { gl.bindVertexArray(cvao); gl.uniform1f(bird.uBeat, 0); gl.uniform1f(bird.uSpan, 0.45 / 1.45); gl.uniform3fv(bird.uCol, sqc); gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sq), gl.DYNAMIC_DRAW); gl.drawArraysInstanced(gl.TRIANGLES, 0, gc.length / 3, sq.length / 8); }
+      S.nSq = sq.length / 8;
       if (bo.length) { gl.bindVertexArray(vao); gl.uniform1f(bird.uSpan, 0.14); gl.uniform1f(bird.uBeat, 13); gl.uniform3fv(bird.uCol, [0.05, 0.04, 0.04]); gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bo), gl.DYNAMIC_DRAW); gl.drawArraysInstanced(gl.TRIANGLES, 0, g.length / 3, bo.length / 8); }
       gl.bindVertexArray(null);
     },
