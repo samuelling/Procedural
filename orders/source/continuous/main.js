@@ -21,7 +21,7 @@ import { mkSky } from './sky.js';
 import { mkHoles, RL4 } from './wormhole.js';
 import { realWorld, REAL, region, NAMES } from './real.js';
 import { dayOf, msOf, moonGeo, helio, frame as bodyFrame, toBody, unit as unitV } from './ephem.js';
-import { dataH, reliefAt, lakeAt, speciesW, CRS, patchOf, CORES, cityRho, citySuit } from './planet.js';
+import { dataH, reliefAt, lakeAt, speciesW, CRS, patchOf, CORES, cityRho, citySuit, rivers, realRiver, segD } from './planet.js';
 
 const $ = (id) => document.getElementById(id), canvas = $('c');
 const gl = canvas.getContext('webgl2', { antialias: false, depth: false, alpha: false, powerPreference: 'high-performance' });
@@ -254,7 +254,7 @@ const grid = (() => {
 // ---- per frame: the octave table for the camera's foot, as a texture every shader reads -----------------------------
 const octTex = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, octTex); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-const S = { cores: { v: new Float32Array(24), r: new Float32Array(6).fill(1) } };   // this frame's shared state
+const S = { cores: { v: new Float32Array(24), r: new Float32Array(6).fill(1) }, riv: { a: new Float32Array(96), b: new Float32Array(96), n: 0 } };   // this frame's shared state
 // measured worlds: their maps as textures (heights and lakes; climate and relief; the forest's colour), made once each
 const dtex = new Map();
 function texOf(w, h, fmt, f, data, lin) { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, fmt, w, h, 0, f, gl.FLOAT, data);
@@ -298,6 +298,10 @@ function octaves(F) {
   }
   S.axis = toLocal(F, G.axis); S.sun = toLocal(F, sunAt(G, G.t || 0)); { const h0 = H0(G, foot); S.rivC = river(G, foot, h0, climate(G, foot, h0).W); }
   { const u = nrm(foot), near = CORES.map((k) => [hypot(u[0] - k[0], u[1] - k[1], u[2] - k[2]), k]).sort((a, b) => a[0] - b[0]).slice(0, 6), v = new Float32Array(24), r = new Float32Array(6); near.forEach(([, k], i) => { v.set([k[0], k[1], k[2], k[4]], i * 4); r[i] = k[3]; }); S.cores = { v, r }; }   // the six city cores nearest you, for the shaders
+  S.riv.n = 0; if (G.real === 'earth' && !G.E && S.cy < 6e4) {                 // the real rivers' segments nearest you, for the shaders
+    const u = nrm(foot), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI, B = rivers(), L = [], seen = new Set();
+    for (let i = floor(lo) - 1; i <= floor(lo) + 1; i++) for (let j = floor(la) - 1; j <= floor(la) + 1; j++) for (const sg of B.get(i * 1000 + j) || []) if (!seen.has(sg)) { seen.add(sg); L.push([segD(u, sg.a, sg.b), sg]); }
+    L.sort((x, y) => x[0] - y[0]); L.slice(0, 24).forEach(([, sg], i) => { const a = toLocal(F, sg.a.map((v, k) => v * G.R - foot[k])), b = toLocal(F, sg.b.map((v, k) => v * G.R - foot[k])); S.riv.a.set([...a, sg.w], i * 4); S.riv.b.set([...b, 0], i * 4); S.riv.n = i + 1; }); }
   S.tb = foot.map((v) => floor(v / TREE)); S.tf = foot.map((v, i) => v / TREE - S.tb[i]); S.lb = foot.map((v) => floor(v / LOT)); S.lf = foot.map((v, i) => v / LOT - S.lb[i]);
   S.night = min(1, max(0, (0.06 - S.sun[1]) / 0.16));
 }
@@ -313,7 +317,7 @@ const setNoise = (P) => {
   if (P.uCrP) { gl.uniform1f(P.uCrP, S.dt && G.crP || 0); if (S.cr) { gl.uniform3fv(P.uCf, S.cr.f); gl.uniform3iv(P.uCb, S.cr.b); } }
   if (P.uCl) { gl.uniform1i(P.uCl, G.dat && G.dat.cl ? 1 : 0); gl.uniform1i(P.uClim, 9); gl.uniform1f(P.uSph, S.sph || 0); }
   if (P.uLapse) gl.uniform1f(P.uLapse, G.lapse ?? 6.5);
-  if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? (G.real === 'earth' && !G.E && S.dt ? 2 : 1) : 0); if (P.uLitC) gl.uniform1i(P.uLitC, 11); if (P.uCore) { gl.uniform4fv(P.uCore, S.cores.v); gl.uniform1fv(P.uCoreR, S.cores.r); } }
+  if (P.uFootP) { gl.uniform3fv(P.uFootP, S.foot); gl.uniformMatrix3fv(P.uFrm, false, S.F.flat()); gl.uniform1i(P.uCities, G.cities ? (G.real === 'earth' && !G.E && S.dt ? 2 : 1) : 0); if (P.uLitC) gl.uniform1i(P.uLitC, 11); if (P.uCore) { gl.uniform4fv(P.uCore, S.cores.v); gl.uniform1fv(P.uCoreR, S.cores.r); } } if (P.uRn) { gl.uniform1i(P.uRn, S.riv.n); gl.uniform4fv(P.uRA, S.riv.a); gl.uniform4fv(P.uRB, S.riv.b); }
   if (P.uAxis) { gl.uniform3fv(P.uAxis, S.axis); gl.uniform1f(P.uTeq, G.Teq); gl.uniform1f(P.uTgrad, G.Tgrad); gl.uniform1f(P.uWet, G.wet); gl.uniform1f(P.uGrav, G.g); }
   if (P.uSpN) { const a = new Float32Array(64), c = new Float32Array(64); G.species.forEach((s, i) => { if (i < 16) { a.set([s.T[0], s.T[1], s.W[0], s.W[1]], i * 4); c.set([...s.canopy, s.decid || 0], i * 4); } }); gl.uniform4fv(P.uSpN, a); gl.uniform4fv(P.uSpC, c); gl.uniform1i(P.uNsp, G.present ? 0 : min(16, G.species.length)); }
 };
@@ -793,7 +797,8 @@ function hud() {
   $('alt').textContent = micro.M.on ? (micro.M.P[1] > 0 ? `${fmt(micro.M.P[1])} above the ` : 'in among the atoms of the ') + (micro.MATS[micro.M.mat] || { on: 'ground' }).on + (w < 2e-7 ? ' · finer than light can show: the colours are a convention' : lampK(S, micro.M) > 0.35 ? ' · lit by the microscope’s lamp' : '') + ((micro.M.mat === 1 || micro.M.mat === 9) && w < 0.03 && w > 1e-5 && eco.soil(S) ? ' · ' + eco.soil(S) : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
   if (G.E && !cave.C.in && !micro.M.on && S.cy < 1e8) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
   if (G.real && !cave.C.in && !micro.M.on && S.cy < 1e8) { const u = nrm(cam.P), la = Math.asin(u[2]) * 180 / PI, lo = Math.atan2(u[1], u[0]) * 180 / PI; $('alt').textContent += ` · ${abs(la).toFixed(2)}°${la < 0 ? 'S' : 'N'} ${abs(lo).toFixed(2)}°${lo < 0 ? 'W' : 'E'}`;
-    if (G.real === 'earth' && !G.E && S.cy < 2e5) { let best = null, bd = 6e4; for (const k of CORES) { const d = hypot(u[0] - k[0], u[1] - k[1], u[2] - k[2]) * 6.371e6; if (d < bd) { bd = d; best = k; } } if (best) $('alt').textContent += bd < best[3] ? ` · in ${best[5]}` : ` · ${fmt(bd)} from ${best[5]}`; } }   // the nearest big city's core, within 60 km
+    if (G.real === 'earth' && !G.E && S.cy < 2e5) { let best = null, bd = 6e4; for (const k of CORES) { const d = hypot(u[0] - k[0], u[1] - k[1], u[2] - k[2]) * 6.371e6; if (d < bd) { bd = d; best = k; } } if (best) $('alt').textContent += bd < best[3] ? ` · in ${best[5]}` : ` · ${fmt(bd)} from ${best[5]}`;
+      const rr = realRiver(u.map((v) => v * G.R)); if (rr && rr.nm && rr.d < 5000) $('alt').textContent += rr.d < rr.w * 0.5 ? ` · on the ${rr.nm}` : ` · ${fmt(rr.d)} from the ${rr.nm}`; } }   // and the nearest major river, within 5 km   // the nearest big city's core, within 60 km
   const code = PB.code ?? pick.code, an = code >= 2e6 ? drawn[Math.round(code - 2e6)] : null, sp = an || !(floor((Math.round(code) - 1) / 10000) < G.species.length) ? null : life.look(G, code), pc = (v) => (v >= 1 ? '+' : '−') + abs(Math.round((v - 1) * 100)) + '%';
   $('sp').textContent = an ? `${Who(an)}, ${an.age < 1 ? Math.round(an.age * 12) + ' months' : an.age.toFixed(0) + ' years'} old${an.dead >= 0 ? `, ${an.why === 'killed' ? 'killed' : 'dead'}` : ''} · a ${an.k.nm}, generation ${an.gen} · size ${pc(an.gn[0])}, speed ${pc(an.gn[1])}, wariness ${pc(an.gn[2])}` : sp ? sp.name : ''; $('sp').hidden = !an && !sp;
   $('eco').textContent = S.sea ? eco.seaText(S.sea) : [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent; $('cen').textContent = !S.sea && S.cen && S.hc < 2000 && !micro.M.on ? S.cen.text : ''; $('cen').hidden = !$('cen').textContent;

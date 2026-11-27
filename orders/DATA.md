@@ -83,6 +83,17 @@ its block: climate in 3° blocks, heights and tree ranges (a genus counts if it 
   dryness; wildflowers bloom in patches from spring to summer; moss carpets cool wet woods, lichen cold open ground.
   The shapes, thresholds and densities are sketches, not measured.
 
+## Rivers (riverdata.js, planet.js: rivers, realRiver)
+
+- **Natural Earth 1:10m rivers and lake centerlines** (public domain, naturalearthdata.com; via the
+  nvkelso/natural-earth-vector repository): the rivers of scale rank 1-3 (83 named, from the Amazon and the Nile to the
+  Ohio and the Murray) plus 43 well-known smaller ones by name (the Rhine, Thames, Seine, Hudson, Colorado, Tigris,
+  Yenisey and others); lake centerlines left out, the lakes being in the maps. Packed by `tools/riverpack.py`:
+  each line simplified to 2 km (Ramer-Douglas-Peucker) and snapped to 0.02°, so a course is good to about 2 km.
+- Each river's channel is cut and filled where it passes (the same 5 m channel as the invented streams), as wide as
+  its rank: 1,500 m for the largest down to 100 m; round numbers, not measured widths. The invented small streams
+  are still there between them. The readout names the river you are on or near; the map draws them at every scale.
+
 ## Towns on today's Earth (planet.js: litRho, CORES)
 
 - **How built-up each place is** comes from the same night lights as the night side (NASA Black Marble 2016, sixth-of-

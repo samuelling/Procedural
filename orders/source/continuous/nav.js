@@ -1,7 +1,7 @@
 // Finding your way: a compass ball that always shows which way the sky is, the ground, north and your target; and a
 // map (N) that zooms from a hundred metres to the whole globe, drawn from the same terrain and climate as the world,
 // with waypoints: what lives near you, the named places of this world, your own marks, and the other worlds.
-import { H, climate, forestF, river, lakeAt, CORES } from './planet.js';
+import { H, climate, forestF, river, lakeAt, CORES, realRiver } from './planet.js';
 
 const { sin, cos, atan2, asin, acos, hypot, max, min, abs, sqrt, round, PI } = Math;
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -87,6 +87,7 @@ export function mkNav(X) {
     if (h < 0 && (G.air > 0.01 || G.liquid)) { const k = cl(1 + h / 5000, 0.3, 1); return sea.map((v) => v * (0.5 + 0.5 * k) * 0.9 + 0.05 * k); }
     let c; const lk = near ? lakeAt(G, nrm(p)) : -1e9;
     if (lk > h) return sea.map((v) => v * 0.85 + 0.06);
+    if (G.real === 'earth' && !G.E) { const rr = realRiver(p, 0); if (rr && rr.d < Math.max(rr.w * 0.5, pix * 0.7)) return sea.map((v) => v * 0.8 + 0.12); }   // the real rivers, as wide as a pixel at least
     if (G.real === 'earth' || !G.real) {
       const { T, W } = climate(G, p, h), F = T > -12 ? forestF(G, p, h, T, W) : 0;
       if (near && river(G, p, h, W) > 0.25) return sea.map((v) => v * 0.8 + 0.12);

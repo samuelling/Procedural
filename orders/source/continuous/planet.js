@@ -11,6 +11,7 @@
 
 import { earth, body, genAt, patches, patchAt, lights } from './earth.js';
 import { sunReal } from './ephem.js';
+import { RIVERS } from './riverdata.js';
 export { earth, body, genAt };
 export const K = 40, LS = 22, GOLD = 2.39996323, PLA = 1.32471795724;
 export const sOf = (k) => 2 ** (LS - k);
@@ -235,12 +236,32 @@ function seaLevel(G) {                                                      // t
 // distance in metres, so a channel has a true width (wider where it is wetter), carved RIVD deep
 export const RIVD = 5;
 const rivN = (G, u) => { const k = K + 4 + G.kseed; return vn3(u[0], u[1], u[2], k) * 0.7 + vn3(u[0] * 2 + 11.3, u[1] * 2 + 11.3, u[2] * 2 + 11.3, k) * 0.3; };
+// the real rivers on today's Earth (riverdata.js: the major ones, good to about 2 km): segments between unit vectors,
+// bucketed by whole degrees, each with a channel width by its Natural Earth rank (round numbers, metres)
+const RW = [0, 1500, 900, 600, 400, 300, 200, 150, 120, 100]; let RV = null;
+export function rivers() {
+  if (RV) return RV; const B = new Map(), uv = (lo, la) => { const a = la * Math.PI / 180, b = lo * Math.PI / 180; return [Math.cos(a) * Math.cos(b), Math.cos(a) * Math.sin(b), Math.sin(a)]; };
+  for (const ln of RIVERS.split(';')) { const m = ln.indexOf('|'), r = +ln[0], nm = ln.slice(1, m); let x = 0, y = 0, pr = null;
+    for (const t of ln.slice(m + 1).split(' ')) { const c = t.split(','); x += +c[0]; y += +c[1]; const lo = x * 0.02, la = y * 0.02;
+      if (pr) { const sg = { a: uv(pr[0], pr[1]), b: uv(lo, la), w: RW[r], nm };
+        for (let i = Math.floor(Math.min(pr[0], lo)); i <= Math.floor(Math.max(pr[0], lo)); i++) for (let j = Math.floor(Math.min(pr[1], la)); j <= Math.floor(Math.max(pr[1], la)); j++) { const k = i * 1000 + j; if (!B.has(k)) B.set(k, []); B.get(k).push(sg); } }
+      pr = [lo, la]; } }
+  return (RV = B);
+}
+export function segD(u, a, b) { const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], t = Math.min(1, Math.max(0, ((u[0] - a[0]) * ab[0] + (u[1] - a[1]) * ab[1] + (u[2] - a[2]) * ab[2]) / Math.max(ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2], 1e-18))); return Math.hypot(u[0] - a[0] - ab[0] * t, u[1] - a[1] - ab[1] * t, u[2] - a[2] - ab[2] * t) * 6.371e6; }
+export function realRiver(p, R = 1) {   // the nearest real river within R degrees of p: { d metres, w width, nm name, sg }
+  const l = Math.hypot(...p), u = p.map((v) => v / l), la = Math.asin(u[2]) * 180 / Math.PI, lo = Math.atan2(u[1], u[0]) * 180 / Math.PI, B = rivers(); let best = null, bd = 1e12;
+  for (let i = Math.floor(lo) - R; i <= Math.floor(lo) + R; i++) for (let j = Math.floor(la) - R; j <= Math.floor(la) + R; j++) for (const sg of B.get(i * 1000 + j) || []) { const d = segD(u, sg.a, sg.b); if (d < bd) { bd = d; best = sg; } }
+  return best && { d: bd, w: best.w, nm: best.nm, sg: best };
+}
 export function river(G, p, h, W, out) {
-  const wd = (8 + 70 * W * W) * ss(0.3, 0.45, W) * ss(0.5, 3, h) * (1 - ss(1600, 2200, h)); if (wd <= 0) return 0;
+  let r0 = 0; if (G.real === 'earth' && !G.E) { const rr = realRiver(p, 0); if (rr && rr.d < rr.w * 2) { r0 = 1 - ss(rr.w * 0.5, rr.w * 0.5 + Math.max(40, rr.w * 0.25), rr.d); if (out) { out.dist = rr.d; out.wd = rr.w; } } }
+  const wd = (8 + 70 * W * W) * ss(0.3, 0.45, W) * ss(0.5, 3, h) * (1 - ss(1600, 2200, h)); if (wd <= 0) return r0;
   const u = rot(K + 4, p).map((v) => m256(v / 30000)), n = rivN(G, u), e = 1e-4;
   const g = Math.hypot(rivN(G, [u[0] + e, u[1], u[2]]) - n, rivN(G, [u[0], u[1] + e, u[2]]) - n, rivN(G, [u[0], u[1], u[2] + e]) - n) / e / 30000, dist = Math.abs(n - 0.5) / Math.max(g, 1e-12);
+  const r1 = 1 - ss(wd * 0.5, wd * 1.5, dist); if (r1 < r0) return r0;
   if (out) { out.dist = dist; out.wd = wd; }
-  return 1 - ss(wd * 0.5, wd * 1.5, dist);
+  return r1;
 }
 // the octave's value, gradient and curvature (lattice units) at a point, for the shaders' near field
 export function taylor(G, k, p) {
@@ -544,11 +565,15 @@ float cityRho(vec3 q) {
   return r;
 }
 uniform float uRivC;   // the channel's depth fraction at the foot
+uniform vec4 uRA[24], uRB[24]; uniform int uRn;   // the real rivers' segments nearest you: ends (camera-local metres), width
+float riverR(vec3 q, out float dist, out float wd) { dist = 1e9; wd = 0.; for (int i = 0; i < 24; i++) { if (i >= uRn) break; vec3 a = uRA[i].xyz, ab = uRB[i].xyz - a; float t = clamp(dot(q - a, ab) / max(dot(ab, ab), 1e-6), 0., 1.), d = length(q - a - ab * t); if (d < dist) { dist = d; wd = uRA[i].w; } }
+  return wd > 0. ? 1. - smoothstep(wd * .5, wd * .5 + max(40., wd * .25), dist) : 0.; }
 float riverM(vec3 q, float h, float W, out float dist, out float wd) {
-  wd = (8. + 70. * W * W) * smoothstep(.3, .45, W) * smoothstep(.5, 3., h) * (1. - smoothstep(1600., 2200., h)); dist = 1e9; if (wd <= 0.) return 0.;
+  float dR, wR, rR = riverR(q, dR, wR);
+  wd = (8. + 70. * W * W) * smoothstep(.3, .45, W) * smoothstep(.5, 3., h) * (1. - smoothstep(1600., 2200., h)); dist = 1e9; if (wd <= 0.) { dist = dR; wd = wR; return rR; }
   int k = ${K} + 4; vec4 A = OT(k, 0), D = OT(k, 3); vec3 u = A.xyz + rotO(k) * q * D.z; vec4 a = vnd3(u, k + uKs), b = vnd3(u * 2. + 11.3, k + uKs);
   float n = a.x * .7 + b.x * .3; vec3 g = a.yzw * .7 + b.yzw * .6; dist = abs(n - .5) / max(length(g) * D.z, 1e-12);
-  return 1. - smoothstep(wd * .5, wd * 1.5, dist);
+  float r1 = 1. - smoothstep(wd * .5, wd * 1.5, dist); if (rR > r1) { dist = dR; wd = wR; return rR; } return r1;
 }
 float citySuit(float h, float T, float W, float sl) { if (uCities == 2) return smoothstep(.5, 2., h) * smoothstep(.35, .15, sl); return smoothstep(3., 12., h) * smoothstep(900., 500., h) * smoothstep(-4., 2., T) * smoothstep(.15, .3, W) * smoothstep(.25, .1, sl); }
 float forestF(vec3 q, float h, float T, float W, float fp) {
