@@ -15,6 +15,7 @@ import { mkSound } from './sound.js';
 import { mkEco, drawn, Who } from './eco.js';
 import { nSpecies, sunAt, season, vn3, AGES, ageWorld, carry, sibling } from './planet.js';
 import { mkTrees } from './trees.js';
+import { mkNav } from './nav.js';
 import { mkCover } from './cover.js';
 import { mkSky } from './sky.js';
 import { mkHoles, RL4 } from './wormhole.js';
@@ -570,7 +571,7 @@ function finish(dt) {
   gl.useProgram(post.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, FB.t[0]); gl.uniform1i(post.uS, 0); gl.uniform1f(post.uEx, 0.62); gl.uniform1f(post.uFlash, flash); gl.uniform3fv(post.uFlashC, flashC);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, FB.t[1]); gl.uniform1i(post.uD, 1); gl.activeTexture(gl.TEXTURE0); holes.setPost(post, W, Hp); const pr = cave.C.in ? 0 : (S.rain || 0) * (S.cy < G.cloudBase ? 1 : 0); gl.uniform1f(post.uRainP, S.snow ? 0 : pr); gl.uniform1f(post.uSnowP, S.snow ? pr : 0); gl.uniform1f(post.uT, (performance.now() - t0) / 1000);
   gl.bindVertexArray(VQ); gl.drawArrays(gl.TRIANGLES, 0, 3);
-  hud();
+  hud(); nav.frame(performance.now() / 1000);
   requestAnimationFrame(frame);
 }
 // through a wormhole: out of the paired mouth on planet n, the same distance from it, looking away from it
@@ -635,12 +636,19 @@ function visit(b) {
 }
 function leaveMicro() { const M = micro.M, p = micro.exitTo(), F = M.F0, dP = toPlanet(F, dir()); cam.P = [0, 1, 2].map((i) => M.anchor[i] + F[0][i] * p[0] + F[1][i] * p[1] + F[2][i] * p[2]);
   const dl = toLocal(axes(), dP); cam.yaw = Math.atan2(dl[0], dl[2]); cam.pitch = min(1.55, max(-1.55, Math.asin(max(-1, min(1, dl[1]))))); }   // (looking the same way in the world)
-function surface() { if (!micro.M.on) return; const M = micro.M; M.P = [M.P[0], 1.6, M.P[2]]; leaveMicro(); cam.pitch = max(cam.pitch, -0.5); }   // straight back up to standing height
-function moveLocal(v) {                                                    // move by a camera-local vector, keep off the ground
+function surface() {                                                      // right yourself, wherever you are: out of the microscope or a cave
+  if (micro.M.on) { const M = micro.M; M.P = [M.P[0], 1.6, M.P[2]]; leaveMicro(); cam.pitch = max(cam.pitch, -0.5); return; }   // straight back up to standing height
+  if (cave.C.in) { leaveCave(); return; }
+  flyV = [0, 0, 0]; const u = nrm(cam.P), g = max(stand(u.map((x) => x * G.R)), 0);
+  if (S.cy > 2e6) { cam.pitch = -1.55; return; }                         // out in space: face the planet
+  if (hypot(...cam.P) - G.R - g < EYE) cam.P = u.map((x) => x * (G.R + g + EYE + (ctl.mode === 'fly' ? 1 : 0)));   // in or on the ground: up to standing height
+  cam.pitch = 0;                                                           // and level the view
+}
+function moveLocal(v, fl = 1e-6) {                                          // move by a camera-local vector, keep off the ground (by fl, flying)
   if (micro.M.on) { const M = micro.M; M.P = M.P.map((q, i) => q + v[i]); M.att = null; if (M.P[1] > M.top * 1.5) leaveMicro(); return; }
   if (cave.C.in) { if (cave.move(v, false, 0, S)) leaveCave(); return; }
   const F = axes(); cam.P = madd(cam.P, toPlanet(F, v), 1);
-  const u = nrm(cam.P), g0 = stand(u.map((x) => x * G.R)), g = ctl.mode === 'fly' ? g0 : max(g0, 0), r = hypot(...cam.P), lo = G.R + g + 1e-6; if (r < lo) cam.P = u.map((x) => x * lo);
+  const u = nrm(cam.P), g0 = stand(u.map((x) => x * G.R)), g = ctl.mode === 'fly' ? g0 : max(g0, 0), r = hypot(...cam.P), lo = G.R + g + fl; if (r < lo) { cam.P = u.map((x) => x * lo); if (fl > 1e-3) bump = performance.now(); }
 }
 function zoomAt(px, py, f) {                                               // f < 1 goes in, toward whatever is under the pointer
   if (micro.M.on) { const M = micro.M, Sc = micro.ride(performance.now() / 1000), T = f < 1 ? micro.target(Sc) : null, now = performance.now();
@@ -726,16 +734,16 @@ addEventListener('keyup', (e) => { keys[e.code] = 0; });
 })();
 function leaveCave() { const o = cave.exit(G); cam.P = o.P; const F = axes(); cam.ref = nrm(madd(o.look, F[1], -dot(o.look, F[1]))); cam.yaw = 0; cam.pitch = 0; }
 function jumpUp() { ctl.vy = 4.2; ctl.ground = false; }                     // the same legs everywhere: under weak gravity you go high
-let flyV = [0, 0, 0];
+let flyV = [0, 0, 0], bump = 0;
 function fly(dt) {
   const hc = S.hc || 1, k = keys, tx = abs(ctl.touch.x) > 0.15 ? ctl.touch.x : 0, ty = abs(ctl.touch.y) > 0.15 ? -ctl.touch.y : 0;
   const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) + ty, s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) + tx;
   const run = k.ShiftLeft || k.ShiftRight || hypot(tx, ty) > 0.92;
   if (ctl.mode === 'fly') {
-    const v = (k.Space || k.KeyE ? 1 : 0) - (k.KeyC || k.KeyQ || k.ControlLeft ? 1 : 0), sp = max(hc, 2e-5) * 1.2 * (run ? 4 : 1), d = dir(), r = nrm([-d[2], 0, d[0]]);
-    const t = [(d[0] * f + r[0] * s) * sp, (d[1] * f + v) * sp, (d[2] * f + r[2] * s) * sp];
+    const v = (k.Space || k.KeyE ? 1 : 0) - (k.KeyC || k.KeyQ || k.ControlLeft ? 1 : 0), sp = max(hc, 0.05) * 1.2 * (run ? 4 : 1), d = dir(), r = nrm([-d[2], 0, d[0]]);
+    const up = v > 0 ? max(sp, (run ? 4 : 1) * 2) : sp, t = [(d[0] * f + r[0] * s) * sp, d[1] * f * sp + v * up, (d[2] * f + r[2] * s) * sp];   // rising is never slower than 2 m/s, so the ground cannot hold you
     flyV = flyV.map((q, i) => q + (t[i] - q) * min(1, dt * 6));
-    if (hypot(...flyV) > 1e-12) moveLocal(flyV.map((q) => q * dt));
+    if (hypot(...flyV) > 1e-12) moveLocal(flyV.map((q) => q * dt), 0.05);   // flying, you stop 5 cm off the ground (scroll to go closer)
     return;
   }
   // walking: along the ground at a person's pace, held down by this planet's gravity (or along a cave floor)
@@ -778,7 +786,6 @@ function hud() {
   if ((hud.n = (hud.n || 0) + 1) % 6) return;
   const c = pickLate(canvas.clientWidth / 2, canvas.clientHeight / 2), d = micro.M.on && micro.M.s < 1.5e-9 ? micro.M.s * 1.2 : c ?? (micro.M.on ? micro.M.s : S.hc * 3), w = 2 * d * Math.tan(cam.fov / 2) * canvas.clientWidth / canvas.clientHeight;
   if (micro.M.on && c !== null && !micro.M.att && !(performance.now() - (micro.M.zt || 0) < 600)) micro.M.s = c;
-  if ($('up').hidden === micro.M.on) $('up').hidden = !micro.M.on;
   $('scale').textContent = fmt(w) + ' across'; $('what').textContent = micro.M.on && w < 0.05 ? micro.label(w) : BANDS.find((b) => w >= b[0])[1];
   $('alt').textContent = micro.M.on ? (micro.M.P[1] > 0 ? `${fmt(micro.M.P[1])} above the ` : 'in among the atoms of the ') + (micro.MATS[micro.M.mat] || { on: 'ground' }).on + (w < 2e-7 ? ' · finer than light can show: the colours are a convention' : lampK(S, micro.M) > 0.35 ? ' · lit by the microscope’s lamp' : '') + ((micro.M.mat === 1 || micro.M.mat === 9) && w < 0.03 && w > 1e-5 && eco.soil(S) ? ' · ' + eco.soil(S) : '') : S.cy > 1e8 ? `${fmt(S.cy)} from ${G.name}` : cave.C.in ? `in a cave, ${fmt(max(0, cave.C.pos[2]))} in` : fmt(S.hc) + ' up · ' + holes.nearest(cam, G, S);
   if (G.E && !cave.C.in && !micro.M.on && S.cy < 1e8) { const c = carry(G, world(G.n), nrm(cam.P).map((v) => v * G.R)), la = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; }; $('alt').textContent += ` · this ground: ${la(cam.P)} then, ${la(c.today)} today`; }
@@ -786,10 +793,10 @@ function hud() {
   const code = PB.code ?? pick.code, an = code >= 2e6 ? drawn[Math.round(code - 2e6)] : null, sp = an || !(floor((Math.round(code) - 1) / 10000) < G.species.length) ? null : life.look(G, code), pc = (v) => (v >= 1 ? '+' : '−') + abs(Math.round((v - 1) * 100)) + '%';
   $('sp').textContent = an ? `${Who(an)}, ${an.age < 1 ? Math.round(an.age * 12) + ' months' : an.age.toFixed(0) + ' years'} old${an.dead >= 0 ? `, ${an.why === 'killed' ? 'killed' : 'dead'}` : ''} · a ${an.k.nm}, generation ${an.gen} · size ${pc(an.gn[0])}, speed ${pc(an.gn[1])}, wariness ${pc(an.gn[2])}` : sp ? sp.name : ''; $('sp').hidden = !an && !sp;
   $('eco').textContent = S.sea ? eco.seaText(S.sea) : [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent; $('cen').textContent = !S.sea && S.cen && S.hc < 2000 && !micro.M.on ? S.cen.text : ''; $('cen').hidden = !$('cen').textContent;
-  { const e = eco.log[eco.log.length - 1]; if (e && performance.now() - e.t < 7000) { if ($('say').textContent !== e.s) $('say').textContent = e.s; $('say').classList.add('on'); } else $('say').classList.remove('on'); }
+  { const e = performance.now() - bump < 3000 ? { s: 'At the ground: Space rises, U rights you, scroll looks closer', t: bump } : eco.log[eco.log.length - 1]; if (e && performance.now() - e.t < 7000) { if ($('say').textContent !== e.s) $('say').textContent = e.s; $('say').classList.add('on'); } else $('say').classList.remove('on'); }
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
-  $('bar').style.width = min(100, max(1, (Math.log10(w) + 18) / 45 * 100)) + '%';
+  nav.ruler(w);
 }
 function hint() {
   const lat = (v) => { const d = Math.asin(max(-1, min(1, dot(nrm(v), G.axis)))) * 180 / PI; return `${abs(d).toFixed(0)}°${d < 0 ? 'S' : 'N'}`; };
@@ -807,6 +814,8 @@ const PLACES = [['Great Smoky Mountains', 100, 35.61, -83.45], ['Yosemite Valley
   ['Jupiter, at the cloud tops', 105, 0, 0], ['Saturn, at the cloud tops', 106, 10, 0], ['Uranus, at the cloud tops', 107, 0, 0], ['Neptune, at the cloud tops', 108, 0, 0], ['The wormhole at the Earth\'s L4 point', -1, 0, 0]];
 const goSel = $('go'); goSel.innerHTML = '<option value="">Go to…</option>' + PLACES.map((p, i) => `<option value="${i}">${p[0]}</option>`).join('');
 const unitLL = (la, lo) => { la *= PI / 180; lo *= PI / 180; return [cos(la) * cos(lo), cos(la) * sin(lo), sin(la)]; };
+const nav = mkNav({ cam, S, G: () => G, axes, dir, micro, cave, eco, fmt, goPlace: (i) => goPlace(i), get PLACES() { return PLACES; },
+  goTo(p) { if (micro.M.on) leaveMicro(); if (cave.C.in) leaveCave(); setMode('walk'); arrive(G.n, p); } });
 function goPlace(i) {
   const [, n, la, lo] = PLACES[i];
   if (n < 0) { G = world(100); G.t = realT; const m = holes.mouths(100)[0], u = nrm(m.C), side = nrm(cross(u, [0.2, 0.3, 0.9])); cam.P = madd(m.C, nrm(madd(u.map((v) => -v), side, 0.35)), RL4 * 14); const F = axes(), toM = toLocal(F, nrm(madd(m.C, cam.P, -1))); cam.yaw = Math.atan2(toM[0], toM[2]); cam.pitch = Math.asin(max(-1, min(1, toM[1]))); $('age').value = 0; hint(); setMode('fly'); return; }
@@ -816,4 +825,4 @@ goSel.addEventListener('change', () => { if (goSel.value !== '') goPlace(+goSel.
 // first: on the Earth, wherever among these places the Sun now stands highest short of noon's glare
 { let best = 0, bs = -9; const E = world(100), s = sunAt(E, realT); PLACES.forEach((p, i) => { if (p[1] !== 100) return; const el = Math.asin(dot(unitLL(p[2], p[3]), s)) * 180 / PI, sc = -abs(el - 32); if (sc > bs) { bs = sc; best = i; } }); goPlace(best); }
 requestAnimationFrame(frame);
-window.sylva = { get snd() { return snd; }, get eco() { return eco; }, get speed() { return speed; }, set speed(v) { speed = v; }, sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
+window.sylva = { nav, get snd() { return snd; }, get eco() { return eco; }, get speed() { return speed; }, set speed(v) { speed = v; }, sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
