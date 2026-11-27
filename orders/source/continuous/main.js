@@ -734,7 +734,7 @@ addEventListener('keyup', (e) => { keys[e.code] = 0; });
 })();
 function leaveCave() { const o = cave.exit(G); cam.P = o.P; const F = axes(); cam.ref = nrm(madd(o.look, F[1], -dot(o.look, F[1]))); cam.yaw = 0; cam.pitch = 0; }
 function jumpUp() { ctl.vy = 4.2; ctl.ground = false; }                     // the same legs everywhere: under weak gravity you go high
-let flyV = [0, 0, 0], bump = 0;
+let flyV = [0, 0, 0], bump = 0, note = null;
 function fly(dt) {
   const hc = S.hc || 1, k = keys, tx = abs(ctl.touch.x) > 0.15 ? ctl.touch.x : 0, ty = abs(ctl.touch.y) > 0.15 ? -ctl.touch.y : 0;
   const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) + ty, s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0) + tx;
@@ -793,7 +793,7 @@ function hud() {
   const code = PB.code ?? pick.code, an = code >= 2e6 ? drawn[Math.round(code - 2e6)] : null, sp = an || !(floor((Math.round(code) - 1) / 10000) < G.species.length) ? null : life.look(G, code), pc = (v) => (v >= 1 ? '+' : '−') + abs(Math.round((v - 1) * 100)) + '%';
   $('sp').textContent = an ? `${Who(an)}, ${an.age < 1 ? Math.round(an.age * 12) + ' months' : an.age.toFixed(0) + ' years'} old${an.dead >= 0 ? `, ${an.why === 'killed' ? 'killed' : 'dead'}` : ''} · a ${an.k.nm}, generation ${an.gen} · size ${pc(an.gn[0])}, speed ${pc(an.gn[1])}, wariness ${pc(an.gn[2])}` : sp ? sp.name : ''; $('sp').hidden = !an && !sp;
   $('eco').textContent = S.sea ? eco.seaText(S.sea) : [eco.here(S), eco.stand(S)].filter((x) => x).join(' · '); $('eco').hidden = !$('eco').textContent; $('cen').textContent = !S.sea && S.cen && S.hc < 2000 && !micro.M.on ? S.cen.text : ''; $('cen').hidden = !$('cen').textContent;
-  { const e = performance.now() - bump < 3000 ? { s: 'At the ground: Space rises, U rights you, scroll looks closer', t: bump } : eco.log[eco.log.length - 1]; if (e && performance.now() - e.t < 7000) { if ($('say').textContent !== e.s) $('say').textContent = e.s; $('say').classList.add('on'); } else $('say').classList.remove('on'); }
+  { const e = performance.now() - bump < 3000 ? { s: 'At the ground: Space rises, U rights you, scroll looks closer', t: bump } : note && performance.now() - note.t < 6000 ? note : eco.log[eco.log.length - 1]; if (e && performance.now() - e.t < 7000) { if ($('say').textContent !== e.s) $('say').textContent = e.s; $('say').classList.add('on'); } else $('say').classList.remove('on'); }
   $('met').textContent = `${life.count(G).toLocaleString()} of ${nSpecies(G).toLocaleString()} species met` + (S.burning && S.fireD < 3e4 ? ` · fire ${fmt(S.fireD)} off` : '') + (S.pondD < 2500 ? ` · beaver pond ${fmt(S.pondD)} off` : '');
   $('lock').hidden = locked() || touchy || !$('life').hidden;
   nav.ruler(w);
@@ -812,7 +812,7 @@ const PLACES = [['Great Smoky Mountains', 100, 35.61, -83.45], ['Yosemite Valley
   ['Himalaya, below Everest', 100, 27.9, 86.85], ['Siberian taiga, Lake Baikal', 100, 52.2, 105.5], ['Hills above Kyoto', 100, 35.03, 135.75], ['Borneo rainforest', 100, 1.0, 114.0], ['Blue Mountains, Australia', 100, -33.7, 150.3], ['Fiordland, New Zealand', 100, -45.4, 167.7], ['Greenland ice sheet', 100, 72, -40],
   ['The Moon, Mare Tranquillitatis', 101, 0.67, 23.47], ['The Moon, Tycho', 101, -43.3, -11.2], ['Mercury, Caloris basin', 102, 31.5, 162.7], ['Venus, Maxwell Montes', 103, 65.2, 3.3], ['Mars, Valles Marineris', 104, -8.5, -72], ['Mars, Olympus Mons', 104, 18.65, -133.8], ['Mars, the north polar cap', 104, 84, 0],
   ['Jupiter, at the cloud tops', 105, 0, 0], ['Saturn, at the cloud tops', 106, 10, 0], ['Uranus, at the cloud tops', 107, 0, 0], ['Neptune, at the cloud tops', 108, 0, 0], ['The wormhole at the Earth\'s L4 point', -1, 0, 0]];
-const goSel = $('go'); goSel.innerHTML = '<option value="">Go to…</option>' + PLACES.map((p, i) => `<option value="${i}">${p[0]}</option>`).join('');
+const goSel = $('go'); goSel.innerHTML = '<option value="">Go to…</option><option value="here">📍 Where you are</option>' + PLACES.map((p, i) => `<option value="${i}">${p[0]}</option>`).join('');
 const unitLL = (la, lo) => { la *= PI / 180; lo *= PI / 180; return [cos(la) * cos(lo), cos(la) * sin(lo), sin(la)]; };
 const nav = mkNav({ cam, S, G: () => G, axes, dir, micro, cave, eco, fmt, goPlace: (i) => goPlace(i), get PLACES() { return PLACES; },
   goTo(p) { if (micro.M.on) leaveMicro(); if (cave.C.in) leaveCave(); setMode('walk'); arrive(G.n, p); } });
@@ -821,8 +821,18 @@ function goPlace(i) {
   if (n < 0) { G = world(100); G.t = realT; const m = holes.mouths(100)[0], u = nrm(m.C), side = nrm(cross(u, [0.2, 0.3, 0.9])); cam.P = madd(m.C, nrm(madd(u.map((v) => -v), side, 0.35)), RL4 * 14); const F = axes(), toM = toLocal(F, nrm(madd(m.C, cam.P, -1))); cam.yaw = Math.atan2(toM[0], toM[2]); cam.pitch = Math.asin(max(-1, min(1, toM[1]))); $('age').value = 0; hint(); setMode('fly'); return; }
   const Gn = world(n), u = unitLL(la, lo); arrive(n, u.map((v) => v * Gn.R));
 }
-goSel.addEventListener('change', () => { if (goSel.value !== '') goPlace(+goSel.value); goSel.value = ''; goSel.blur(); });
+goSel.addEventListener('change', () => { if (goSel.value === 'here') goHere(true); else if (goSel.value !== '') goPlace(+goSel.value); goSel.value = ''; goSel.blur(); });
 // first: on the Earth, wherever among these places the Sun now stands highest short of noon's glare
 { let best = 0, bs = -9; const E = world(100), s = sunAt(E, realT); PLACES.forEach((p, i) => { if (p[1] !== 100) return; const el = Math.asin(dot(unitLL(p[2], p[3]), s)) * 180 / PI, sc = -abs(el - 32); if (sc > bs) { bs = sc; best = i; } }); goPlace(best); }
+// then, if the device will say where it is (the browser asks you first), to where you are standing, on today's Earth
+function goHere(asked) {
+  if (!navigator.geolocation) { if (asked) note = { s: 'This browser cannot say where you are', t: performance.now() }; return; }
+  navigator.geolocation.getCurrentPosition((g) => {
+    const { latitude: la, longitude: lo } = g.coords; if (micro.M.on) leaveMicro(); if (cave.C.in) leaveCave();
+    if ((G.E || 0) && G.n === 100) setAge(0); setMode('walk'); const E = world(100); arrive(100, unitLL(la, lo).map((v) => v * E.R));
+    note = { s: `Here: where you are, ${abs(la).toFixed(3)}°${la >= 0 ? 'N' : 'S'} ${abs(lo).toFixed(3)}°${lo >= 0 ? 'E' : 'W'}`, t: performance.now() };
+  }, () => { if (asked) note = { s: 'Your location was not shared, so you stay here', t: performance.now() }; }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 6e5 });
+}
+goHere(false);
 requestAnimationFrame(frame);
 window.sylva = { nav, get snd() { return snd; }, get eco() { return eco; }, get speed() { return speed; }, set speed(v) { speed = v; }, sunAt, goPlace, PLACES, realT: () => realT, setRealT: (t) => { realT = t; }, cosmos, micro, setAge, fire, strike, cave, setMode, ctl, moveLocal, cam, G: () => G, S, H: (p) => H(G, p), arrive, zoomAt, pick, world, frame, jump, sky: sky.S, holes };
